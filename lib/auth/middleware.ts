@@ -1,5 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserFromAuthHeader, JWTPayload } from "./jwt";
+import { getUserFromAuthHeader, JWTPayload, verifyToken } from "./jwt";
+
+/**
+ * Extract token from request (header or cookie)
+ */
+export function extractToken(request: NextRequest): string | null {
+  // Try Authorization header first
+  const authHeader = request.headers.get("authorization");
+  if (authHeader) {
+    const parts = authHeader.split(" ");
+    if (parts.length === 2 && parts[0] === "Bearer") {
+      return parts[1];
+    }
+  }
+
+  // Fall back to cookie
+  return request.cookies.get("admin_token")?.value || null;
+}
 
 /**
  * Middleware to require authentication
@@ -16,8 +33,9 @@ import { getUserFromAuthHeader, JWTPayload } from "./jwt";
 export async function requireAuth(
   request: NextRequest
 ): Promise<JWTPayload | null> {
-  const authHeader = request.headers.get("authorization");
-  return getUserFromAuthHeader(authHeader);
+  const token = extractToken(request);
+  if (!token) return null;
+  return verifyToken(token);
 }
 
 /**
