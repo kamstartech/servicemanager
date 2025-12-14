@@ -43,7 +43,12 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { Search, Plus, MoreVertical, Edit, Trash2, Eye, GripVertical } from "lucide-react";
+import { 
+  Search, Plus, MoreVertical, Edit, Trash2, Eye, GripVertical,
+  Home, Send, CreditCard, LayoutDashboard, User, Settings,
+  Smartphone, Briefcase, TrendingUp, Bell, Target, Wallet,
+  FileText, Lock, Phone, MapPin, Store, File, Lightbulb
+} from "lucide-react";
 import Link from "next/link";
 import {
   DndContext,
@@ -143,35 +148,49 @@ const REORDER_SCREENS = gql`
   }
 `;
 
+// Icon mapping
+const iconMap: Record<string, any> = {
+  Home, Send, CreditCard, LayoutDashboard, User, Settings,
+  Smartphone, Briefcase, TrendingUp, Bell, Target, Wallet,
+  FileText, Lock, Phone, MapPin, Store, File, Lightbulb, Search
+};
+
+// Icon renderer component
+const IconRenderer = ({ iconName, className = "h-5 w-5" }: { iconName: string, className?: string }) => {
+  const IconComponent = iconMap[iconName];
+  if (!IconComponent) return <span className={className}>{iconName}</span>;
+  return <IconComponent className={className} />;
+};
+
 const CONTEXTS = [
-  { value: "MOBILE_BANKING", label: "Mobile Banking", icon: "📱" },
-  { value: "WALLET", label: "Wallet", icon: "💳" },
-  { value: "VILLAGE_BANKING", label: "Village Banking", icon: "🏘️" },
-  { value: "AGENT", label: "Agent", icon: "👤" },
-  { value: "MERCHANT", label: "Merchant", icon: "🏪" },
+  { value: "MOBILE_BANKING", label: "Mobile Banking", icon: "Smartphone" },
+  { value: "WALLET", label: "Wallet", icon: "Wallet" },
+  { value: "VILLAGE_BANKING", label: "Village Banking", icon: "MapPin" },
+  { value: "AGENT", label: "Agent", icon: "User" },
+  { value: "MERCHANT", label: "Merchant", icon: "Store" },
 ];
 
 const ICONS = [
-  { value: "🏠", label: "Home" },
-  { value: "💸", label: "Money Transfer" },
-  { value: "💳", label: "Card" },
-  { value: "📊", label: "Dashboard" },
-  { value: "👤", label: "Profile" },
-  { value: "⚙️", label: "Settings" },
-  { value: "📱", label: "Mobile" },
-  { value: "💼", label: "Business" },
-  { value: "📈", label: "Analytics" },
-  { value: "🔔", label: "Notifications" },
-  { value: "🎯", label: "Goals" },
-  { value: "💰", label: "Wallet" },
-  { value: "📝", label: "Forms" },
-  { value: "🔐", label: "Security" },
-  { value: "📞", label: "Support" },
-  { value: "🏘️", label: "Village" },
-  { value: "🏪", label: "Store" },
-  { value: "📄", label: "Document" },
-  { value: "💡", label: "Idea" },
-  { value: "🔍", label: "Search" },
+  { value: "Home", label: "Home" },
+  { value: "Send", label: "Money Transfer" },
+  { value: "CreditCard", label: "Card" },
+  { value: "LayoutDashboard", label: "Dashboard" },
+  { value: "User", label: "Profile" },
+  { value: "Settings", label: "Settings" },
+  { value: "Smartphone", label: "Mobile" },
+  { value: "Briefcase", label: "Business" },
+  { value: "TrendingUp", label: "Analytics" },
+  { value: "Bell", label: "Notifications" },
+  { value: "Target", label: "Goals" },
+  { value: "Wallet", label: "Wallet" },
+  { value: "FileText", label: "Forms" },
+  { value: "Lock", label: "Security" },
+  { value: "Phone", label: "Support" },
+  { value: "MapPin", label: "Village" },
+  { value: "Store", label: "Store" },
+  { value: "File", label: "Document" },
+  { value: "Lightbulb", label: "Idea" },
+  { value: "Search", label: "Search" },
 ];
 
 function SortableScreenRow({ screen, onEdit, onDelete }: any) {
@@ -201,7 +220,7 @@ function SortableScreenRow({ screen, onEdit, onDelete }: any) {
         </div>
       </TableCell>
       <TableCell>
-        <span className="text-2xl">{screen.icon}</span>
+        <IconRenderer iconName={screen.icon} className="h-6 w-6" />
       </TableCell>
       <TableCell>
         <p className="font-medium">{screen.name}</p>
@@ -454,7 +473,7 @@ export default function AppScreensPage() {
             <TabsList className="grid w-full grid-cols-5 mb-4">
               {CONTEXTS.map((context) => (
                 <TabsTrigger key={context.value} value={context.value}>
-                  <span className="mr-2">{context.icon}</span>
+                  <IconRenderer iconName={context.icon} className="h-4 w-4 mr-2" />
                   {context.label}
                 </TabsTrigger>
               ))}
@@ -492,7 +511,7 @@ export default function AppScreensPage() {
                 {/* Empty State */}
                 {!loading && !error && filteredScreens.length === 0 && (
                   <div className="text-center py-12">
-                    <div className="text-6xl mb-4">{context.icon}</div>
+                    <IconRenderer iconName={context.icon} className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
                     <div className="text-muted-foreground mb-4">
                       {searchTerm
                         ? "No screens found matching your search"

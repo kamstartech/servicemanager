@@ -38,7 +38,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ArrowLeft, Plus, MoreVertical, Edit, Trash2, GripVertical, Workflow as WorkflowIcon } from "lucide-react";
+import { ArrowLeft, Plus, MoreVertical, Edit, Trash2, GripVertical, Workflow as WorkflowIcon,
+  Home, Send, CreditCard, LayoutDashboard, User, Settings,
+  Smartphone, Briefcase, TrendingUp, Bell, Target, Wallet,
+  FileText, Lock, Phone, MapPin, Store, File, Lightbulb, Search
+} from "lucide-react";
 import Link from "next/link";
 import {
   DndContext,
@@ -125,27 +129,41 @@ const REORDER_PAGES = gql`
   }
 `;
 
+// Icon mapping
+const iconMap: Record<string, any> = {
+  Home, Send, CreditCard, LayoutDashboard, User, Settings,
+  Smartphone, Briefcase, TrendingUp, Bell, Target, Wallet,
+  FileText, Lock, Phone, MapPin, Store, File, Lightbulb, Search
+};
+
+// Icon renderer component
+const IconRenderer = ({ iconName, className = "h-5 w-5" }: { iconName: string, className?: string }) => {
+  const IconComponent = iconMap[iconName];
+  if (!IconComponent) return <span className={className}>{iconName}</span>;
+  return <IconComponent className={className} />;
+};
+
 const ICONS = [
-  { value: "🏠", label: "Home" },
-  { value: "💸", label: "Money Transfer" },
-  { value: "💳", label: "Card" },
-  { value: "📊", label: "Dashboard" },
-  { value: "👤", label: "Profile" },
-  { value: "⚙️", label: "Settings" },
-  { value: "📱", label: "Mobile" },
-  { value: "💼", label: "Business" },
-  { value: "📈", label: "Analytics" },
-  { value: "🔔", label: "Notifications" },
-  { value: "🎯", label: "Goals" },
-  { value: "💰", label: "Wallet" },
-  { value: "📝", label: "Forms" },
-  { value: "🔐", label: "Security" },
-  { value: "📞", label: "Support" },
-  { value: "🏘️", label: "Village" },
-  { value: "🏪", label: "Store" },
-  { value: "📄", label: "Document" },
-  { value: "💡", label: "Idea" },
-  { value: "🔍", label: "Search" },
+  { value: "Home", label: "Home" },
+  { value: "Send", label: "Money Transfer" },
+  { value: "CreditCard", label: "Card" },
+  { value: "LayoutDashboard", label: "Dashboard" },
+  { value: "User", label: "Profile" },
+  { value: "Settings", label: "Settings" },
+  { value: "Smartphone", label: "Mobile" },
+  { value: "Briefcase", label: "Business" },
+  { value: "TrendingUp", label: "Analytics" },
+  { value: "Bell", label: "Notifications" },
+  { value: "Target", label: "Goals" },
+  { value: "Wallet", label: "Wallet" },
+  { value: "FileText", label: "Forms" },
+  { value: "Lock", label: "Security" },
+  { value: "Phone", label: "Support" },
+  { value: "MapPin", label: "Village" },
+  { value: "Store", label: "Store" },
+  { value: "File", label: "Document" },
+  { value: "Lightbulb", label: "Idea" },
+  { value: "Search", label: "Search" },
 ];
 
 function SortablePageRow({ page, onEdit, onDelete, screenId }: any) {
@@ -175,7 +193,7 @@ function SortablePageRow({ page, onEdit, onDelete, screenId }: any) {
         </div>
       </TableCell>
       <TableCell>
-        <span className="text-2xl">{page.icon}</span>
+        <IconRenderer iconName={page.icon} className="h-6 w-6" />
       </TableCell>
       <TableCell>
         <p className="font-medium">{page.name}</p>
@@ -399,7 +417,7 @@ export default function AppScreenDetailsPage() {
         <CardHeader>
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
-              <span className="text-4xl">{screen.icon}</span>
+              <IconRenderer iconName={screen.icon} className="h-10 w-10" />
               <div>
                 <CardTitle className="text-2xl">{screen.name}</CardTitle>
                 <div className="flex items-center gap-2 mt-2">
