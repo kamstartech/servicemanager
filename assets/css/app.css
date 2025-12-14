@@ -1,0 +1,155 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+
+
+/* This file is for your main application CSS */
+body, .font-sans { font-family: 'Poppins', sans-serif; }
+.bg-fdh-blue { background-color: #154E9E; }
+.bg-fdh-light-blue { background-color: #1e62c7; }
+.text-fdh-orange { color: #f59e0b; }
+.bg-fdh-orange { background-color: #f59e0b; }
+.sidebar-icon { 
+    width: 1.5rem;
+    height: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #f59e0b;
+    font-size: medium;
+}
+.card { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+.chart-container { height: 200px; }
+.sidebar-item { 
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+.sidebar-item:hover { 
+    background-color: rgba(255, 255, 255, 0.2);
+    transform: translateX(5px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+.sidebar-item.active { background-color: #1e62c7; }
+.sidebar-item.active .sidebar-icon { color: #f59e0b; } 
+
+.sidebar {
+    width: 20vw; 
+    min-width: 250px;
+    max-width: 300px;
+    height: 100vh;
+    overflow-y: hidden;
+    padding-left: 15px;
+    transition: transform 0.3s ease-in-out;
+}
+
+.sidebar nav {
+    height: calc(100vh - 150px);
+    overflow-y: auto;
+    padding-right: 15px;
+}
+.sidebar nav::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar nav::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+.sidebar nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+}
+
+.sidebar nav::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.sidebar nav {
+    -ms-overflow-style: none;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1);
+}
+.dropdown-menu {
+    transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+}
+
+.dropdown-menu:not(.hidden) {
+    max-height: 1000px;
+    opacity: 1;
+}
+
+.rotate-180 {
+    transform: rotate(180deg);
+}
+
+@media (max-width: 1023px) {
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        transform: translateX(-100%);
+        z-index: 50;
+    }
+
+    .sidebar.show {
+        transform: translateX(0);
+    }
+
+    .flex-1 {
+        width: 100%;
+    }
+}
+
+
+
+.fdh-scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .fdh-scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+/* Drag and Drop Styles */
+.drag-handle {
+  cursor: grab;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+[draggable="true"] {
+  transition: all 0.2s ease;
+}
+
+[draggable="true"]:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+[draggable="true"].opacity-50 {
+  opacity: 0.5;
+  transform: rotate(2deg) scale(0.95);
+}
+
+/* Drop zone visual feedback */
+.border-indigo-400 {
+  border-color: #818cf8 !important;
+  border-width: 2px !important;
+  border-style: dashed !important;
+}
+
+.bg-indigo-25 {
+  background-color: rgba(129, 140, 248, 0.1) !important;
+}
