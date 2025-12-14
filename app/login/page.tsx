@@ -26,22 +26,28 @@ function LoginForm() {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include", // Important: include cookies
         body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        // Successful login - redirect
+        // Successful login - wait a moment for cookie to be set
         console.log("Login successful, redirecting to:", redirect);
-        window.location.href = redirect; // Use window.location for hard redirect
+        
+        // Small delay to ensure cookie is set
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Force full page reload to re-run middleware
+        window.location.href = redirect;
       } else {
         setError(data.error || "Login failed. Please try again.");
+        setIsLoading(false);
       }
     } catch (error) {
       console.error("Login error:", error);
       setError("An error occurred. Please try again.");
-    } finally {
       setIsLoading(false);
     }
   };

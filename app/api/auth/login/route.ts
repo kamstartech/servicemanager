@@ -74,6 +74,7 @@ export async function POST(request: NextRequest) {
       sameSite: "lax",
       maxAge: 60 * 60 * 24, // 24 hours
       path: "/",
+      domain: undefined, // Let browser set domain automatically
     });
 
     return response;

@@ -21,10 +21,16 @@ export function middleware(request: NextRequest) {
     request.cookies.get("admin_token")?.value ||
     request.headers.get("authorization")?.split(" ")[1];
 
+  // Debug logging (remove in production)
+  if (pathname === "/" || pathname === "/login") {
+    console.log(`[Middleware] Path: ${pathname}, Token exists: ${!!token}`);
+  }
+
   // If user is authenticated and trying to access login page, redirect to dashboard
   if (pathname === "/login" && token) {
     const user = verifyToken(token);
     if (user && user.context === "ADMIN") {
+      console.log(`[Middleware] Authenticated user on /login, redirecting to /`);
       return NextResponse.redirect(new URL("/", request.url));
     }
   }
