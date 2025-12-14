@@ -13,11 +13,21 @@ const publicRoutes = [
   "/api/auth/reset-password",
 ];
 
-// API routes that require authentication (will check token)
-const protectedApiRoutes = ["/api"];
-
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Get token from cookie or header
+  const token =
+    request.cookies.get("admin_token")?.value ||
+    request.headers.get("authorization")?.split(" ")[1];
+
+  // If user is authenticated and trying to access login page, redirect to dashboard
+  if (pathname === "/login" && token) {
+    const user = verifyToken(token);
+    if (user && user.context === "ADMIN") {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+  }
 
   // Allow public routes
   if (publicRoutes.some((route) => pathname.startsWith(route))) {

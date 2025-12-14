@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/";
@@ -32,9 +32,9 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (response.ok) {
-        // Redirect to the intended page or dashboard
-        router.push(redirect);
-        router.refresh();
+        // Successful login - redirect
+        console.log("Login successful, redirecting to:", redirect);
+        window.location.href = redirect; // Use window.location for hard redirect
       } else {
         setError(data.error || "Login failed. Please try again.");
       }
@@ -149,5 +149,13 @@ export default function LoginPage() {
         />
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center">Loading...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }
