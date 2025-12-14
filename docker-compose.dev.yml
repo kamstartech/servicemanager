@@ -1,0 +1,46 @@
+version: '3.8'
+
+# Development override - use with: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  # Next.js Admin Panel in development mode
+  adminpanel:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: service_manager_adminpanel
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+      - ./backups:/app/backups
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: "postgresql://postgres:postgres@db:5432/service_manager"
+      JWT_SECRET: "${JWT_SECRET:-change-this-to-a-secure-random-string-in-production}"
+      JWT_EXPIRES_IN: "${JWT_EXPIRES_IN:-24h}"
+      BACKUP_DIR: "/app/backups"
+      MINIO_ENDPOINT: "minio"
+      MINIO_PORT: "9000"
+      MINIO_USE_SSL: "false"
+      MINIO_ACCESS_KEY: "${MINIO_ACCESS_KEY:-minioadmin}"
+      MINIO_SECRET_KEY: "${MINIO_SECRET_KEY:-minioadmin}"
+      MINIO_BUCKET_NAME: "${MINIO_BUCKET_NAME:-backups}"
+      # T24 Configuration
+      T24_BASE_URL: "${T24_BASE_URL}"
+      T24_USERNAME: "${T24_USERNAME}"
+      T24_PASSWORD: "${T24_PASSWORD}"
+      # Background services
+      BALANCE_SYNC_INTERVAL: "${BALANCE_SYNC_INTERVAL:-300000}"
+      ACCOUNT_DISCOVERY_INTERVAL: "${ACCOUNT_DISCOVERY_INTERVAL:-86400000}"
+      ACCOUNT_DISCOVERY_BATCH_SIZE: "${ACCOUNT_DISCOVERY_BATCH_SIZE:-50}"
+    command: sh -c "npm install && npx prisma generate && npm run dev"
+    networks:
+      - service_manager_network

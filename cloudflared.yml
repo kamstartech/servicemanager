@@ -1,0 +1,9 @@
+# cloudflared tunnel configuration
+# Runs inside Docker and connects to nginx container
+
+tunnel: 276c2c30-0731-408a-903a-e754fa7260cd
+credentials-file: /etc/cloudflared/credentials.json
+ingress:
+  - hostname: sm.kamstar.tech
+    service: http://nginx:80
+  - service: http_status:404
