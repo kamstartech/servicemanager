@@ -231,7 +231,7 @@ export function AdminSidebar() {
               collapsed={collapsed}
             />
             <NavItem
-              href="/system/admin-users"
+              href="/admin-users"
               icon={Users}
               label={translate("sidebar.users")}
               collapsed={collapsed}
