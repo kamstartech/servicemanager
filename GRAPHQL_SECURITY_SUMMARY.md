@@ -1,8 +1,13 @@
 # GraphQL Endpoint Security Analysis
 
-## Current Status: ✅ **PROTECTED**
+## Current Status: ✅ **PROTECTED** (Mixed Access)
 
-The GraphQL endpoint (`/api/graphql`) **IS protected** by Next.js middleware.
+The GraphQL endpoint (`/api/graphql`) **IS protected** by Next.js middleware, but allows **both admin and mobile app access**.
+
+**Access Control:**
+- ✅ Admin panel users (context: ADMIN) → Full access
+- ✅ Mobile app users (context: MOBILE_BANKING, etc.) → Limited to mobile-specific resolvers
+- ❌ Unauthenticated users → Blocked (401 Unauthorized)
 
 ## How It Works
 
@@ -94,22 +99,27 @@ GraphQL Request → Context → Check Bearer token → Empty {} or User Context
 
 ### Admin Panel (Web)
 ```
-1. User logs in → receives admin_token cookie
+1. User logs in → receives admin_token cookie (context: ADMIN)
 2. Browser sends GraphQL request with cookie
-3. Middleware checks admin_token → validates
+3. Middleware checks admin_token → validates admin context
 4. Request reaches GraphQL endpoint → executes
 5. Resolver performs admin operation
 ```
 
 ### Mobile App
 ```
-1. User logs in → receives JWT Bearer token
+1. User logs in → receives JWT Bearer token (context: MOBILE_BANKING, etc.)
 2. App sends GraphQL request with Authorization header
 3. Middleware checks Bearer token → validates
 4. Request reaches GraphQL endpoint
 5. GraphQL context checks device session → provides userId
 6. Resolver uses context.userId for user-specific data
 ```
+
+**Key Difference:**
+- Admin resolvers don't check context (middleware already validated ADMIN context)
+- Mobile resolvers check `context.userId` (provided by GraphQL context)
+- Both can access `/api/graphql` but use different resolvers
 
 ## Resolver Patterns
 
@@ -135,6 +145,28 @@ async myProfile(_parent, args, context: GraphQLContext) {
   return user;
 }
 ```
+
+### Shared Endpoint Architecture
+
+The GraphQL endpoint is **shared** between admin panel and mobile app:
+
+**Why This Works:**
+1. **Middleware authenticates ALL requests** (admin or mobile)
+2. **Different resolvers for different users:**
+   - Admin queries: `appScreens`, `workflows`, `adminWebUsers`, etc.
+   - Mobile queries: `myProfile`, `myTransactions`, `myBeneficiaries`, etc.
+3. **Context provides mobile user data:**
+   - Admin: No context needed (middleware validated ADMIN)
+   - Mobile: Context provides `userId`, `deviceId`, `sessionId`
+4. **Resolvers enforce their own access:**
+   - Admin resolvers assume admin access (via middleware)
+   - Mobile resolvers check `context.userId`
+
+**Security Considerations:**
+- ⚠️ Mobile users CAN access admin-only queries if not protected
+- ✅ Admin resolvers should verify admin context
+- ✅ Mobile resolvers already check userId
+- ⚠️ Mixed resolver model requires careful access control
 
 ## Security Verification
 
@@ -169,41 +201,89 @@ curl -X POST http://localhost:3000/api/graphql \
 
 ## Potential Improvements
 
-### 1. Add Admin Context to GraphQL
-Currently, GraphQL context only handles mobile users. We could add admin user info:
+### 1. ⚠️ **CRITICAL: Separate Admin Context Check**
+
+Currently, mobile users can potentially access admin-only resolvers. Fix:
 
 ```typescript
+// Update GraphQL context to include admin info
 export interface GraphQLContext {
-  // Mobile user
+  // Mobile user (from Bearer token + device session)
   userId?: number;
   deviceId?: string;
   sessionId?: string;
   
-  // Admin user
+  // Admin user (from admin_token cookie)
   adminUserId?: number;
   isAdmin?: boolean;
 }
+
+// Update createGraphQLContext
+export async function createGraphQLContext({ req }): Promise<GraphQLContext> {
+  const authHeader = req?.headers?.authorization;
+  
+  // Check for admin token in cookie (from middleware)
+  const adminToken = req?.cookies?.admin_token;
+  if (adminToken) {
+    const admin = await verifyAdminToken(adminToken);
+    if (admin && admin.context === "ADMIN") {
+      return {
+        adminUserId: admin.userId,
+        isAdmin: true,
+      };
+    }
+  }
+  
+  // Otherwise check for mobile Bearer token
+  if (!authHeader?.startsWith("Bearer ")) {
+    return {};
+  }
+  
+  // ... existing mobile user logic ...
+}
 ```
 
-### 2. Explicit Auth Guards
-Add helper functions for resolvers:
+### 2. Add Explicit Admin Guards
+
+Protect admin-only resolvers:
 
 ```typescript
-// lib/graphql/auth-guard.ts
-export function requireAuth(context: GraphQLContext) {
-  if (!context.userId) {
-    throw new GraphQLError("Authentication required");
+import { GraphQLError } from "graphql";
+
+function requireAdmin(context: GraphQLContext) {
+  if (!context.isAdmin) {
+    throw new GraphQLError("Admin access required", {
+      extensions: {
+        code: "FORBIDDEN",
+        http: { status: 403 },
+      },
+    });
   }
 }
 
-// Usage in resolver
-async myProfile(_parent, args, context) {
-  requireAuth(context); // Throws if not authenticated
-  return await prisma.mobileUser.findUnique({ ... });
+// Usage in admin resolvers
+async createAppScreen(_parent, args, context) {
+  requireAdmin(context); // Throws if not admin
+  return await prisma.appScreen.create({ ... });
 }
 ```
 
-### 3. Rate Limiting
+### 3. Separate GraphQL Endpoints (Recommended)
+
+Better approach: Split into two endpoints:
+
+**Option A: Separate Routes**
+```
+/api/graphql/admin  → Admin-only operations
+/api/graphql/mobile → Mobile-only operations
+```
+
+**Option B: Conditional Schema**
+```typescript
+const schema = context.isAdmin ? adminSchema : mobileSchema;
+```
+
+### 4. Rate Limiting
 Add rate limiting to GraphQL endpoint:
 
 ```typescript
@@ -245,12 +325,22 @@ const complexityLimit = createComplexityLimitRule(1000);
 
 ## Summary
 
-**The GraphQL endpoint is properly secured:**
+**The GraphQL endpoint has mixed security:**
 
 - ✅ Middleware blocks all unauthenticated requests
 - ✅ Admin panel authenticated via admin_token cookie
 - ✅ Mobile app authenticated via Bearer token + device session
-- ✅ No public access to GraphQL endpoint
-- ✅ Token verification on every request
+- ❌ **Mobile users CAN access admin-only resolvers** (no context check)
+- ⚠️ Admin resolvers should verify `context.isAdmin`
+- ⚠️ Consider separating admin/mobile GraphQL endpoints
 
-**No immediate security concerns** - the current implementation is solid.
+**Action Required:**
+1. ✅ Update GraphQL context to include admin info
+2. ✅ Add `requireAdmin()` guards to admin resolvers
+3. ⚠️ Consider separate GraphQL endpoints for better security
+4. ✅ Protect admin mutations explicitly
+
+**Current Risk Level: MEDIUM**
+- Mobile users authenticated but could access admin operations
+- Admin operations not explicitly protected by context
+- Relies on middleware only (single layer of defense)

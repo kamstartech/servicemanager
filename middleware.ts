@@ -94,6 +94,26 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
+  // For API routes, check context based on the endpoint
+  if (pathname.startsWith("/api")) {
+    // Admin-only API routes (admin panel operations)
+    const adminOnlyApiRoutes = [
+      "/api/admin",
+      "/api/graphql", // GraphQL has mixed admin/mobile operations
+    ];
+
+    const isAdminOnlyRoute = adminOnlyApiRoutes.some(route => pathname.startsWith(route));
+    
+    // Allow mobile users for GraphQL (they have their own resolvers)
+    // But block non-admin users from admin-specific APIs
+    if (isAdminOnlyRoute && pathname !== "/api/graphql" && user.context !== "ADMIN") {
+      return NextResponse.json(
+        { error: "Forbidden", message: "Admin access required" },
+        { status: 403 }
+      );
+    }
+  }
+
   // User is authenticated, continue
   return NextResponse.next();
 }
