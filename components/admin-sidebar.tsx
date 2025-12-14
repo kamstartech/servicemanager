@@ -177,7 +177,7 @@ export function AdminSidebar() {
 
   return (
     <aside
-      className={`flex flex-col gap-3 border-r bg-sidebar text-sidebar-foreground transition-[width] duration-200 ${
+      className={`sticky top-0 flex h-screen flex-col gap-3 border-r bg-sidebar text-sidebar-foreground transition-[width] duration-200 ${
         collapsed ? "w-16" : "w-64"
       }`}
     >
