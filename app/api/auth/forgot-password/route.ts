@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
+import { emailService } from "@/lib/services/email";
 import crypto from "crypto";
 
 export async function POST(request: NextRequest) {
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
     // Generate reset link
     const resetLink = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/reset-password?token=${token}`;
 
-    // Send email (you'll need to implement this based on your email service)
+    // Send email using the email service
     try {
       await sendPasswordResetEmail(user.email, user.name || "Admin", resetLink);
     } catch (emailError) {
@@ -80,66 +81,68 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Email sending function - implement based on your email service
+// Email sending function with FDH branding
 async function sendPasswordResetEmail(
   email: string,
   name: string,
   resetLink: string
 ) {
-  // TODO: Implement with your email service (e.g., SendGrid, Mailgun, etc.)
-  // For now, we'll just log it
-  console.log(`
-    Password Reset Email:
-    To: ${email}
-    Name: ${name}
-    Reset Link: ${resetLink}
-    
-    Subject: Reset Your FDH Bank Admin Password
-    
-    Hi ${name},
-    
-    You requested to reset your password for the FDH Bank Admin Panel.
-    
-    Click the link below to reset your password:
-    ${resetLink}
-    
-    This link will expire in 1 hour.
-    
-    If you didn't request this, please ignore this email.
-    
-    Best regards,
-    FDH Bank Admin Team
-  `);
-
-  // Example with nodemailer (uncomment and configure if using):
-  /*
-  const nodemailer = require('nodemailer');
-  
-  const transporter = nodemailer.createTransporter({
-    host: process.env.SMTP_HOST,
-    port: process.env.SMTP_PORT,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASSWORD,
-    },
-  });
-
-  await transporter.sendMail({
-    from: process.env.SMTP_FROM,
+  await emailService.sendEmail({
     to: email,
-    subject: 'Reset Your FDH Bank Admin Password',
+    subject: "Reset Your FDH Bank Admin Password",
+    text: `Hello ${name},\n\nYou requested to reset your password for the FDH Bank Admin Panel.\n\nClick the link below to reset your password:\n${resetLink}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this, please ignore this email.\n\nBest regards,\nFDH Bank Admin Team`,
     html: `
-      <h2>Reset Your Password</h2>
-      <p>Hi ${name},</p>
-      <p>You requested to reset your password for the FDH Bank Admin Panel.</p>
-      <p>Click the button below to reset your password:</p>
-      <a href="${resetLink}" style="display: inline-block; padding: 12px 24px; background-color: #f59e0b; color: white; text-decoration: none; border-radius: 9999px; font-weight: 600;">Reset Password</a>
-      <p>Or copy and paste this link:</p>
-      <p>${resetLink}</p>
-      <p>This link will expire in 1 hour.</p>
-      <p>If you didn't request this, please ignore this email.</p>
-      <p>Best regards,<br>FDH Bank Admin Team</p>
+      <div style="font-family: 'Poppins', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #154E9E; margin: 0;">FDH Bank</h1>
+          <p style="color: #666; margin-top: 5px;">Admin Panel</p>
+        </div>
+        
+        <div style="background-color: #f8f9fa; padding: 30px; border-radius: 10px;">
+          <h2 style="color: #154E9E; margin-top: 0;">Reset Your Password</h2>
+          <p style="color: #333; line-height: 1.6;">Hello ${name},</p>
+          <p style="color: #333; line-height: 1.6;">
+            You requested to reset your password for the FDH Bank Admin Panel.
+          </p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetLink}" 
+               style="display: inline-block; 
+                      padding: 14px 32px; 
+                      background-color: #f59e0b; 
+                      color: white; 
+                      text-decoration: none; 
+                      border-radius: 9999px; 
+                      font-weight: 600;
+                      font-size: 16px;">
+              Reset Password
+            </a>
+          </div>
+          
+          <p style="color: #666; font-size: 14px; line-height: 1.6;">
+            Or copy and paste this link into your browser:
+          </p>
+          <p style="color: #154E9E; word-break: break-all; font-size: 14px;">
+            ${resetLink}
+          </p>
+          
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+            <p style="color: #666; font-size: 13px; line-height: 1.6;">
+              <strong>⏰ This link will expire in 1 hour.</strong>
+            </p>
+            <p style="color: #666; font-size: 13px; line-height: 1.6;">
+              If you didn't request this password reset, please ignore this email. 
+              Your password will remain unchanged.
+            </p>
+          </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px; color: #999; font-size: 12px;">
+          <p>© ${new Date().getFullYear()} FDH Bank. All rights reserved.</p>
+          <p>This is an automated message, please do not reply.</p>
+        </div>
+      </div>
     `,
   });
-  */
 }
+

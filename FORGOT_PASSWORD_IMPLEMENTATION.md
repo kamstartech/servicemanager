@@ -117,66 +117,50 @@ model AdminWebPasswordResetToken {
 
 ## Email Integration
 
-The email sending function is stubbed out in `/api/auth/forgot-password/route.ts`.
+✅ **Integrated with MailHog** - Email service is configured and ready to use!
 
 ### Current Implementation
-- Logs email content to console
-- Contains commented example with nodemailer
+- Uses existing `EmailService` from `@/lib/services/email`
+- Sends emails via MailHog (SMTP on port 1025)
+- FDH-branded HTML email template
+- Includes both plain text and HTML versions
 
-### To Enable Email Sending
+### Email Template Features
+- **FDH Bank branding** - Blue (#154E9E) and Orange (#f59e0b) colors
+- **Poppins font** - Consistent with UI
+- **Responsive design** - Works on all devices
+- **Clear call-to-action** - Orange button matching brand
+- **Security information** - Expiration time and security notice
+- **Professional footer** - Copyright and automated message notice
 
-#### Option 1: Using Nodemailer (SMTP)
-Add to `.env`:
-```env
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USER=your-email@example.com
-SMTP_PASSWORD=your-password
-SMTP_FROM=noreply@fdhbank.com
-```
+### MailHog Access
+When running in development with Docker Compose:
+- **SMTP Server**: localhost:1025 (for sending)
+- **Web UI**: http://localhost:8025 (to view emails)
 
-Uncomment the nodemailer code in the forgot-password route.
-
-#### Option 2: Using SendGrid
-```typescript
-import sgMail from '@sendgrid/mail';
-
-sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
-
-await sgMail.send({
-  to: email,
-  from: 'noreply@fdhbank.com',
-  subject: 'Reset Your FDH Bank Admin Password',
-  html: `...`,
-});
-```
-
-#### Option 3: Using Existing Email Service
-The project already has MailHog configured. Update the function to use:
-```typescript
-import { sendEmail } from '@/lib/services/email';
-
-await sendEmail({
-  to: email,
-  subject: 'Reset Your FDH Bank Admin Password',
-  html: `...`,
-});
-```
+All password reset emails will appear in the MailHog web interface where you can:
+- View the email content
+- Click the reset link directly
+- Test the full flow
 
 ## Environment Variables
 
-Add to `.env`:
+Already configured for MailHog in docker-compose.yml:
 ```env
 # Required for password reset links
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 
-# Optional: Email service configuration
+# Email service (MailHog - already configured)
 SMTP_HOST=mailhog
 SMTP_PORT=1025
+SMTP_SECURE=false
 SMTP_USER=
 SMTP_PASSWORD=
 SMTP_FROM=noreply@fdhbank.com
 ```
+
+**Note**: When running with Docker Compose, `SMTP_HOST` should be `mailhog` (the service name).
+When running locally without Docker, use `localhost`.
 
 ## Testing
 
@@ -197,11 +181,12 @@ SMTP_FROM=noreply@fdhbank.com
    - Navigate to `/login`
    - Click "Forgot your password?"
    - Enter admin email
-   - Check console for email output
+   - Open MailHog web UI at http://localhost:8025
+   - Click on the password reset email
+   - Copy the reset link from the email
 
 4. **Test reset password**
-   - Copy token from console email
-   - Navigate to `/reset-password?token=YOUR_TOKEN`
+   - Click the reset link in the email (or navigate manually)
    - Enter new password
    - Submit and verify redirect
 
@@ -289,9 +274,10 @@ SMTP_FROM=noreply@fdhbank.com
 ## Troubleshooting
 
 ### Emails not sending
-- Check SMTP configuration
-- Verify MailHog is running (docker-compose)
-- Check console logs for email output
+- Check SMTP configuration in .env
+- Verify MailHog container is running: `docker ps | grep mailhog`
+- Check MailHog logs: `docker logs service_manager_mailhog`
+- Access MailHog UI: http://localhost:8025
 
 ### Token errors
 - Verify database connection
