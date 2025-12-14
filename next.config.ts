@@ -3,11 +3,6 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   
-  // Ensure instrumentation runs in Node.js runtime, not Edge
-  experimental: {
-    instrumentationHook: true,
-  },
-  
   // Allow Cloudflare Web Analytics (Insights) when using tunnel
   async headers() {
     return [

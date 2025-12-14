@@ -1,3 +1,7 @@
+> ⚠️ **ARCHIVED** - Implementation Completed
+> This was the implementation plan from 2024-12-13. The system is now fully implemented.
+> See [BILLER_TRANSACTION_PROCESSING.md](../features/BILLER_TRANSACTION_PROCESSING.md) and [MOBILE_BILLER_INTEGRATION.md](../features/MOBILE_BILLER_INTEGRATION.md) for current documentation.
+
 # Billers Implementation Plan - Next.js Admin Panel (Standalone)
 
 **Date**: 2025-12-13  

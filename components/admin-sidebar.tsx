@@ -24,6 +24,9 @@ import {
   Settings,
   Shield,
   Wrench,
+  LayoutDashboard,
+  Key,
+  Layers,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -53,14 +56,18 @@ function NavItem({
   const button = (
     <Button
       asChild
-      variant={active ? "default" : "ghost"}
+      variant="ghost"
       size="sm"
-      className={`w-full ${
+      className={`w-full text-white transition-all duration-300 ${
         collapsed ? "justify-center px-2" : "justify-start gap-2"
+      } ${
+        active 
+          ? "bg-fdh-light-blue" 
+          : "hover:bg-white/20 hover:translate-x-1"
       }`}
     >
       <Link href={href}>
-        <Icon className="h-4 w-4 shrink-0" />
+        <Icon className="h-4 w-4 shrink-0 text-fdh-orange" />
         {!collapsed && <span className="truncate">{label}</span>}
       </Link>
     </Button>
@@ -99,13 +106,13 @@ function SectionHeader({
     <button
       type="button"
       onClick={onToggle}
-      className={`flex w-full items-center rounded-md px-2 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${
+      className={`flex w-full items-center rounded-md px-2 py-2 text-xs font-semibold uppercase tracking-wide text-white/80 transition-colors hover:bg-white/20 hover:text-white ${
         collapsed ? "justify-center" : "justify-between"
       }`}
       aria-expanded={isOpen}
     >
       <span className="flex items-center gap-2">
-        <Icon className="h-4 w-4 shrink-0" />
+        <Icon className="h-4 w-4 shrink-0 text-fdh-orange" />
         {!collapsed && <span>{label}</span>}
       </span>
       {!collapsed && (
@@ -177,27 +184,35 @@ export function AdminSidebar() {
 
   return (
     <aside
-      className={`sticky top-0 flex h-screen flex-col gap-3 border-r bg-sidebar text-sidebar-foreground transition-[width] duration-200 ${
+      className={`sticky top-0 flex h-screen flex-col gap-3 bg-fdh-blue text-white transition-[width] duration-200 rounded-tr-3xl rounded-br-3xl ${
         collapsed ? "w-16" : "w-64"
       }`}
     >
-      {/* Header */}
-      <div className="flex items-center gap-2 border-b px-3 py-4">
-        {!collapsed && (
-          <div className="flex flex-1 flex-col">
-            <h1 className="text-lg font-semibold tracking-tight">
-              {translate("sidebar.title")}
-            </h1>
-            <p className="text-xs text-muted-foreground">
-              {translate("sidebar.subtitle")}
-            </p>
+      {/* Header with Logo */}
+      <div className="flex flex-col items-center px-4 pt-6">
+        {!collapsed ? (
+          <>
+            <img 
+              src="/images/logo/whitelogo.svg" 
+              alt="FDH Logo" 
+              className="w-3/4 max-w-[150px] mb-6" 
+            />
+            <div className="w-full h-0.5 bg-fdh-orange mb-4"></div>
+          </>
+        ) : (
+          <div className="mb-4">
+            <img 
+              src="/images/logo/whitelogo.svg" 
+              alt="FDH Logo" 
+              className="w-8 h-8 object-contain" 
+            />
           </div>
         )}
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="shrink-0"
+          className="shrink-0 text-white hover:bg-fdh-light-blue"
           onClick={() => setCollapsed((prev) => !prev)}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
@@ -206,15 +221,19 @@ export function AdminSidebar() {
       </div>
 
       {/* Scrollable Navigation */}
-      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 pb-2">
+      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 pb-2 sidebar-scroll">
         {/* Language Switcher - Compact */}
         {!collapsed && (
-          <div className="mb-2 flex items-center justify-center gap-1 rounded-md bg-sidebar-accent/50 p-1">
+          <div className="mb-2 flex items-center justify-center gap-1 rounded-md bg-white/10 p-1">
             <Button
               type="button"
               variant={locale === "en" ? "default" : "ghost"}
               size="sm"
-              className="h-7 flex-1 text-xs"
+              className={`h-7 flex-1 text-xs ${
+                locale === "en" 
+                  ? "bg-fdh-orange text-white hover:bg-fdh-orange/90" 
+                  : "text-white hover:bg-white/20"
+              }`}
               onClick={() => setLocale("en")}
             >
               EN
@@ -223,13 +242,27 @@ export function AdminSidebar() {
               type="button"
               variant={locale === "pt" ? "default" : "ghost"}
               size="sm"
-              className="h-7 flex-1 text-xs"
+              className={`h-7 flex-1 text-xs ${
+                locale === "pt" 
+                  ? "bg-fdh-orange text-white hover:bg-fdh-orange/90" 
+                  : "text-white hover:bg-white/20"
+              }`}
               onClick={() => setLocale("pt")}
             >
               PT
             </Button>
           </div>
         )}
+
+        {/* Dashboard Link */}
+        <div className="mb-2">
+          <NavItem
+            href="/"
+            icon={LayoutDashboard}
+            label="Dashboard"
+            collapsed={collapsed}
+          />
+        </div>
 
         {/* Mobile Banking Section */}
         <div className="space-y-1">
@@ -292,6 +325,12 @@ export function AdminSidebar() {
                 href="/wallet/users"
                 icon={Users}
                 label={translate("sidebar.users")}
+                collapsed={collapsed}
+              />
+              <NavItem
+                href="/wallet/tiers"
+                icon={Layers}
+                label="Tiers"
                 collapsed={collapsed}
               />
             </div>
@@ -394,6 +433,12 @@ export function AdminSidebar() {
                 collapsed={collapsed}
               />
               <NavItem
+                href="/system/third-party"
+                icon={Key}
+                label="Third-Party API"
+                collapsed={collapsed}
+              />
+              <NavItem
                 href="/services"
                 icon={Activity}
                 label="Services Monitor"
@@ -405,13 +450,20 @@ export function AdminSidebar() {
       </nav>
 
       {/* Profile - Sticky Bottom */}
-      <div className="border-t px-2 py-3">
-        <NavItem
-          href="/profile"
-          icon={UserCog}
-          label="Profile"
-          collapsed={collapsed}
-        />
+      <div className="border-t border-white/20 px-2 py-3">
+        <Button
+          asChild
+          variant="ghost"
+          size="sm"
+          className={`w-full text-white transition-all duration-300 hover:bg-white/20 hover:translate-x-1 ${
+            collapsed ? "justify-center px-2" : "justify-start gap-2"
+          }`}
+        >
+          <Link href="/profile">
+            <UserCog className="h-4 w-4 shrink-0 text-fdh-orange" />
+            {!collapsed && <span className="truncate">Profile</span>}
+          </Link>
+        </Button>
       </div>
     </aside>
   );

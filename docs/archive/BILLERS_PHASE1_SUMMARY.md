@@ -1,3 +1,7 @@
+> ⚠️ **ARCHIVED** - Superseded by [BILLER_TRANSACTION_PROCESSING.md](../features/BILLER_TRANSACTION_PROCESSING.md) and [MOBILE_BILLER_INTEGRATION.md](../features/MOBILE_BILLER_INTEGRATION.md)
+> This was the Phase 1 summary from initial implementation on 2024-12-13.
+> The system has been completed and is now fully operational.
+
 # Billers Implementation - Phase 1 Summary
 
 **Date**: 2025-12-13  

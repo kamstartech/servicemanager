@@ -1,3 +1,7 @@
+> ⚠️ **ARCHIVED** - Superseded by [BILLER_TRANSACTION_PROCESSING.md](../features/BILLER_TRANSACTION_PROCESSING.md)
+> The Elixir backend has been replaced with Next.js implementation on 2024-12-14.
+> This document describes the old Phoenix/Elixir architecture which is no longer used.
+
 # Billers Implementation - Elixir Backend Summary
 
 **Date**: 2025-12-13  

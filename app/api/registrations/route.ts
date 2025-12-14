@@ -5,12 +5,28 @@ import type {
   ThirdPartyRegistrationRequest, 
   RequestedRegistrationCreate 
 } from '@/types/registration';
+import { autoProcessRegistration } from '@/lib/services/registration-processor';
+import {
+  verifyThirdPartyRequest,
+  logThirdPartyAccess,
+} from "@/lib/middleware/verify-third-party-token";
 
 /**
  * POST /api/registrations
  * Create a new registration request (called by third-party systems or webhooks)
+ * Automatically triggers processing after creation
+ * Requires valid JWT Bearer token with registrations:create permission
  */
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+
+  // Verify third-party token
+  const auth = await verifyThirdPartyRequest(request, ["registrations:create"]);
+
+  if (!auth.authorized) {
+    return auth.response;
+  }
+
   try {
     const body: ThirdPartyRegistrationRequest = await request.json();
     
@@ -75,16 +91,45 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    console.log(`📝 Registration ${registration.id} created, triggering auto-processing...`);
+
+    // Trigger auto-processing asynchronously (don't wait for it)
+    autoProcessRegistration(registration.id).catch(error => {
+      console.error(`Failed to auto-process registration ${registration.id}:`, error);
+    });
+
+    // Log successful access
+    const responseTime = Date.now() - startTime;
+    logThirdPartyAccess(
+      auth.clientId!,
+      null,
+      request,
+      201,
+      responseTime
+    ).catch(console.error);
+
     return NextResponse.json(
       {
         success: true,
         data: registration,
-        message: 'Registration request created successfully',
+        message: 'Registration request created and processing started',
       },
       { status: 201 }
     );
   } catch (error) {
     console.error('Error creating registration request:', error);
+
+    // Log error access
+    const responseTime = Date.now() - startTime;
+    logThirdPartyAccess(
+      auth.clientId!,
+      null,
+      request,
+      500,
+      responseTime,
+      error instanceof Error ? error.message : "Unknown error"
+    ).catch(console.error);
+
     return NextResponse.json(
       { error: 'Failed to create registration request' },
       { status: 500 }

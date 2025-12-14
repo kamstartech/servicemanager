@@ -40,17 +40,23 @@ export function CheckbookRequestsMenu({ collapsed }: { collapsed: boolean }) {
   return (
     <Button
       asChild
-      variant={isActive ? "default" : "ghost"}
+      variant="ghost"
       size="sm"
-      className={`w-full ${collapsed ? "justify-center" : "justify-start gap-2"}`}
+      className={`w-full text-white transition-all duration-300 ${
+        collapsed ? "justify-center px-2" : "justify-start gap-2"
+      } ${
+        isActive 
+          ? "bg-fdh-light-blue" 
+          : "hover:bg-white/20 hover:translate-x-1"
+      }`}
     >
       <Link href="/mobile-banking/checkbook-requests">
-        <BookOpen className="h-4 w-4" />
+        <BookOpen className="h-4 w-4 shrink-0 text-fdh-orange" />
         {!collapsed && (
           <>
-            <span className="flex-1">Checkbook Requests</span>
+            <span className="flex-1 truncate">Checkbook Requests</span>
             {!loading && totalCount > 0 && (
-              <Badge variant="secondary" className="ml-auto text-xs">
+              <Badge variant="secondary" className="ml-auto text-xs bg-fdh-orange text-white">
                 {totalCount}
               </Badge>
             )}

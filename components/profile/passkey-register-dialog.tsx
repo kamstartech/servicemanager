@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { startRegistration } from "@simplewebauthn/browser";
 
 interface PasskeyRegisterDialogProps {
   open: boolean;
@@ -37,56 +38,28 @@ export function PasskeyRegisterDialog({
 
     setRegistering(true);
     try {
-      // Check if WebAuthn is supported
-      if (!window.PublicKeyCredential) {
-        toast.error("WebAuthn is not supported on this device");
-        return;
-      }
-
       // Start registration - get options from server
       const optionsResponse = await fetch("/api/profile/passkeys/register/start", {
         method: "POST",
       });
 
       if (!optionsResponse.ok) {
-        throw new Error("Failed to start registration");
+        const error = await optionsResponse.json();
+        console.error("Registration start error:", error);
+        throw new Error(error.error || "Failed to start registration");
       }
 
       const { options } = await optionsResponse.json();
 
-      // Create credential
-      const credential = await navigator.credentials.create({
-        publicKey: {
-          ...options,
-          challenge: Uint8Array.from(atob(options.challenge), c => c.charCodeAt(0)),
-          user: {
-            ...options.user,
-            id: Uint8Array.from(atob(options.user.id), c => c.charCodeAt(0)),
-          },
-        },
-      }) as PublicKeyCredential;
-
-      if (!credential) {
-        throw new Error("Failed to create credential");
-      }
-
-      // Get response data
-      const response = credential.response as AuthenticatorAttestationResponse;
+      // Use SimpleWebAuthn browser library
+      const credential = await startRegistration(options);
       
       // Complete registration
       const completeResponse = await fetch("/api/profile/passkeys/register/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          credential: {
-            id: credential.id,
-            rawId: btoa(String.fromCharCode(...new Uint8Array(credential.rawId))),
-            response: {
-              clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(response.clientDataJSON))),
-              attestationObject: btoa(String.fromCharCode(...new Uint8Array(response.attestationObject))),
-            },
-            type: credential.type,
-          },
+          credential,
           deviceName,
         }),
       });

@@ -15,6 +15,84 @@
   - `npx shadcn@latest init` in the `admin` folder.
   - Follow prompts for Next.js + TypeScript + Tailwind CSS + App Router.
 
+## Forms & Validation
+
+- **Standard approach:** Use **React 19 Server Actions** with **zod** for validation.
+- **Do NOT use** `react-hook-form` or `@hookform/resolvers` - they are legacy patterns.
+- Server Actions provide:
+  - Progressive enhancement (works without JavaScript)
+  - Built-in pending states with `useActionState`
+  - Type-safe form handling
+  - Server-side validation with zod
+
+### Form Implementation Pattern
+
+1. **Create Server Action** in `lib/actions/`:
+```typescript
+'use server';
+import { z } from 'zod';
+import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
+
+const schema = z.object({
+  name: z.string().min(1),
+  email: z.string().email(),
+});
+
+export type FormState = {
+  errors?: { name?: string[]; email?: string[]; _form?: string[] };
+  success?: boolean;
+};
+
+export async function createItem(prevState: FormState, formData: FormData): Promise<FormState> {
+  const validatedFields = schema.safeParse({
+    name: formData.get('name'),
+    email: formData.get('email'),
+  });
+
+  if (!validatedFields.success) {
+    return { errors: validatedFields.error.flatten().fieldErrors };
+  }
+
+  try {
+    // Database operations
+    revalidatePath('/items');
+  } catch (error) {
+    return { errors: { _form: ['Failed to create item'] } };
+  }
+
+  redirect('/items');
+}
+```
+
+2. **Use in Component**:
+```typescript
+'use client';
+import { useActionState } from 'react';
+
+export function ItemForm({ action }) {
+  const [state, formAction, pending] = useActionState(action, {});
+
+  return (
+    <form action={formAction}>
+      {state.errors?._form && <div className="text-red-600">{state.errors._form}</div>}
+      
+      <input name="name" required />
+      {state.errors?.name && <p className="text-red-600">{state.errors.name}</p>}
+      
+      <button disabled={pending}>{pending ? 'Saving...' : 'Submit'}</button>
+    </form>
+  );
+}
+```
+
+3. **Benefits**:
+   - No client-side dependencies for basic forms
+   - Type-safe with zod schemas
+   - Works with and without JavaScript
+   - Built-in error handling and pending states
+   - Simpler than react-hook-form patterns
+
 ## GraphQL & Backend Architecture
 
 - The **GraphQL server lives inside the Next.js admin app** at `/api/graphql`.

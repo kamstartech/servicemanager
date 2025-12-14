@@ -13,6 +13,12 @@ const publicRoutes = [
   "/api/auth/reset-password",
 ];
 
+// Third-party API routes (handled by endpoint-level JWT verification)
+const thirdPartyRoutes = [
+  "/api/registrations/status",
+  "/api/registrations",
+];
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -37,6 +43,11 @@ export async function middleware(request: NextRequest) {
 
   // Allow public routes
   if (publicRoutes.some((route) => pathname.startsWith(route))) {
+    return NextResponse.next();
+  }
+
+  // Allow third-party routes (they have their own JWT verification)
+  if (thirdPartyRoutes.some((route) => pathname.startsWith(route))) {
     return NextResponse.next();
   }
 

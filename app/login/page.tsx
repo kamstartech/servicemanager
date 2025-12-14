@@ -5,6 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { PasskeyLogin } from "@/components/auth/passkey-login";
+import { Key } from "lucide-react";
 
 function LoginForm() {
   const router = useRouter();
@@ -14,6 +16,7 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [usePasskey, setUsePasskey] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,6 +55,13 @@ function LoginForm() {
     }
   };
 
+  const handlePasskeySuccess = () => {
+    toast.success("Login successful! Redirecting...");
+    setTimeout(() => {
+      window.location.href = redirect;
+    }, 100);
+  };
+
   return (
     <div className="flex h-screen">
       {/* Left side - Login Form */}
@@ -72,7 +82,37 @@ function LoginForm() {
             <h2 className="text-4xl font-bold text-[#154E9E]">Sign In</h2>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Toggle between password and passkey */}
+          <div className="flex gap-2 mb-6">
+            <button
+              type="button"
+              onClick={() => setUsePasskey(false)}
+              className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${
+                !usePasskey
+                  ? "bg-[#154E9E] text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              Password
+            </button>
+            <button
+              type="button"
+              onClick={() => setUsePasskey(true)}
+              className={`flex-1 py-2 px-4 rounded-lg font-medium transition flex items-center justify-center gap-2 ${
+                usePasskey
+                  ? "bg-[#154E9E] text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              <Key className="h-4 w-4" />
+              Passkey
+            </button>
+          </div>
+
+          {usePasskey ? (
+            <PasskeyLogin onSuccess={handlePasskeySuccess} />
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label
                 htmlFor="email"
@@ -126,6 +166,7 @@ function LoginForm() {
               {isLoading ? "Logging in..." : "Log in →"}
             </button>
           </form>
+          )}
         </div>
       </div>
 

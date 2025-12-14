@@ -149,9 +149,11 @@ docs/architecture/
 - `docs/features/WORKFLOW_STEPS_*.md`
 
 **Billers & Payments**
-- `docs/features/BILLERS_README.md`
-- `docs/features/BILLERS_QUICK_START.md`
-- `docs/features/BILLERS_WORKFLOW_INTEGRATION.md`
+- `docs/features/BILLERS_README.md` - Complete billers system overview
+- `docs/features/BILLER_TRANSACTION_PROCESSING.md` - Backend transaction processing (Layer 1)
+- `docs/features/MOBILE_BILLER_INTEGRATION.md` - Mobile GraphQL API (Layer 2)
+- `docs/features/BILLERS_WORKFLOW_INTEGRATION.md` - Workflow integration
+- `docs/quick-references/BILLERS_QUICK_START.md` - Quick start guide
 
 **Transactions & Accounts**
 - `docs/features/TRANSACTION_*.md`

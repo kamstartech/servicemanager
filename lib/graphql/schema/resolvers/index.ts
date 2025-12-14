@@ -26,10 +26,12 @@ import { workflowResolvers } from "./workflow";
 import { workflowStepResolvers } from "./workflowStep";
 import { workflowExecutionResolvers } from "./workflowExecution";
 import { billersResolvers } from "./billers";
-import { JSONResolver } from "graphql-scalars";
+import { walletTierResolvers } from "./walletTier";
+import { JSONResolver, DateTimeResolver } from "graphql-scalars";
 
 export const resolvers = {
   JSON: JSONResolver,
+  DateTime: DateTimeResolver,
   MobileUser: {
     ...mobileUserResolvers.MobileUser,
   },
@@ -56,6 +58,7 @@ export const resolvers = {
     ...workflowStepResolvers.Query,
     ...workflowExecutionResolvers.Query,
     ...billersResolvers.Query,
+    ...walletTierResolvers.Query,
   },
   Mutation: {
     ...authResolvers.Mutation,
@@ -83,6 +86,7 @@ export const resolvers = {
     ...workflowStepResolvers.Mutation,
     ...workflowExecutionResolvers.Mutation,
     ...billersResolvers.Mutation,
+    ...walletTierResolvers.Mutation,
   },
   CoreBankingConnection: {
     ...coreBankingEndpointResolvers.CoreBankingConnection,
@@ -101,6 +105,12 @@ export const resolvers = {
   },
   AppScreenPageWorkflow: {
     ...workflowResolvers.AppScreenPageWorkflow,
+  },
+  WalletTier: {
+    ...walletTierResolvers.WalletTier,
+  },
+  Transaction: {
+    ...transactionResolvers.Transaction,
   },
   Subscription: {
     ...subscriptionResolvers.Subscription,

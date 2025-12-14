@@ -6,11 +6,13 @@ export async function register() {
         const { accountDiscoveryService } = await import('@/lib/services/background/account-discovery');
         const { accountEnrichmentService } = await import('@/lib/services/background/account-enrichment');
         const { alertSettingsService } = await import('@/lib/services/background/alert-settings');
+        const { startTransactionProcessorJob } = await import('@/lib/jobs/transaction-processor-job');
         
         migrationScheduler.init();
         balanceSyncService.start();
         accountDiscoveryService.start();
         accountEnrichmentService.start();
         alertSettingsService.start();
+        startTransactionProcessorJob();
     }
 }

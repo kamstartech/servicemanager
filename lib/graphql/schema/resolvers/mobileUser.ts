@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db/prisma";
 import { pubsub, EVENTS } from "../../pubsub";
+import { WalletTierService } from "@/lib/services/wallet-tiers";
 
 type MobileUsersArguments = {
   context?: string;
@@ -91,6 +92,30 @@ export const mobileUserResolvers = {
         createdAt: profile.createdAt.toISOString(),
         updatedAt: profile.updatedAt.toISOString(),
       };
+    },
+
+    // Field resolver for wallet tier (for WALLET context users)
+    async walletTier(parent: any) {
+      if (parent.context !== 'WALLET') return null;
+
+      const kyc = await prisma.mobileUserKYC.findUnique({
+        where: { mobileUserId: parent.id },
+        include: { walletTier: true }
+      });
+
+      if (!kyc?.walletTier) return null;
+
+      return {
+        id: kyc.walletTier.id,
+        name: kyc.walletTier.name,
+        position: kyc.walletTier.position,
+        maximumBalance: kyc.walletTier.maximumBalance,
+        maxTransactionAmount: kyc.walletTier.maxTransactionAmount,
+        dailyTransactionLimit: kyc.walletTier.dailyTransactionLimit,
+        monthlyTransactionLimit: kyc.walletTier.monthlyTransactionLimit,
+        dailyTransactionCount: kyc.walletTier.dailyTransactionCount,
+        monthlyTransactionCount: kyc.walletTier.monthlyTransactionCount,
+      };
     }
   },
 
@@ -125,6 +150,20 @@ export const mobileUserResolvers = {
           passwordHash: args.input.passwordHash,
         },
       });
+
+      // If WALLET context, automatically set up wallet account and assign default tier
+      if (args.input.context === 'WALLET') {
+        try {
+          // Assign default tier
+          await WalletTierService.assignDefaultTier(user.id);
+          
+          // Create wallet account (phoneNumber as accountNumber)
+          await WalletTierService.getOrCreateWalletAccount(user.id);
+        } catch (error) {
+          console.error('Error setting up wallet for new user:', error);
+          // Don't fail user creation if tier/account setup fails
+        }
+      }
 
       const formattedUser = {
         id: user.id,

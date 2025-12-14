@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
+import { generateRegistrationOptions } from "@simplewebauthn/server";
+import { isoUint8Array } from "@simplewebauthn/server/helpers";
+import { redis } from "@/lib/db/redis";
+
+const RP_ID = process.env.NEXT_PUBLIC_RP_ID || "localhost";
+const RP_NAME = "Admin Panel";
 
 export const POST = withAuth(async (request: NextRequest, user: any) => {
   try {
@@ -15,32 +21,26 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
       );
     }
 
-    // Generate challenge
-    const challenge = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url');
-    
-    const options = {
-      challenge,
-      rp: {
-        name: "Admin Panel",
-        id: process.env.NEXT_PUBLIC_RP_ID || "localhost",
-      },
-      user: {
-        id: Buffer.from(user.userId.toString()).toString('base64url'),
-        name: adminUser.email,
-        displayName: adminUser.name || adminUser.email,
-      },
-      pubKeyCredParams: [
-        { type: "public-key", alg: -7 },  // ES256
-        { type: "public-key", alg: -257 }, // RS256
-      ],
+    // Generate registration options
+    const options = await generateRegistrationOptions({
+      rpName: RP_NAME,
+      rpID: RP_ID,
+      userID: isoUint8Array.fromUTF8String(user.userId.toString()),
+      userName: adminUser.email,
+      userDisplayName: adminUser.name || adminUser.email,
       timeout: 60000,
-      attestation: "none",
+      attestationType: "none",
       authenticatorSelection: {
         authenticatorAttachment: "platform",
         requireResidentKey: false,
+        residentKey: "preferred",
         userVerification: "preferred",
       },
-    };
+    });
+
+    // Store challenge in Redis with 5-minute expiry
+    const challengeKey = `passkey:reg:challenge:${user.userId}`;
+    await redis.setex(challengeKey, 300, options.challenge);
 
     return NextResponse.json({ options });
   } catch (error: any) {

@@ -1,5 +1,6 @@
 export const typeDefs = /* GraphQL */ `
   scalar JSON
+  scalar DateTime
 
   enum MobileUserContext {
     MOBILE_BANKING
@@ -33,6 +34,12 @@ export const typeDefs = /* GraphQL */ `
   enum TransactionType {
     DEBIT
     CREDIT
+    TRANSFER
+    WALLET_TRANSFER
+    WALLET_DEBIT
+    WALLET_CREDIT
+    ACCOUNT_TO_WALLET
+    WALLET_TO_ACCOUNT
   }
 
   enum SuspicionReason {
@@ -159,9 +166,22 @@ export const typeDefs = /* GraphQL */ `
     accounts: [Account!]!
     primaryAccount: Account
     profile: MobileUserProfile
+    walletTier: MobileUserWalletTier
     isActive: Boolean!
     createdAt: String!
     updatedAt: String!
+  }
+
+  type MobileUserWalletTier {
+    id: Int!
+    name: String!
+    position: Int!
+    maximumBalance: Float!
+    maxTransactionAmount: Float!
+    dailyTransactionLimit: Float!
+    monthlyTransactionLimit: Float!
+    dailyTransactionCount: Int!
+    monthlyTransactionCount: Int!
   }
 
   type MobileUserProfile {
@@ -1570,5 +1590,296 @@ export const typeDefs = /* GraphQL */ `
     
     # Retry failed transaction
     billerRetryTransaction(transactionId: ID!): BillerPaymentResult!
+  }
+  
+  # ============================================
+  # Wallet Tiers System
+  # ============================================
+  
+  type WalletTier {
+    id: Int!
+    name: String!
+    description: String
+    position: Int!
+    isDefault: Boolean!
+    
+    minimumBalance: Float!
+    maximumBalance: Float!
+    maximumCreditLimit: Float!
+    maximumDebtLimit: Float!
+    
+    minTransactionAmount: Float!
+    maxTransactionAmount: Float!
+    dailyTransactionLimit: Float!
+    monthlyTransactionLimit: Float!
+    
+    dailyTransactionCount: Int!
+    monthlyTransactionCount: Int!
+    
+    requiredKycFields: [String!]!
+    kycRules: JSON!
+    
+    createdAt: DateTime!
+    updatedAt: DateTime!
+    
+    walletUsersCount: Int!
+  }
+  
+  type MobileUserKYC {
+    id: Int!
+    mobileUserId: Int!
+    
+    walletTierId: Int
+    walletTier: WalletTier
+    
+    dateOfBirth: DateTime
+    occupation: String
+    employerName: String
+    sourceOfFunds: String
+    idNumber: String
+    idImage: String
+    
+    kycComplete: Boolean!
+    kycVerifiedAt: DateTime
+    
+    nrbValidation: Boolean
+    nrbResponseCode: Int
+    nrbResponseMessage: String
+    nrbStatus: String
+    nrbStatusReason: String
+    
+    createdAt: DateTime!
+    updatedAt: DateTime!
+  }
+  
+  input CreateWalletTierInput {
+    name: String!
+    description: String
+    position: Int!
+    isDefault: Boolean
+    
+    minimumBalance: Float!
+    maximumBalance: Float!
+    maximumCreditLimit: Float
+    maximumDebtLimit: Float
+    
+    minTransactionAmount: Float!
+    maxTransactionAmount: Float!
+    dailyTransactionLimit: Float!
+    monthlyTransactionLimit: Float!
+    
+    dailyTransactionCount: Int!
+    monthlyTransactionCount: Int!
+    
+    requiredKycFields: [String!]
+    kycRules: JSON
+  }
+  
+  input UpdateWalletTierInput {
+    name: String
+    description: String
+    position: Int
+    isDefault: Boolean
+    
+    minimumBalance: Float
+    maximumBalance: Float
+    maximumCreditLimit: Float
+    maximumDebtLimit: Float
+    
+    minTransactionAmount: Float
+    maxTransactionAmount: Float
+    dailyTransactionLimit: Float
+    monthlyTransactionLimit: Float
+    
+    dailyTransactionCount: Int
+    monthlyTransactionCount: Int
+    
+    requiredKycFields: [String!]
+    kycRules: JSON
+  }
+  
+  input UpdateMobileUserKYCInput {
+    dateOfBirth: DateTime
+    occupation: String
+    employerName: String
+    sourceOfFunds: String
+    idNumber: String
+    idImage: String
+    walletTierId: Int
+  }
+  
+  input TierPositionInput {
+    id: Int!
+    position: Int!
+  }
+  
+  extend type Query {
+    walletTiers: [WalletTier!]!
+    walletTier(id: Int!): WalletTier
+    defaultWalletTier: WalletTier
+    mobileUserKYC(mobileUserId: Int!): MobileUserKYC
+  }
+  
+  extend type Mutation {
+    createWalletTier(input: CreateWalletTierInput!): WalletTier!
+    updateWalletTier(id: Int!, input: UpdateWalletTierInput!): WalletTier!
+    deleteWalletTier(id: Int!): Boolean!
+    reorderWalletTiers(positions: [TierPositionInput!]!): [WalletTier!]!
+    
+    updateMobileUserKYC(mobileUserId: Int!, input: UpdateMobileUserKYCInput!): MobileUserKYC!
+    upgradeWalletUserTier(mobileUserId: Int!, newTierId: Int!): MobileUserKYC!
+  }
+  
+  # ============================================
+  # TRANSACTION SYSTEM (PROXY)
+  # ============================================
+  
+  enum TransactionStatus {
+    PENDING
+    PROCESSING
+    COMPLETED
+    FAILED
+    FAILED_PERMANENT
+    REVERSED
+  }
+
+  enum TransactionSource {
+    MOBILE_BANKING
+    WALLET
+    ADMIN
+    API
+  }
+
+  type Transaction {
+    id: ID!
+    reference: String!
+    type: TransactionType!
+    source: TransactionSource!
+    status: TransactionStatus!
+    
+    amount: Decimal!
+    currency: String!
+    description: String!
+    
+    fromAccountId: Int
+    fromAccountNumber: String
+    fromWalletId: Int
+    fromWalletNumber: String
+    
+    toAccountId: Int
+    toAccountNumber: String
+    toWalletId: Int
+    toWalletNumber: String
+    
+    t24Reference: String
+    t24Response: JSON
+    
+    retryCount: Int!
+    maxRetries: Int!
+    nextRetryAt: DateTime
+    
+    errorMessage: String
+    errorCode: String
+    
+    isReversal: Boolean!
+    
+    statusHistory: [TransactionStatusHistory!]!
+    
+    createdAt: DateTime!
+    updatedAt: DateTime!
+    completedAt: DateTime
+  }
+
+  type TransactionStatusHistory {
+    id: ID!
+    fromStatus: TransactionStatus!
+    toStatus: TransactionStatus!
+    reason: String
+    retryNumber: Int
+    createdAt: DateTime!
+  }
+
+  input CreateTransactionInput {
+    type: TransactionType!
+    source: TransactionSource
+    amount: Decimal!
+    description: String!
+    currency: String
+    
+    fromAccountId: Int
+    fromAccountNumber: String
+    fromWalletId: Int
+    fromWalletNumber: String
+    
+    toAccountId: Int
+    toAccountNumber: String
+    toWalletId: Int
+    toWalletNumber: String
+    
+    maxRetries: Int
+  }
+
+  input TransactionFilterInput {
+    status: TransactionStatus
+    type: TransactionType
+    source: TransactionSource
+    dateFrom: DateTime
+    dateTo: DateTime
+    minAmount: Decimal
+    maxAmount: Decimal
+    accountId: Int
+    walletId: Int
+    search: String
+  }
+
+  type CreateTransactionResponse {
+    success: Boolean!
+    transaction: Transaction
+    message: String!
+    errors: [String!]
+  }
+
+  type TransactionConnection {
+    transactions: [Transaction!]!
+    totalCount: Int!
+    pageInfo: PageInfo!
+  }
+
+  type RetryStats {
+    totalRetryable: Int!
+    totalFailed: Int!
+    totalPending: Int!
+    nextRetryTime: DateTime
+  }
+
+  extend type Query {
+    transaction(id: ID!): Transaction
+    transactionByReference(reference: String!): Transaction
+    transactions(
+      filter: TransactionFilterInput
+      page: Int = 1
+      limit: Int = 20
+    ): TransactionConnection!
+    
+    accountTransactions(
+      accountId: Int!
+      page: Int = 1
+      limit: Int = 20
+    ): TransactionConnection!
+    
+    walletTransactions(
+      walletId: Int!
+      page: Int = 1
+      limit: Int = 20
+    ): TransactionConnection!
+    
+    retryableTransactions(limit: Int = 100): [Transaction!]!
+    transactionRetryStats: RetryStats!
+  }
+
+  extend type Mutation {
+    createTransaction(input: CreateTransactionInput!): CreateTransactionResponse!
+    retryTransaction(id: ID!): CreateTransactionResponse!
+    reverseTransaction(id: ID!, reason: String!): CreateTransactionResponse!
   }
 `;

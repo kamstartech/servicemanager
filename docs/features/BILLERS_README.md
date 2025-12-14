@@ -1,8 +1,240 @@
-# 💳 Billers System
+# Billers System
 
-Standalone billers payment system for the Next.js admin panel. Supports 8 different billers for water, electricity, government services, and mobile payments.
+## Summary
+Complete bill payment system integrated with T24 ESB, supporting 8 different billers for water, electricity, government services, and mobile payments. The system provides both REST and GraphQL APIs for admin and mobile integration.
 
-## 📋 Overview
+## Problem/Context
+Users need to pay various utility bills (water, electricity, government services, telecom bundles) through the mobile banking app. The system must:
+- Support multiple biller types with different integration patterns
+- Handle account lookups and payment processing
+- Track transactions for audit and user history
+- Provide mobile-friendly GraphQL API
+- Integrate with T24 core banking system
+
+## Architecture
+
+### Two-Layer Design
+
+```
+Mobile App → GraphQL API → Biller Services → T24 ESB → External Billers
+              (Layer 2)        (Layer 1)
+                ↓
+          Authentication
+                ↓
+       Transaction Logging
+```
+
+**Layer 1**: Backend service layer that communicates with T24 ESB  
+**Layer 2**: Mobile-facing GraphQL API with authentication and user context
+
+## Supported Billers (8 Types)
+
+| Biller | Type | Integration | Features |
+|--------|------|-------------|----------|
+| LWB Postpaid | SOAP/XML | Lilongwe Water Board | Account lookup, Payment |
+| BWB Postpaid | SOAP/XML | Blantyre Water Board | Account lookup, Payment |
+| SRWB Postpaid | SOAP/XML | Southern Region Water (postpaid) | Account lookup, Payment |
+| SRWB Prepaid | Invoice | Southern Region Water (prepaid) | Get invoice, Confirm payment |
+| MASM | SOAP/XML | Electricity | Account lookup (with type), Payment |
+| Register General | Invoice | Government services | Get invoice, Confirm payment |
+| TNM Bundles | Bundle | Mobile data bundles | Bundle details, Purchase |
+| Airtel Validation | Validation | Phone validation | Validate number only |
+
+## Implementation Details
+
+### Service Layer
+
+**Base Service** (`lib/services/billers/base.ts`)
+- HTTP client with timeout and retry
+- Authentication (Basic, Bearer, API Key)
+- Input validation
+- Exponential backoff retry logic
+
+**Concrete Implementations:**
+- `SoapBillerService` - SOAP/XML billers (water, electricity)
+- `InvoiceBillerService` - Two-step invoice billers
+- `BundleBillerService` - Telecom bundle billers
+- `ValidationBillerService` - Validation-only billers
+
+**Transaction Management** (`lib/services/billers/transactions.ts`)
+- Create and track transactions
+- Status management (PENDING → PROCESSING → COMPLETED/FAILED)
+- Retry failed transactions
+- Query and reporting
+
+### GraphQL API (Mobile Layer)
+
+**Queries:**
+- `availableBillers` - List all active billers
+- `billerAccountLookup` - Verify account before payment
+- `myBillerTransactions` - User's transaction history
+- `billerTransaction` - Get specific transaction
+
+**Mutations:**
+- `billerPayment` - Process bill payment
+- `billerRetryTransaction` - Retry failed transaction
+
+**Security:**
+- Authentication required on all operations
+- User isolation (users see only their transactions)
+- Transaction ownership verification
+
+### REST API (Admin Layer)
+
+- `POST /api/billers/[billerType]/account-details` - Account lookup
+- `POST /api/billers/[billerType]/payment` - Process payment
+- `GET /api/billers/transactions` - List transactions
+- `POST /api/billers/transactions/[id]/retry` - Retry transaction
+
+## Usage
+
+### Mobile App (GraphQL)
+
+```graphql
+# Get available billers
+query {
+  availableBillers {
+    type
+    displayName
+    validationRules {
+      minAmount
+      maxAmount
+    }
+  }
+}
+
+# Process payment
+mutation {
+  billerPayment(input: {
+    billerType: LWB_POSTPAID
+    accountNumber: "1234567890"
+    amount: 5000
+    debitAccount: "01234567890"
+    debitAccountType: "CASA"
+  }) {
+    success
+    transactionId
+    message
+  }
+}
+```
+
+### Admin/Testing (REST)
+
+```bash
+# Account lookup
+curl -X POST http://localhost:3000/api/billers/lwb_postpaid/account-details \
+  -H "Content-Type: application/json" \
+  -d '{"account_number":"1234567890"}'
+
+# Payment
+curl -X POST http://localhost:3000/api/billers/bwb_postpaid/payment \
+  -H "Content-Type: application/json" \
+  -d '{
+    "account_number":"1234567890",
+    "amount":5000,
+    "debit_account":"01234567890",
+    "debit_account_type":"CASA"
+  }'
+```
+
+## Testing
+
+1. **Seed database**:
+   ```bash
+   npm run prisma:seed
+   ```
+
+2. **Test via GraphQL Playground**:
+   ```
+   http://localhost:3000/api/graphql
+   ```
+
+3. **Test via REST API**:
+   Use cURL or Postman with examples above
+
+## Files Structure
+
+```
+lib/services/billers/
+├── base.ts              # Base service class
+├── soap.ts              # SOAP/XML implementation
+├── invoice.ts           # Invoice-based implementation  
+├── bundle.ts            # Bundle-based implementation
+├── validation.ts        # Validation-only implementation
+├── factory.ts           # Service factory
+└── transactions.ts      # Transaction management
+
+app/api/billers/
+├── [billerType]/
+│   ├── account-details/route.ts
+│   └── payment/route.ts
+└── transactions/
+    ├── route.ts
+    └── [id]/retry/route.ts
+
+lib/graphql/schema/
+├── typeDefs.ts          # GraphQL types
+└── resolvers/
+    └── billers.ts       # GraphQL resolvers
+
+docs/
+├── features/
+│   ├── BILLER_TRANSACTION_PROCESSING.md  # Layer 1 docs
+│   ├── MOBILE_BILLER_INTEGRATION.md      # Layer 2 docs
+│   └── BILLERS_WORKFLOW_INTEGRATION.md   # Workflow integration
+├── quick-references/
+│   └── BILLERS_QUICK_START.md            # Quick start guide
+└── archive/
+    ├── BILLERS_PHASE1_SUMMARY.md         # Historical
+    ├── BILLERS_BACKEND_SUMMARY.md        # Old Elixir backend
+    └── BILLERS_ADMIN_IMPLEMENTATION_PLAN.md  # Implementation plan
+```
+
+## Related Documentation
+
+- [BILLER_TRANSACTION_PROCESSING.md](./BILLER_TRANSACTION_PROCESSING.md) - Layer 1 implementation details
+- [MOBILE_BILLER_INTEGRATION.md](./MOBILE_BILLER_INTEGRATION.md) - Layer 2 GraphQL API  
+- [BILLERS_WORKFLOW_INTEGRATION.md](./BILLERS_WORKFLOW_INTEGRATION.md) - Workflow integration
+- [../quick-references/BILLERS_QUICK_START.md](../quick-references/BILLERS_QUICK_START.md) - Quick start guide
+- [../t24/T24_ACCOUNTS_ENDPOINT.md](../t24/T24_ACCOUNTS_ENDPOINT.md) - T24 ESB integration
+
+## Notes
+
+### Key Features
+
+✅ **Complete** - Both layers fully implemented  
+✅ **Type-safe** - Full TypeScript + GraphQL  
+✅ **Secure** - Authentication and authorization  
+✅ **Tested** - Comprehensive testing support  
+✅ **Documented** - Full documentation with examples  
+✅ **Independent** - No Phoenix/Elixir dependency  
+✅ **Mobile-ready** - GraphQL optimized for mobile apps
+
+### Transaction Flow
+
+1. User initiates payment via mobile app
+2. GraphQL mutation validates authentication
+3. Transaction created in database (PENDING)
+4. Biller service selected via factory
+5. Status updated to PROCESSING
+6. HTTP request to T24 ESB with retry logic
+7. Response parsed and transaction updated (COMPLETED/FAILED)
+8. Result returned to mobile app
+
+### Future Enhancements
+
+- Real-time status updates via GraphQL subscriptions
+- Scheduled/recurring payments
+- Payment reminders
+- Transaction receipts (PDF generation)
+- Favorite billers/accounts
+- Payment analytics dashboard
+
+---
+
+*Last Updated: 2024-12-14*
+
 
 - **Status**: Phase 1 Complete ✅
 - **Version**: 1.0.0
