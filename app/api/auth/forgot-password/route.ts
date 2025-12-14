@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { emailService } from "@/lib/services/email";
 import crypto from "crypto";
+import path from "path";
 
 export async function POST(request: NextRequest) {
   try {
@@ -147,7 +148,7 @@ async function sendPasswordResetEmail(
     attachments: [
       {
         filename: "fdh-logo.png",
-        path: process.cwd() + "/public/images/logo/BLUE PNG/FDH LOGO-06.png",
+        path: path.join(process.cwd(), "public", "images", "logo", "BLUE PNG", "FDH LOGO-06.png"),
         cid: "logo",
       },
     ],

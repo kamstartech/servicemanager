@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
+import path from "path";
 
 const prisma = new PrismaClient();
 
@@ -121,7 +122,7 @@ FDH Bank Admin Team
     attachments: [
       {
         filename: "fdh-logo.png",
-        path: process.cwd() + "/public/images/logo/BLUE PNG/FDH LOGO-06.png",
+        path: path.join(process.cwd(), "public", "images", "logo", "BLUE PNG", "FDH LOGO-06.png"),
         cid: "logo",
       },
     ],
