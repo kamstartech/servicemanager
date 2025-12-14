@@ -6,7 +6,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-poppins);
   --font-mono: var(--font-geist-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -41,6 +41,13 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  
+  /* FDH Brand Colors */
+  --color-fdh-blue: #154E9E;
+  --color-fdh-light-blue: #1e62c7;
+  --color-fdh-orange: #f59e0b;
+  --color-fdh-navy-blue: #012d81;
+  --color-brand: #FD4F00;
 }
 
 :root {
@@ -120,3 +127,43 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* FDH Custom Styles */
+.bg-fdh-blue {
+  background-color: #154E9E;
+}
+
+.bg-fdh-light-blue {
+  background-color: #1e62c7;
+}
+
+.text-fdh-orange {
+  color: #f59e0b;
+}
+
+.bg-fdh-orange {
+  background-color: #f59e0b;
+}
+
+.text-fdh-blue {
+  color: #154E9E;
+}
+
+.text-fdh-navy-blue {
+  color: #012d81;
+}
+
+.sidebar-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #f59e0b;
+  font-size: medium;
+}
+
+.card {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
