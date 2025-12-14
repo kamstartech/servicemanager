@@ -1,210 +1,243 @@
-# Documentation Organization - December 2025-12-13
+# Documentation Organization - December 2024
 
 ## Summary
 
-Reorganized 58 markdown documentation files into a structured `docs/` directory with clear categories and comprehensive indexes.
-
-## Structure Created
-
-```
-docs/
-├── README.md                    # Main documentation hub
-├── t24/                         # T24 Core Banking Integration
-│   ├── README.md
-│   ├── T24_ACCOUNTS_ENDPOINT.md (updated)
-│   ├── T24_ACCOUNTS_PAGINATION.md
-│   ├── T24_DOCKER_IPV6_FIX.md
-│   ├── T24_BALANCE_INTEGRATION.md
-│   ├── ACCOUNT_DISCOVERY_SERVICE.md
-│   └── ACCOUNT_BALANCE_*.md
-├── features/                    # Feature Implementation
-│   ├── README.md
-│   ├── FORMS_*.md
-│   ├── LOGIN_*.md
-│   ├── OTP_*.md
-│   ├── BENEFICIARIES*.md
-│   ├── MULTI_ACCOUNT_*.md
-│   ├── APP_*.md
-│   ├── PASSWORD_*.md
-│   ├── DEVICE_TRACKING_*.md
-│   ├── TOKEN_*.md
-│   └── WALLET_*.md
-├── infrastructure/              # Infrastructure & DevOps
-│   ├── README.md
-│   ├── BACKUP_*.md
-│   ├── MINIO_*.md
-│   ├── EMAIL_*.md
-│   ├── MIGRATION*.md
-│   ├── DEV_SERVER_RESTART.md
-│   └── PERFORMANCE_OPTIMIZATION.md
-├── guides/                      # API & Development Guides
-│   ├── README.md
-│   ├── MOBILE_API_DOCUMENTATION.md
-│   ├── JWT_AUTH.md
-│   └── SERVICES_MONITOR.md
-└── archive/                     # Historical Documentation
-    ├── T24_ACCOUNTS_ENDPOINT_LEGACY.md
-    ├── BACKEND_*.md
-    ├── *_IMPLEMENTATION*.md
-    ├── *_COMPLETE.md
-    ├── *_SUMMARY.md
-    └── SESSION_SUMMARY.md
-```
+Reorganized 41+ documentation files from project root into structured `docs/` directory with clear categories, comprehensive indexes, and updated PROJECT_RULES.md with documentation standards.
 
 ## Changes Made
 
-### 1. Created Documentation Structure
-- Created `docs/` directory with 5 subdirectories
-- Added comprehensive README.md in each subdirectory
-- Created main docs/README.md as documentation hub
+### 1. Moved Documentation Files
 
-### 2. Organized Files by Category
+**From Root → docs/features/** (Authentication & Features)
+- `AUTHENTICATION_SYSTEM.md`
+- `LOGIN_PAGE_README.md`
+- `FORGOT_PASSWORD_IMPLEMENTATION.md`
+- `REGISTRATION_*.md` (4 files)
+- `ACCOUNT_ALERTS_IMPLEMENTATION.md`
+- `ALERT_*.md` (2 files)
+- `WORKFLOW_*.md` (11 files)
+- `BILLERS_*.md` (6 files)
+- `CHECKBOOK_*.md` (3 files)
+- `TRANSACTION_*.md` (3 files)
 
-**T24 Integration (8 files)**
-- Consolidated all T24-related documentation
-- Updated T24_ACCOUNTS_ENDPOINT.md to reflect current implementation
-- Highlighted critical Docker IPv6 fix
+**From Root → docs/infrastructure/**
+- `BACKUP_SYSTEM_SUMMARY.md`
+- `REDIS_UPDATES_SUMMARY.md`
 
-**Features (20+ files)**
-- Authentication & security documents
-- Forms system documentation
-- Account management docs
-- App screens & pages
+**From Root → docs/api/**
+- `GRAPHQL_SECURITY_SUMMARY.md`
+- `GRAPHQL_RATE_limiting.md`
+- `GRAPHQL_SECURITY_QUICK_REFERENCE.md`
 
-**Infrastructure (11 files)**
-- Storage and backup systems
-- Email configuration
-- Database migrations
-- Development environment
+**From Root → docs/guides/**
+- `ADMIN_SEEDER_README.md`
+- `ICON_USAGE_STANDARDS.md`
+- `THEME_COLORS_ANALYSIS.md`
 
-**Guides (3 files)**
-- API documentation
-- Authentication guides
-- Service monitoring
+**From Root → docs/archive/**
+- `ALERTS_FINAL_SUMMARY.txt`
 
-**Archive (18+ files)**
-- Legacy implementation docs
-- Completed session summaries
-- Historical references
+### 2. Enhanced Directory Structure
 
-### 3. Updated Documentation
-
-**T24_ACCOUNTS_ENDPOINT.md**
-- Reflected current implementation with pagination
-- Added Docker IPv4 fix references
-- Updated API examples
-- Added troubleshooting section
-- Documented all three service methods
-- Included production checklist
-
-**Created Comprehensive READMEs**
-- docs/README.md - Main hub with quick links
-- docs/t24/README.md - T24 integration overview
-- docs/features/README.md - Features catalog
-- docs/infrastructure/README.md - Infrastructure guide
-- docs/guides/README.md - API reference
-
-### 4. Preserved Essential Files
-- PROJECT_RULES.md (kept in root)
-- README.md (kept in root)
-
-## Key Improvements
-
-### Better Organization
-- Clear categorization by domain
-- Related documents grouped together
-- Easy navigation with README indexes
-- Quick links to essential docs
-
-### Up-to-Date Information
-- Removed outdated implementation details
-- Reflected current working code
-- Added troubleshooting for known issues
-- Documented recent fixes (Docker IPv6, pagination)
-
-### Discoverability
-- Comprehensive indexes in each README
-- Cross-references between related docs
-- Clear file naming conventions
-- Status indicators (✅ Working, ⚠️ Critical)
-
-### Documentation Standards
-- Defined structure template
-- File naming conventions
-- Contributing guidelines
-- When to archive vs update
-
-## Migration Guide
-
-### Finding Old Documentation
-
-| Old Location | New Location |
-|-------------|--------------|
-| `/T24_*.md` | `/docs/t24/` |
-| `/FORMS_*.md` | `/docs/features/` |
-| `/MINIO_*.md` | `/docs/infrastructure/` |
-| `/MOBILE_API_*.md` | `/docs/guides/` |
-| `/LOGIN_*.md` | `/docs/features/` |
-| `/BACKUP_*.md` | `/docs/infrastructure/` |
-| `/*_IMPLEMENTATION*.md` | `/docs/archive/` |
-| `/*_COMPLETE.md` | `/docs/archive/` |
-
-### Updating Links
-
-If you have links to old documentation paths:
-```diff
-- See [T24 Integration](T24_ACCOUNTS_ENDPOINT.md)
-+ See [T24 Integration](docs/t24/T24_ACCOUNTS_ENDPOINT.md)
-
-- See [Forms](FORMS_COMPLETE.md)
-+ See [Forms](docs/features/FORMS_COMPLETE.md)
+```
+docs/
+├── README.md                    # Main documentation hub (UPDATED)
+├── t24/                         # T24 Core Banking Integration
+│   └── README.md
+├── features/                    # Feature implementations
+│   └── README.md               (UPDATED)
+├── infrastructure/              # Infrastructure & DevOps
+│   └── README.md
+├── api/                         # API documentation
+│   └── README.md               (NEW)
+├── guides/                      # Development guides
+│   └── README.md
+├── quick-references/            # Quick reference guides
+│   └── README.md               (NEW)
+├── architecture/                # System architecture
+│   └── README.md               (NEW)
+└── archive/                     # Historical documentation
+    └── README.md
 ```
 
-## Statistics
+### 3. Updated PROJECT_RULES.md
 
-- **Total Files:** 58 markdown files
-- **Categories:** 5 (t24, features, infrastructure, guides, archive)
-- **README Files:** 6 (main + 5 category indexes)
-- **Updated Docs:** 2 (T24_ACCOUNTS_ENDPOINT.md, docs/README.md)
-- **Archived Docs:** 18+
+Added comprehensive "Documentation Organization" section including:
+- Complete directory structure specification
+- File naming conventions
+- Documentation categories and purpose
+- Standard document structure template
+- Guidelines for when to create/update/archive docs
+- Best practices for documentation
+- Root directory file policy
+
+### 4. Created New README Files
+
+**docs/api/README.md**
+- API documentation overview
+- GraphQL endpoint information
+- Common tasks for adding queries/mutations
+- Security checklist
+
+**docs/quick-references/README.md**
+- Quick reference index
+- Purpose and format guidelines
+- Cross-references to detailed docs
+
+**docs/architecture/README.md**
+- Architecture documentation purpose
+- Document types (ADRs, diagrams, specs)
+- When to add architecture docs
+
+### 5. Enhanced Existing READMEs
+
+**docs/README.md**
+- Updated structure description
+- Expanded quick links section
+- Added feature area navigation
+- Updated all file references
+- Added comprehensive finding documentation guide
+
+**docs/features/README.md**
+- Added all newly moved files
+- Organized by feature area
+- Complete index of authentication, workflows, billers, transactions, alerts
+
+## Documentation Organization Standards
+
+### File Naming
+- `SCREAMING_SNAKE_CASE.md` for all documentation
+- Prefix with domain (T24_, WORKFLOW_, BILLERS_)
+- Descriptive, meaningful names
+
+### Categories
+
+1. **t24/** - T24 ESB API integrations
+2. **features/** - Feature implementations by area
+3. **infrastructure/** - DevOps, storage, email, backups
+4. **api/** - GraphQL, REST API documentation
+5. **guides/** - Development guides and tutorials
+6. **quick-references/** - Concise cheat sheets (1-2 pages)
+7. **architecture/** - System design and ADRs
+8. **archive/** - Deprecated/historical docs
+
+### Root Directory Policy
+
+Only these files in project root:
+- `README.md` - Project overview
+- `PROJECT_RULES.md` - Development guidelines
+
+All other documentation must be in `docs/` subdirectories.
+
+### Standard Document Template
+
+```markdown
+# Title
+
+## Summary
+Brief overview
+
+## Problem/Context
+What problem does this solve?
+
+## Solution
+How was it solved?
+
+## Implementation Details
+Technical details and code
+
+## Usage
+How to use with examples
+
+## Testing
+How to test/verify
+
+## Files Changed
+List of modified files
+
+## Related Documentation
+Links to related docs
+
+## Notes
+Caveats and limitations
+
+---
+*Last Updated: YYYY-MM-DD*
+```
 
 ## Benefits
 
-1. **Easier Navigation:** Clear structure with indexes
-2. **Better Maintenance:** Related docs grouped together
-3. **Reduced Clutter:** Root directory cleaner
-4. **Improved Onboarding:** New developers find docs faster
-5. **Historical Context:** Archived docs preserved for reference
-6. **Current Information:** Updated to reflect working implementation
+1. **Clear Organization** - Logical grouping by domain
+2. **Easy Navigation** - Comprehensive indexes in each directory
+3. **Discoverability** - Find docs by topic or feature area
+4. **Consistency** - Standardized structure and naming
+5. **Maintainability** - Clear guidelines for updates
+6. **Scalability** - Structure supports growth
+7. **Onboarding** - New developers find information quickly
+8. **Standards** - Documented best practices in PROJECT_RULES.md
 
-## Next Steps
+## Statistics
 
-When adding new documentation:
-1. Choose appropriate directory (t24, features, infrastructure, guides)
-2. Follow naming conventions (SCREAMING_SNAKE_CASE.md)
-3. Use standard document structure
-4. Update relevant README index
-5. Cross-reference related documentation
+- **Files Moved**: 41+ documentation files
+- **Directories**: 8 (t24, features, infrastructure, api, guides, quick-references, architecture, archive)
+- **New READMEs**: 3 (api, quick-references, architecture)
+- **Updated READMEs**: 2 (docs/README.md, docs/features/README.md)
+- **Updated Guidelines**: PROJECT_RULES.md with comprehensive documentation section
+- **Root Files Remaining**: 2 (README.md, PROJECT_RULES.md)
 
-When updating existing docs:
-1. Update the document
-2. Update "Last Updated" date
-3. Add changelog entry if significant
-4. Update cross-references if needed
+## File Locations Reference
 
-When archiving docs:
-1. Move to `/docs/archive/`
-2. Add note why it's archived
-3. Update links pointing to it
-4. Keep for historical reference
+| Old Location | New Location |
+|-------------|--------------|
+| `/AUTHENTICATION_SYSTEM.md` | `/docs/features/` |
+| `/LOGIN_*.md` | `/docs/features/` |
+| `/REGISTRATION_*.md` | `/docs/features/` |
+| `/WORKFLOW_*.md` | `/docs/features/` |
+| `/BILLERS_*.md` | `/docs/features/` |
+| `/CHECKBOOK_*.md` | `/docs/features/` |
+| `/TRANSACTION_*.md` | `/docs/features/` |
+| `/ALERT_*.md` | `/docs/features/` |
+| `/BACKUP_*.md` | `/docs/infrastructure/` |
+| `/REDIS_*.md` | `/docs/infrastructure/` |
+| `/GRAPHQL_*.md` | `/docs/api/` |
+| `/ADMIN_SEEDER_*.md` | `/docs/guides/` |
+| `/ICON_*.md` | `/docs/guides/` |
+| `/THEME_*.md` | `/docs/guides/` |
+
+## Quick Access
+
+### By Feature
+- **Auth**: `docs/features/AUTHENTICATION_SYSTEM.md`
+- **Workflows**: `docs/features/WORKFLOW_SYSTEM_GUIDE.md`
+- **Billers**: `docs/features/BILLERS_README.md`
+- **Transactions**: `docs/features/TRANSACTION_VIEW_IMPLEMENTATION.md`
+- **Alerts**: `docs/features/ALERT_IMPLEMENTATION_SUMMARY.md`
+
+### By Type
+- **Quick Starts**: `docs/quick-references/`
+- **API Docs**: `docs/api/`
+- **Infrastructure**: `docs/infrastructure/`
+- **Architecture**: `docs/architecture/`
+
+## Next Steps for Contributors
+
+When adding/updating documentation:
+
+1. **Choose correct directory** based on content type
+2. **Follow naming conventions** (SCREAMING_SNAKE_CASE.md)
+3. **Use standard template** from PROJECT_RULES.md
+4. **Update relevant README** index
+5. **Cross-reference** related documentation
+6. **Archive old versions** if superseded
+
+See [PROJECT_RULES.md](../PROJECT_RULES.md) for complete documentation standards.
 
 ## Related Documentation
 
-- **Main README:** [/README.md](../README.md)
-- **Project Rules:** [/PROJECT_RULES.md](../PROJECT_RULES.md)
-- **Docs Hub:** [/docs/README.md](README.md)
-- **T24 Integration:** [/docs/t24/README.md](t24/README.md)
+- [Project Rules](../PROJECT_RULES.md) - Complete development guidelines
+- [Main Documentation Hub](README.md) - Documentation navigation
+- [Features Index](features/README.md) - Feature documentation index
 
 ---
 
-*Documentation Organized: 2025-12-13*
+*Organization Completed: 2024-12-14*
