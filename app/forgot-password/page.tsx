@@ -125,8 +125,8 @@ export default function ForgotPasswordPage() {
 
       {/* Right side - Background Image - Hidden on mobile */}
       <div className="hidden md:flex md:w-1/2 relative overflow-hidden">
-        <div className="h-full flex flex-col justify-center items-center p-12 z-10 relative">
-          <div className="text-center text-white">
+        <div className="absolute inset-0 flex items-center justify-center z-10">
+          <div className="text-center text-white px-12">
             <h1 className="text-4xl font-light mb-2">Welcome to</h1>
             <h1 className="text-5xl font-bold mb-1">FDH Bank</h1>
             <h1 className="text-5xl font-bold">Admin Panel</h1>
