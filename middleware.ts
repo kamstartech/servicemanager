@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { verifyToken } from "@/lib/auth/jwt";
+import { verifyTokenEdge } from "@/lib/auth/jwt-edge";
 
 // Public routes that don't require authentication
 const publicRoutes = [
@@ -13,7 +13,7 @@ const publicRoutes = [
   "/api/auth/reset-password",
 ];
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Get token from cookie or header
@@ -28,7 +28,7 @@ export function middleware(request: NextRequest) {
 
   // If user is authenticated and trying to access login page, redirect to dashboard
   if (pathname === "/login" && token) {
-    const user = verifyToken(token);
+    const user = await verifyTokenEdge(token);
     if (user && user.context === "ADMIN") {
       console.log(`[Middleware] Authenticated user on /login, redirecting to /`);
       return NextResponse.redirect(new URL("/", request.url));
@@ -67,7 +67,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Verify token
-  const user = verifyToken(token);
+  const user = await verifyTokenEdge(token);
 
   if (!user) {
     // Clear invalid cookie
