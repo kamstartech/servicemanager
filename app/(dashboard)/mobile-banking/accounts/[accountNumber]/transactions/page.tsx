@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
-import { ArrowLeft, RefreshCw, Download } from "lucide-react";
+import { ArrowLeft, RefreshCw, Download, AlertCircle, FileText } from "lucide-react";
 
 const GET_ACCOUNT_TRANSACTIONS = gql`
   query GetAccountTransactions($accountNumber: String!) {
@@ -330,19 +330,7 @@ export default function AccountTransactionsPage() {
           {!loading && !isRefreshing && !error && fetchStatus === "error" && (
             <div className="text-center py-12">
               <div className="mx-auto w-16 h-16 mb-4 rounded-full bg-red-50 flex items-center justify-center">
-                <svg
-                  className="w-8 h-8 text-red-500"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
+                <AlertCircle className="w-8 h-8 text-red-500" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 Failed to Load Transactions
@@ -367,19 +355,7 @@ export default function AccountTransactionsPage() {
           {!loading && !error && hasNoTransactions && (
             <div className="text-center py-12">
               <div className="mx-auto w-16 h-16 mb-4 rounded-full bg-blue-50 flex items-center justify-center">
-                <svg
-                  className="w-8 h-8 text-blue-500"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
+                <FileText className="w-8 h-8 text-blue-500" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 No Transactions Found
