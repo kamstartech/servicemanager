@@ -1,0 +1,263 @@
+import { prisma } from "@/lib/db/prisma";
+
+export const mobileUserAccountResolvers = {
+  Query: {
+    async mobileUserAccounts(_parent: unknown, args: { userId: string }) {
+      try {
+        const userId = parseInt(args.userId);
+        if (isNaN(userId)) {
+          console.error(`Invalid userId for mobileUserAccounts: ${args.userId}`);
+          return [];
+        }
+
+        const accounts = await prisma.mobileUserAccount.findMany({
+          where: { mobileUserId: userId },
+          orderBy: [
+            { isPrimary: 'desc' }, // Primary account first
+            { createdAt: 'asc' }
+          ]
+        });
+
+        return accounts.map(account => ({
+          id: account.id.toString(),
+          accountNumber: account.accountNumber,
+          accountName: account.accountName,
+          accountType: account.accountType,
+          currency: account.currency,
+          categoryName: account.categoryName,
+          balance: account.balance?.toString() || null,
+          isPrimary: account.isPrimary,
+          isActive: account.isActive,
+          createdAt: account.createdAt.toISOString(),
+          updatedAt: account.updatedAt.toISOString(),
+        }));
+      } catch (error) {
+        console.error("Error fetching mobileUserAccounts:", error);
+        return [];
+      }
+    },
+
+    async allMobileUserAccounts(_parent: unknown) {
+      try {
+        const accounts = await prisma.mobileUserAccount.findMany({
+          orderBy: [
+            { isPrimary: 'desc' },
+            { accountNumber: 'asc' }
+          ]
+        });
+
+        return accounts.map(account => ({
+          id: account.id.toString(),
+          accountNumber: account.accountNumber,
+          accountName: account.accountName,
+          accountType: account.accountType,
+          currency: account.currency,
+          categoryId: account.categoryId,
+          categoryName: account.categoryName,
+          accountStatus: account.accountStatus,
+          holderName: account.holderName,
+          balance: account.balance?.toString() || null,
+          workingBalance: account.workingBalance?.toString() || null,
+          isPrimary: account.isPrimary,
+          isActive: account.isActive,
+          mobileUserId: account.mobileUserId.toString(),
+          createdAt: account.createdAt.toISOString(),
+          updatedAt: account.updatedAt.toISOString(),
+        }));
+      } catch (error) {
+        console.error("Error fetching allMobileUserAccounts:", error);
+        return [];
+      }
+    },
+
+    async mobileUserAccount(_parent: unknown, args: { accountNumber: string }) {
+      try {
+        const account = await prisma.mobileUserAccount.findFirst({
+          where: { accountNumber: args.accountNumber }
+        });
+
+        if (!account) {
+          return null;
+        }
+
+        return {
+          id: account.id.toString(),
+          accountNumber: account.accountNumber,
+          accountName: account.accountName,
+          accountType: account.accountType,
+          currency: account.currency,
+          categoryId: account.categoryId,
+          categoryName: account.categoryName,
+          accountStatus: account.accountStatus,
+          holderName: account.holderName,
+          balance: account.balance?.toString() || null,
+          workingBalance: account.workingBalance?.toString() || null,
+          isPrimary: account.isPrimary,
+          isActive: account.isActive,
+          mobileUserId: account.mobileUserId.toString(),
+          createdAt: account.createdAt.toISOString(),
+          updatedAt: account.updatedAt.toISOString(),
+        };
+      } catch (error) {
+        console.error("Error fetching mobileUserAccount:", error);
+        return null;
+      }
+    }
+  },
+
+  Mutation: {
+    async linkAccountToUser(
+      _parent: unknown,
+      args: {
+        userId: string;
+        accountNumber: string;
+        accountName?: string;
+        accountType?: string;
+        isPrimary?: boolean;
+      }
+    ) {
+      const userId = parseInt(args.userId);
+      
+      // If this is marked as primary, unset other primary accounts
+      if (args.isPrimary) {
+        await prisma.mobileUserAccount.updateMany({
+          where: { mobileUserId: userId, isPrimary: true },
+          data: { isPrimary: false }
+        });
+      }
+
+      // If no accounts exist, make this one primary
+      const existingCount = await prisma.mobileUserAccount.count({
+        where: { mobileUserId: userId }
+      });
+      const isPrimary = args.isPrimary ?? (existingCount === 0);
+
+      const account = await prisma.mobileUserAccount.create({
+        data: {
+          mobileUserId: userId,
+          accountNumber: args.accountNumber,
+          accountName: args.accountName,
+          accountType: args.accountType,
+          isPrimary
+        }
+      });
+
+      return {
+        id: account.id.toString(),
+        accountNumber: account.accountNumber,
+        accountName: account.accountName,
+        accountType: account.accountType,
+        currency: account.currency,
+        balance: account.balance?.toString() || null,
+        isPrimary: account.isPrimary,
+        isActive: account.isActive,
+        createdAt: account.createdAt.toISOString(),
+        updatedAt: account.updatedAt.toISOString(),
+      };
+    },
+
+    async unlinkAccountFromUser(
+      _parent: unknown,
+      args: { userId: string; accountId: string }
+    ) {
+      const userId = parseInt(args.userId);
+      const accountId = parseInt(args.accountId);
+
+      const account = await prisma.mobileUserAccount.findUnique({
+        where: { id: accountId }
+      });
+
+      if (!account || account.mobileUserId !== userId) {
+        throw new Error("Account not found or does not belong to user");
+      }
+
+      // If this was the primary account, promote another
+      if (account.isPrimary) {
+        const nextAccount = await prisma.mobileUserAccount.findFirst({
+          where: { 
+            mobileUserId: userId, 
+            id: { not: accountId },
+            isActive: true
+          },
+          orderBy: { createdAt: 'asc' }
+        });
+
+        if (nextAccount) {
+          await prisma.mobileUserAccount.update({
+            where: { id: nextAccount.id },
+            data: { isPrimary: true }
+          });
+        }
+      }
+
+      await prisma.mobileUserAccount.delete({
+        where: { id: accountId }
+      });
+
+      return true;
+    },
+
+    async setPrimaryAccount(
+      _parent: unknown,
+      args: { userId: string; accountId: string }
+    ) {
+      const userId = parseInt(args.userId);
+      const accountId = parseInt(args.accountId);
+
+      // Verify account belongs to user
+      const account = await prisma.mobileUserAccount.findUnique({
+        where: { id: accountId }
+      });
+
+      if (!account || account.mobileUserId !== userId) {
+        throw new Error("Account not found or does not belong to user");
+      }
+
+      // Unset all primary accounts for this user
+      await prisma.mobileUserAccount.updateMany({
+        where: { mobileUserId: userId, isPrimary: true },
+        data: { isPrimary: false }
+      });
+
+      // Set this account as primary
+      await prisma.mobileUserAccount.update({
+        where: { id: accountId },
+        data: { isPrimary: true }
+      });
+
+      return true;
+    },
+
+    async updateAccount(
+      _parent: unknown,
+      args: {
+        accountId: string;
+        accountName?: string;
+        accountType?: string;
+      }
+    ) {
+      const accountId = parseInt(args.accountId);
+
+      const account = await prisma.mobileUserAccount.update({
+        where: { id: accountId },
+        data: {
+          ...(args.accountName !== undefined && { accountName: args.accountName }),
+          ...(args.accountType !== undefined && { accountType: args.accountType }),
+        }
+      });
+
+      return {
+        id: account.id.toString(),
+        accountNumber: account.accountNumber,
+        accountName: account.accountName,
+        accountType: account.accountType,
+        currency: account.currency,
+        balance: account.balance?.toString() || null,
+        isPrimary: account.isPrimary,
+        isActive: account.isActive,
+        createdAt: account.createdAt.toISOString(),
+        updatedAt: account.updatedAt.toISOString(),
+      };
+    }
+  }
+};

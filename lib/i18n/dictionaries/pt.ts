@@ -1,0 +1,197 @@
+export const pt = {
+  common: {
+    actions: {
+      back: "Voltar",
+      refresh: "Recarregar",
+    },
+    state: {
+      loading: "A carregar...",
+      error: "Erro",
+    },
+    status: {
+      active: "Ativo",
+      inactive: "Inativo",
+    },
+  },
+  sidebar: {
+    title: "Service Manager",
+    subtitle: "Painel de administração",
+    mobileBanking: "Banco móvel",
+    wallet: "Carteira",
+    system: "Sistema",
+    databaseManagement: "Gestão de base de dados",
+    migrations: "Migrações",
+    users: "Utilizadores",
+    accounts: "Contas",
+    accountCategories: "Categorias de Conta",
+    registrationRequests: "Pedidos de Registo",
+    coreBanking: "Core banking",
+  },
+  dashboard: {
+    title: "Service Manager Admin",
+    subtitle: "Escolha um módulo para gerir os seus utilizadores.",
+    mobileBanking: {
+      title: "Banco móvel",
+      description:
+        "Gerir utilizadores que iniciam sessão com nome de utilizador e palavra-passe.",
+      cta: "Ver utilizadores de banco móvel",
+    },
+    wallet: {
+      title: "Carteira",
+      description:
+        "Gerir utilizadores que iniciam sessão com número de telefone e PIN.",
+      cta: "Ver utilizadores de carteira",
+    },
+  },
+  mobileUsers: {
+    title: "Utilizadores móveis",
+    columns: {
+      identifier: "Identificador",
+      context: "Contexto",
+      username: "Nome de utilizador",
+      phone: "Telefone",
+      status: "Estado",
+      createdAt: "Criado em",
+    },
+  },
+  adminUsers: {
+    title: "Utilizadores de administração",
+    columns: {
+      identifier: "Identificador",
+      email: "Email",
+      name: "Nome",
+      status: "Estado",
+      createdAt: "Criado em",
+    },
+  },
+  wallet: {
+    users: {
+      title: "Utilizadores de carteira",
+      searchPlaceholder: "Procurar utilizadores de carteira",
+    },
+    loginAttempts: {
+      title: "Tentativas de Login da Carteira",
+      searchPlaceholder: "Pesquisar por número de telefone...",
+    },
+  },
+  databaseConnections: {
+    title: "Conexões de base de dados",
+    subtitle: "Gerir conexões para bases de dados externas.",
+    newConnection: "Nova conexão",
+    name: "Nome",
+    engine: "Motor",
+    host: "Servidor",
+    database: "Base de dados",
+    user: "Utilizador",
+    mode: "Modo",
+    readOnly: "Só leitura",
+    readWrite: "Leitura e escrita",
+    actions: "Ações",
+    emptyState: "Ainda não existem conexões de base de dados configuradas.",
+  },
+  databaseConnectionDialog: {
+    newTitle: "Nova conexão de base de dados",
+    editTitle: "Editar conexão de base de dados",
+    description: "Configure como o painel de administração se liga a uma base de dados externa.",
+    nameLabel: "Nome",
+    engineLabel: "Motor",
+    hostLabel: "Servidor",
+    portLabel: "Porta",
+    databaseLabel: "Base de dados",
+    usernameLabel: "Nome de utilizador",
+    passwordLabel: "Palavra-passe",
+    cancel: "Cancelar",
+    save: "Guardar",
+    update: "Atualizar",
+  },
+  language: {
+    english: "Inglês",
+    portuguese: "Português",
+  },
+  coreBanking: {
+    connections: {
+      title: "Conexões de core banking",
+      subtitle: "Gerir conexões aos serviços de core banking",
+      columns: {
+        name: "Nome",
+        username: "Nome de utilizador",
+        baseUrl: "URL base",
+        status: "Estado",
+        lastTest: "Último teste",
+        createdAt: "Criado em",
+        actions: "Ações",
+      },
+      lastTest: {
+        never: "Nunca",
+        ok: "OK",
+        failed: "Falhou",
+      },
+      actions: {
+        test: "Testar",
+        details: "Detalhes",
+        newConnection: "Nova conexão",
+      },
+      test: {
+        success: "A conexão de core banking está acessível",
+        failed: "O teste de core banking falhou",
+        error: "Falha ao testar a conexão de core banking",
+      },
+      searchPlaceholder: "Procurar conexões de core banking",
+    },
+    connectionDetail: {
+      notFound: "Conexão não encontrada",
+      fields: {
+        username: "Nome de utilizador",
+        baseUrl: "URL base",
+        status: "Estado",
+        lastTest: "Último teste",
+        createdAt: "Criado em",
+        updatedAt: "Atualizado em",
+      },
+      actions: {
+        test: "Testar",
+        edit: "Editar",
+      },
+      test: {
+        success: "A conexão de core banking está acessível",
+        failed: "O teste de core banking falhou",
+        error: "Falha ao testar a conexão de core banking",
+      },
+      endpoints: {
+        title: "Endpoints",
+        subtitle:
+          "Configurar endpoints de serviços de core banking para esta conexão",
+        columns: {
+          name: "Nome",
+          method: "Método",
+          path: "Caminho",
+          status: "Estado",
+          actions: "Ações",
+        },
+        actions: {
+          test: "Testar",
+          edit: "Editar",
+          add: "Adicionar endpoint",
+        },
+        searchPlaceholder: "Procurar endpoints",
+        emptyState: "Ainda não existem endpoints configurados.",
+      },
+    },
+  },
+  accountCategories: {
+    title: "Categorias de Conta",
+    subtitle: "Gerir categorias de conta exibidas aos utilizadores de banco móvel.",
+    columns: {
+      category: "Categoria",
+      categoryName: "Nome da Categoria",
+      displayToMobile: "Exibir no Móvel",
+      actions: "Ações",
+    },
+    addCategory: "Adicionar Categoria",
+    editCategory: "Editar Categoria",
+    deleteCategory: "Eliminar Categoria",
+    confirmDelete: "Tem certeza que deseja eliminar esta categoria?",
+    categoryPlaceholder: "ex: 1000, 2000, 3000",
+    displayLabel: "Mostrar na aplicação móvel",
+  },
+} as const;

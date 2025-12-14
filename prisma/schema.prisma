@@ -1,0 +1,1061 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MobileUserContext {
+  MOBILE_BANKING
+  WALLET
+  VILLAGE_BANKING
+  AGENT
+  MERCHANT
+}
+
+enum AttemptType {
+  PASSWORD_LOGIN
+  PASSKEY_REGISTRATION
+  PASSKEY_LOGIN
+  OTP_VERIFY
+}
+
+enum AttemptStatus {
+  PENDING_VERIFICATION
+  VERIFIED
+  SUCCESS
+  FAILED_CREDENTIALS
+  FAILED_OTP
+  FAILED_DEVICE_PENDING
+  FAILED_DEVICE_BLOCKED
+  EXPIRED
+  PENDING_APPROVAL
+}
+
+enum AlertType {
+  LOW_BALANCE
+  LARGE_TRANSACTION
+  SUSPICIOUS_ACTIVITY
+  PAYMENT_DUE
+  ACCOUNT_LOGIN
+}
+
+enum NotificationChannel {
+  PUSH
+  SMS
+  EMAIL
+}
+
+enum AlertStatus {
+  PENDING
+  SENT
+  FAILED
+  ACKNOWLEDGED
+}
+
+enum TransactionType {
+  DEBIT
+  CREDIT
+}
+
+enum SuspicionReason {
+  UNUSUAL_LOCATION
+  MULTIPLE_FAILED_ATTEMPTS
+  NEW_DEVICE_TRANSACTION
+}
+
+enum PaymentType {
+  BILL
+  LOAN
+  SUBSCRIPTION
+  RECURRING
+}
+
+enum PaymentReminderInterval {
+  ONE_WEEK
+  THREE_DAYS
+  ONE_DAY
+}
+
+enum LoginAlertMode {
+  EVERY_LOGIN
+  NEW_DEVICE
+  NEW_LOCATION
+}
+
+enum LoginMethod {
+  PASSWORD
+  BIOMETRIC
+  PASSKEY
+  OTP
+}
+
+enum UserAction {
+  DISMISSED
+  THIS_WAS_ME
+  REPORT_FRAUD
+  QUICK_PAY
+}
+
+enum ResolutionAction {
+  CONFIRMED_LEGITIMATE
+  FRAUD_REPORTED
+  ACCOUNT_LOCKED
+}
+
+model MobileUser {
+  id      Int               @id @default(autoincrement())
+  context MobileUserContext
+
+  // Login identifiers (only some are used depending on context)
+  username    String? @db.Text
+  phoneNumber String? @db.Text
+
+  // Core banking linkage
+  customerNumber String? @db.Text
+  accountNumber  String? @db.Text // Deprecated: use accounts relation
+
+  // Secrets (storage/validation rules depend on context)
+  passwordHash String? @db.Text
+  memoWord     String? @map("memo_word") @db.Text // Security word for password reset
+
+  // Token versioning for rotation
+  tokenVersion Int @default(0) @map("token_version")
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  beneficiaries        Beneficiary[]
+  devices              MobileDevice[]
+  accounts             MobileUserAccount[]
+  loginAttempts        DeviceLoginAttempt[]
+  profile              MobileUserProfile?
+  sessions             DeviceSession[]
+  registrationRequests RequestedRegistration[]
+  alertSettings        AccountAlertSettings[]
+  alerts               AccountAlert[]
+  suspiciousActivities SuspiciousActivityLog[]
+  checkbookRequests    CheckbookRequest[]
+
+  @@map("fdh_mobile_users")
+}
+
+model MobileUserAccount {
+  id           Int @id @default(autoincrement())
+  mobileUserId Int @map("mobile_user_id")
+
+  accountNumber String  @map("account_number") @db.Text
+  accountName   String? @map("account_name") @db.Text
+  accountType   String? @map("account_type") @db.Text // SAVINGS, CURRENT, etc.
+  currency      String  @default("MWK")
+
+  // Account details from T24
+  categoryId    String? @map("category_id") @db.Text // e.g., "1001"
+  categoryName  String? @map("category_name") @db.Text // e.g., "Platinum Current Account"
+  accountStatus String? @map("account_status") @db.Text // e.g., "Active"
+  holderName    String? @map("holder_name") @db.Text // Account holder name
+  nickName      String? @map("nick_name") @db.Text // Account nickname
+  onlineLimit   String? @map("online_limit") @db.Text // Online transaction limit
+  openingDate   String? @map("opening_date") @db.Text // Account opening date
+
+  // Balance fields (synced from T24)
+  balance          Decimal? @db.Decimal(15, 2)
+  workingBalance   Decimal? @map("working_balance") @db.Decimal(15, 2)
+  availableBalance Decimal? @map("available_balance") @db.Decimal(15, 2)
+  clearedBalance   Decimal? @map("cleared_balance") @db.Decimal(15, 2)
+
+  isPrimary Boolean @default(false) @map("is_primary")
+  isActive  Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  mobileUser MobileUser @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
+
+  @@unique([mobileUserId, accountNumber])
+  @@index([mobileUserId])
+  @@map("fdh_mobile_user_accounts")
+}
+
+model MobileUserProfile {
+  id           Int @id @default(autoincrement())
+  mobileUserId Int @unique @map("mobile_user_id")
+
+  firstName String? @map("first_name") @db.Text
+  lastName  String? @map("last_name") @db.Text
+  email     String? @db.Text
+  phone     String? @db.Text
+  address   String? @db.Text
+  city      String? @db.Text
+  country   String? @db.Text
+  zip       String? @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  mobileUser MobileUser @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
+
+  @@map("fdh_mobile_user_profiles")
+}
+
+model DeviceLoginAttempt {
+  id String @id @default(cuid())
+
+  // User Context
+  mobileUserId Int?    @map("mobile_user_id")
+  username     String? @db.Text
+  context      String? @db.Text
+
+  // Device Information (NOT yet in device table)
+  deviceId    String? @map("device_id")
+  deviceName  String? @map("device_name")
+  deviceModel String? @map("device_model")
+  deviceOs    String? @map("device_os")
+
+  // Network Context
+  ipAddress String? @map("ip_address")
+  location  String? @db.Text
+
+  // Attempt Details
+  attemptType   AttemptType   @map("attempt_type")
+  status        AttemptStatus
+  failureReason String?       @map("failure_reason") @db.Text
+
+  // OTP Verification
+  otpCode           String?   @map("otp_code")
+  otpSentTo         String?   @map("otp_sent_to")
+  otpSentAt         DateTime? @map("otp_sent_at")
+  otpExpiresAt      DateTime? @map("otp_expires_at")
+  otpVerifiedAt     DateTime? @map("otp_verified_at")
+  otpAttempts       Int       @default(0) @map("otp_attempts")
+  verificationToken String?   @unique @map("verification_token")
+
+  attemptedAt DateTime @default(now()) @map("attempted_at")
+
+  // Relations
+  mobileUser MobileUser? @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
+
+  @@index([mobileUserId])
+  @@index([deviceId])
+  @@index([verificationToken])
+  @@index([attemptedAt])
+  @@map("fdh_device_login_attempts")
+}
+
+model MobileDevice {
+  id           String     @id @default(cuid())
+  mobileUserId Int        @map("mobile_user_id")
+  user         MobileUser @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
+
+  // Device Metadata
+  name     String? @db.Text
+  model    String? @db.Text
+  os       String? @db.Text
+  deviceId String  @db.Text
+
+  // Passkey Credentials (WebAuthn) - Optional for password-login devices
+  credentialId String?  @unique @db.Text
+  publicKey    String?  @db.Text
+  counter      BigInt?  @default(0)
+  transports   String[] @default([])
+
+  // Verification Context
+  verifiedVia          String? @map("verified_via") // "OTP_SMS", "OTP_EMAIL", "PASSKEY", "ADMIN"
+  verificationIp       String? @map("verification_ip")
+  verificationLocation String? @map("verification_location")
+
+  // Status
+  isActive    Boolean   @default(true) @map("is_active")
+  lastUsedAt  DateTime? @map("last_used_at")
+  loginCount  Int       @default(0) @map("login_count")
+  lastLoginIp String?   @map("last_login_ip")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([mobileUserId, deviceId])
+  @@index([mobileUserId])
+  @@map("mobile_devices")
+}
+
+model DatabaseConnection {
+  id         Int      @id @default(autoincrement())
+  name       String
+  engine     String // e.g. "postgres" (v1 only)
+  host       String
+  port       Int
+  database   String
+  username   String
+  password   String
+  options    Json?
+  isReadOnly Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  lastTestedAt    DateTime?
+  lastTestOk      Boolean?
+  lastTestMessage String?
+
+  migrations Migration[]
+}
+
+model CoreBankingConnection {
+  id       Int    @id @default(autoincrement())
+  name     String
+  username String @db.Text
+  password String @db.Text
+  baseUrl  String @db.Text // e.g. "https://core-banking.internal" or full base API URL
+
+  authType CoreBankingAuthType @default(BASIC)
+  token    String?             @db.Text
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lastTestedAt    DateTime?
+  lastTestOk      Boolean?
+  lastTestMessage String?
+
+  endpoints CoreBankingEndpoint[]
+}
+
+enum CoreBankingAuthType {
+  BASIC
+  BEARER
+}
+
+model CoreBankingEndpoint {
+  id           Int                   @id @default(autoincrement())
+  connection   CoreBankingConnection @relation(fields: [connectionId], references: [id])
+  connectionId Int
+
+  name         String
+  method       String  @default("POST")
+  path         String  @db.Text
+  bodyTemplate String? @db.Text
+  isActive     Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum MigrationStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model Migration {
+  id          Int     @id @default(autoincrement())
+  name        String
+  description String? @db.Text
+
+  // Source database (external - where we read from)
+  sourceConnectionId Int
+  sourceConnection   DatabaseConnection @relation(fields: [sourceConnectionId], references: [id], onDelete: Cascade)
+  sourceQuery        String             @db.Text
+
+  // Target database (our database - where we write to)
+  targetTable       String
+  targetInsertQuery String @db.Text // Template query with placeholders
+
+  // Execution tracking
+  status              MigrationStatus @default(PENDING)
+  lastRunAt           DateTime?
+  lastRunSuccess      Boolean?
+  lastRunMessage      String?         @db.Text
+  lastRunRowsAffected Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Scheduling
+  isRecurring    Boolean   @default(false) @map("is_recurring") // Run periodically?
+  cronExpression String?   @map("cron_expression") @db.Text // e.g. "0 0 * * *"
+  nextRunAt      DateTime? @map("next_run_at") // When is it due next?
+
+  @@map("fdh_migrations")
+}
+
+model Backup {
+  id         String   @id @default(cuid())
+  filename   String   @unique
+  sizeBytes  BigInt   @map("size_bytes")
+  storageUrl String?  @map("storage_url") @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("fdh_backups")
+}
+
+enum BeneficiaryType {
+  WALLET
+  BANK_INTERNAL
+  BANK_EXTERNAL
+}
+
+model Beneficiary {
+  id Int @id @default(autoincrement())
+
+  // Relationship to user
+  userId Int        @map("user_id")
+  user   MobileUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Beneficiary details
+  name            String          @db.Text
+  beneficiaryType BeneficiaryType @map("beneficiary_type")
+
+  // For WALLET beneficiaries
+  phoneNumber String? @map("phone_number") @db.Text
+
+  // For BANK_INTERNAL and BANK_EXTERNAL beneficiaries
+  accountNumber String? @map("account_number") @db.Text
+
+  // For BANK_EXTERNAL only
+  bankCode String? @map("bank_code") @db.Text
+  bankName String? @map("bank_name") @db.Text
+  branch   String? @db.Text
+
+  // Optional fields
+  description String? @db.Text
+
+  // Metadata
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Unique constraints per type
+  @@unique([userId, phoneNumber, beneficiaryType], name: "unique_user_wallet")
+  @@unique([userId, accountNumber, beneficiaryType], name: "unique_user_internal_bank")
+  @@unique([userId, accountNumber, bankCode, beneficiaryType], name: "unique_user_external_bank")
+  @@index([userId])
+  @@index([beneficiaryType])
+  @@map("fdh_beneficiaries")
+}
+
+model AdminWebUser {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique @db.Text
+  passwordHash String   @db.Text
+  name         String?  @db.Text
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  resetTokens            AdminWebPasswordResetToken[]
+  processedRegistrations RequestedRegistration[]
+  approvedCheckbooks     CheckbookRequest[]
+
+  @@map("admin_web_users")
+}
+
+model AdminWebPasswordResetToken {
+  id        Int       @id @default(autoincrement())
+  token     String    @unique @db.Text
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  userId Int          @map("user_id")
+  user   AdminWebUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("admin_web_password_reset_tokens")
+}
+
+model AccountCategory {
+  id              Int      @id @default(autoincrement())
+  category        String   @unique @db.Text
+  displayToMobile Boolean  @default(true) @map("display_to_mobile")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("fdh_account_categories")
+}
+
+model Form {
+  id          String  @id @default(cuid())
+  name        String  @db.Text
+  description String? @db.Text
+  category    String? @db.Text
+
+  // JSON schema for fields
+  schema Json
+
+  // Settings
+  isActive Boolean @default(true) @map("is_active")
+  isPublic Boolean @default(false) @map("is_public")
+
+  // Submission settings
+  allowMultiple Boolean @default(false) @map("allow_multiple")
+  requiresAuth  Boolean @default(true) @map("requires_auth")
+
+  // Metadata
+  createdBy Int @map("created_by")
+  version   Int @default(1)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@index([category])
+  @@map("forms")
+}
+
+model DeviceSession {
+  id           String @id @default(cuid())
+  deviceId     String @map("device_id")
+  mobileUserId Int    @map("mobile_user_id")
+
+  // Token tracking
+  tokenHash String @unique @db.Text
+  sessionId String @unique @map("session_id") @db.Text
+
+  // Session info
+  isActive       Boolean  @default(true) @map("is_active")
+  expiresAt      DateTime @map("expires_at")
+  lastActivityAt DateTime @default(now()) @map("last_activity_at")
+
+  // Context
+  ipAddress String? @map("ip_address")
+  userAgent String? @map("user_agent") @db.Text
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  revokedAt DateTime? @map("revoked_at")
+
+  // Relations
+  mobileUser MobileUser @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId])
+  @@index([mobileUserId])
+  @@index([tokenHash])
+  @@index([sessionId])
+  @@index([isActive])
+  @@map("fdh_device_sessions")
+}
+
+model AppScreen {
+  id      String            @id @default(cuid())
+  name    String            @db.Text
+  context MobileUserContext
+  icon    String            @db.Text // Icon name from predefined list
+  order   Int               @default(0)
+
+  isActive  Boolean @default(true) @map("is_active")
+  isTesting Boolean @default(false) @map("is_testing")
+
+  pages AppScreenPage[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([context, name])
+  @@index([context])
+  @@index([order])
+  @@index([isActive])
+  @@map("app_screens")
+}
+
+model AppScreenPage {
+  id    String @id @default(cuid())
+  name  String @db.Text
+  icon  String @db.Text
+  order Int    @default(0)
+
+  isActive  Boolean @default(true) @map("is_active")
+  isTesting Boolean @default(false) @map("is_testing")
+
+  screenId String    @map("screen_id")
+  screen   AppScreen @relation(fields: [screenId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  workflows AppScreenPageWorkflow[]
+
+  @@unique([screenId, name])
+  @@index([screenId])
+  @@index([order])
+  @@index([isActive])
+  @@map("app_screen_pages")
+}
+
+enum RegistrationStatus {
+  PENDING
+  APPROVED
+  COMPLETED
+  FAILED
+  DUPLICATE
+}
+
+enum RegistrationSource {
+  THIRD_PARTY_API
+  ADMIN_PORTAL
+  SELF_SERVICE
+  T24_SYNC
+}
+
+model RequestedRegistration {
+  id Int @id @default(autoincrement())
+
+  // Request metadata
+  sourceIp    String             @map("source_ip") @db.Text
+  requestBody Json               @map("request_body") // Full request payload
+  source      RegistrationSource @default(THIRD_PARTY_API)
+
+  // Customer data (extracted from request)
+  phoneNumber    String  @map("phone_number") @db.Text
+  customerNumber String  @map("customer_number") @db.Text
+  emailAddress   String? @map("email_address") @db.Text
+  firstName      String? @map("first_name") @db.Text
+  lastName       String? @map("last_name") @db.Text
+  profileType    String? @map("profile_type") @db.Text
+  company        String? @db.Text
+
+  // Processing status
+  status       RegistrationStatus @default(PENDING)
+  processedAt  DateTime?          @map("processed_at")
+  elixirUserId Int?               @map("elixir_user_id") // ID from service_manager
+  mobileUserId Int?               @map("mobile_user_id") // Link to MobileUser if created
+
+  // Error handling
+  errorMessage String?   @map("error_message") @db.Text
+  retryCount   Int       @default(0) @map("retry_count")
+  lastRetryAt  DateTime? @map("last_retry_at")
+
+  // Validation data (stored for cron job processing)
+  validationData Json? @map("validation_data")
+
+  // Process stage tracking
+  processLog Json[] @default([]) @map("process_log")
+
+  // Audit trail
+  processedBy Int?    @map("processed_by") // AdminWebUser who processed
+  notes       String? @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  mobileUser      MobileUser?   @relation(fields: [mobileUserId], references: [id], onDelete: SetNull)
+  processedByUser AdminWebUser? @relation(fields: [processedBy], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([customerNumber])
+  @@index([phoneNumber])
+  @@index([sourceIp])
+  @@index([createdAt])
+  @@index([source])
+  @@map("requested_registrations")
+}
+
+// ============================================
+// Account Alerts System
+// ============================================
+
+model AccountAlertSettings {
+  id            Int    @id @default(autoincrement())
+  mobileUserId  Int    @map("mobile_user_id")
+  accountNumber String @map("account_number") @db.VarChar(20)
+
+  // Low Balance Alert
+  lowBalanceEnabled   Boolean               @default(true) @map("low_balance_enabled")
+  lowBalanceThreshold Decimal?              @map("low_balance_threshold") @db.Decimal(19, 4)
+  lowBalanceChannels  NotificationChannel[] @default([PUSH]) @map("low_balance_channels")
+
+  // Large Transaction Alert
+  largeTransactionEnabled   Boolean               @default(true) @map("large_transaction_enabled")
+  largeTransactionThreshold Decimal?              @map("large_transaction_threshold") @db.Decimal(19, 4)
+  largeTransactionChannels  NotificationChannel[] @default([PUSH, SMS]) @map("large_transaction_channels")
+  largeTransactionDebitOnly Boolean               @default(true) @map("large_transaction_debit_only")
+
+  // Suspicious Activity Alert
+  alertUnusualLocation        Boolean               @default(true) @map("alert_unusual_location")
+  alertMultipleFailedAttempts Boolean               @default(true) @map("alert_multiple_failed_attempts")
+  alertNewDeviceTransaction   Boolean               @default(true) @map("alert_new_device_transaction")
+  suspiciousActivityChannels  NotificationChannel[] @default([PUSH, SMS, EMAIL]) @map("suspicious_activity_channels")
+
+  // Payment Due Alert
+  paymentDueEnabled       Boolean                 @default(true) @map("payment_due_enabled")
+  paymentDueChannels      NotificationChannel[]   @default([PUSH, SMS]) @map("payment_due_channels")
+  paymentReminderInterval PaymentReminderInterval @default(ONE_DAY) @map("payment_reminder_interval")
+
+  // Login Alert
+  loginAlertMode     LoginAlertMode        @default(NEW_DEVICE) @map("login_alert_mode")
+  loginAlertChannels NotificationChannel[] @default([PUSH, EMAIL]) @map("login_alert_channels")
+
+  // Quiet Hours
+  quietHoursEnabled Boolean   @default(false) @map("quiet_hours_enabled")
+  quietHoursStart   DateTime? @map("quiet_hours_start") @db.Time(6)
+  quietHoursEnd     DateTime? @map("quiet_hours_end") @db.Time(6)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  mobileUser MobileUser @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
+
+  @@unique([mobileUserId, accountNumber])
+  @@index([mobileUserId])
+  @@index([accountNumber])
+  @@map("account_alert_settings")
+}
+
+model AccountAlert {
+  id            Int       @id @default(autoincrement())
+  mobileUserId  Int       @map("mobile_user_id")
+  accountNumber String?   @map("account_number") @db.VarChar(20)
+  alertType     AlertType @map("alert_type")
+
+  // Alert Context (flexible JSON storage)
+  alertData Json @map("alert_data")
+
+  // Status
+  status AlertStatus @default(PENDING)
+
+  // Delivery Tracking
+  channelsSent   NotificationChannel[] @default([]) @map("channels_sent")
+  sentAt         DateTime?             @map("sent_at")
+  deliveryStatus Json?                 @map("delivery_status")
+
+  // User Interaction
+  acknowledgedAt DateTime?   @map("acknowledged_at")
+  userAction     UserAction? @map("user_action")
+
+  // Timestamps
+  triggeredAt DateTime @default(now()) @map("triggered_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  mobileUser           MobileUser              @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
+  suspiciousActivities SuspiciousActivityLog[]
+
+  @@index([mobileUserId])
+  @@index([accountNumber])
+  @@index([alertType])
+  @@index([status])
+  @@index([triggeredAt])
+  @@map("account_alerts")
+}
+
+model SuspiciousActivityLog {
+  id            Int     @id @default(autoincrement())
+  alertId       Int?    @map("alert_id")
+  mobileUserId  Int     @map("mobile_user_id")
+  accountNumber String? @map("account_number") @db.VarChar(20)
+
+  // Detection Details
+  suspicionReason  SuspicionReason @map("suspicion_reason")
+  riskScore        Int             @map("risk_score")
+  detectionDetails Json            @map("detection_details")
+
+  // Related Data
+  relatedTransactionIds String[] @default([]) @map("related_transaction_ids")
+  deviceId              String?  @map("device_id") @db.VarChar(255)
+  ipAddress             String?  @map("ip_address") @db.VarChar(45)
+  location              String?  @db.VarChar(255)
+
+  // Resolution
+  isResolved       Boolean           @default(false) @map("is_resolved")
+  resolvedAt       DateTime?         @map("resolved_at")
+  resolutionAction ResolutionAction? @map("resolution_action")
+  adminNotes       String?           @map("admin_notes") @db.Text
+
+  detectedAt DateTime @default(now()) @map("detected_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  alert      AccountAlert? @relation(fields: [alertId], references: [id], onDelete: SetNull)
+  mobileUser MobileUser    @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
+
+  @@index([mobileUserId])
+  @@index([alertId])
+  @@index([riskScore])
+  @@index([isResolved])
+  @@index([detectedAt])
+  @@map("suspicious_activity_log")
+}
+
+// ============================================
+// Checkbook Requests
+// ============================================
+
+enum CheckbookRequestStatus {
+  PENDING
+  APPROVED
+  READY_FOR_COLLECTION
+  COLLECTED
+  CANCELLED
+  REJECTED
+}
+
+model CheckbookRequest {
+  id            Int                    @id @default(autoincrement())
+  mobileUserId  Int                    @map("mobile_user_id")
+  accountNumber String                 @map("account_number") @db.Text
+  
+  // Checkbook details
+  numberOfCheckbooks Int    @default(1) @map("number_of_checkbooks")
+  collectionPoint    String @map("collection_point") @db.Text
+  
+  // Status tracking
+  status       CheckbookRequestStatus @default(PENDING)
+  requestedAt  DateTime               @default(now()) @map("requested_at")
+  approvedAt   DateTime?              @map("approved_at")
+  approvedBy   Int?                   @map("approved_by")
+  readyAt      DateTime?              @map("ready_at")
+  collectedAt  DateTime?              @map("collected_at")
+  cancelledAt  DateTime?              @map("cancelled_at")
+  rejectedAt   DateTime?              @map("rejected_at")
+  
+  // Additional information
+  notes          String? @db.Text
+  rejectionReason String? @map("rejection_reason") @db.Text
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  mobileUser      MobileUser    @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
+  approvedByUser  AdminWebUser? @relation(fields: [approvedBy], references: [id], onDelete: SetNull)
+  
+  @@index([mobileUserId])
+  @@index([accountNumber])
+  @@index([status])
+  @@index([requestedAt])
+  @@map("checkbook_requests")
+}
+
+model Workflow {
+  id          String   @id @default(cuid())
+  name        String   @unique @db.Text
+  description String?  @db.Text
+  
+  isActive    Boolean  @default(true) @map("is_active")
+  version     Int      @default(1)
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  steps       WorkflowStep[]
+  screenPages AppScreenPageWorkflow[]
+  
+  @@index([isActive])
+  @@map("workflows")
+}
+
+model WorkflowStep {
+  id         String   @id @default(cuid())
+  workflowId String   @map("workflow_id")
+  
+  // Step details
+  type       WorkflowStepType
+  label      String   @db.Text
+  order      Int      @default(0)
+  
+  // Step configuration (JSON for flexibility)
+  config     Json
+  
+  // Validation rules (optional)
+  validation Json?
+  
+  // Status
+  isActive   Boolean  @default(true) @map("is_active")
+  
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  @@index([workflowId])
+  @@index([type])
+  @@index([order])
+  @@index([isActive])
+  @@map("workflow_steps")
+}
+
+enum WorkflowStepType {
+  FORM
+  API_CALL
+  VALIDATION
+  CONFIRMATION
+  DISPLAY
+  REDIRECT
+}
+
+model AppScreenPageWorkflow {
+  id        String   @id @default(cuid())
+  
+  pageId    String   @map("page_id")
+  workflowId String  @map("workflow_id")
+  
+  order     Int      @default(0)
+  isActive  Boolean  @default(true) @map("is_active")
+  
+  // Override config if needed (optional)
+  configOverride Json? @map("config_override")
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  page      AppScreenPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  workflow  Workflow      @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  @@unique([pageId, workflowId])
+  @@index([pageId])
+  @@index([workflowId])
+  @@index([order])
+  @@map("app_screen_page_workflows")
+}
+
+// ============================================
+// Billers System
+// ============================================
+
+enum BillerType {
+  REGISTER_GENERAL
+  BWB_POSTPAID
+  LWB_POSTPAID
+  SRWB_POSTPAID
+  SRWB_PREPAID
+  MASM
+  AIRTEL_VALIDATION
+  TNM_BUNDLES
+}
+
+enum BillerTransactionType {
+  ACCOUNT_DETAILS
+  POST_TRANSACTION
+  GET_INVOICE
+  CONFIRM_INVOICE
+  BUNDLE_DETAILS
+  CONFIRM_BUNDLE
+}
+
+enum BillerTransactionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REVERSED
+}
+
+model BillerConfig {
+  id                    String       @id @default(cuid())
+  
+  // Identity
+  billerType            BillerType   @unique @map("biller_type")
+  billerName            String       @map("biller_name") @db.Text
+  displayName           String       @map("display_name") @db.Text
+  description           String?      @db.Text
+  isActive              Boolean      @default(true) @map("is_active")
+  
+  // API Configuration
+  baseUrl               String       @map("base_url") @db.Text
+  endpoints             Json         // { accountDetails, payment, invoice, etc. }
+  authentication        Json?        // Encrypted credentials
+  
+  // Transaction Settings
+  defaultCurrency       String       @default("MWK") @map("default_currency") @db.VarChar(3)
+  supportedCurrencies   String[]     @default(["MWK"]) @map("supported_currencies")
+  timeoutMs             Int          @default(30000) @map("timeout_ms")
+  retryAttempts         Int          @default(3) @map("retry_attempts")
+  
+  // Features & Validation
+  features              Json         // { supportsInvoice, supportsBalanceCheck, etc. }
+  validationRules       Json         // { accountNumberFormat, minAmount, maxAmount }
+  
+  // Audit
+  createdAt             DateTime     @default(now()) @map("created_at")
+  updatedAt             DateTime     @updatedAt @map("updated_at")
+  createdBy             String?      @map("created_by")
+  updatedBy             String?      @map("updated_by")
+  
+  // Relations
+  transactions          BillerTransaction[]
+  
+  @@index([billerType])
+  @@index([isActive])
+  @@map("biller_configs")
+}
+
+model BillerTransaction {
+  id                    String       @id @default(cuid())
+  
+  // Biller Reference
+  billerConfigId        String?                @map("biller_config_id")
+  billerConfig          BillerConfig?          @relation(fields: [billerConfigId], references: [id])
+  billerType            BillerType             @map("biller_type")
+  billerName            String                 @map("biller_name") @db.Text
+  
+  // Transaction Identity
+  ourTransactionId      String                 @unique @map("our_transaction_id") @db.VarChar(50)
+  externalTransactionId String?                @map("external_transaction_id") @db.Text
+  
+  // Transaction Type
+  transactionType       BillerTransactionType  @map("transaction_type")
+  
+  // Account Information
+  accountNumber         String                 @map("account_number") @db.Text
+  accountType           String?                @map("account_type") @db.VarChar(20)
+  customerAccountName   String?                @map("customer_account_name") @db.Text
+  
+  // T24 Integration
+  creditAccount         String?                @map("credit_account") @db.VarChar(20)
+  creditAccountType     String?                @map("credit_account_type") @db.VarChar(20)
+  debitAccount          String?                @map("debit_account") @db.VarChar(20)
+  debitAccountType      String?                @map("debit_account_type") @db.VarChar(20)
+  
+  // Amount
+  amount                Decimal                @db.Decimal(18, 2)
+  currency              String                 @default("MWK") @db.VarChar(3)
+  
+  // Status & Processing
+  status                BillerTransactionStatus
+  
+  // API Details
+  apiEndpoint           String?                @map("api_endpoint") @db.Text
+  requestPayload        Json?                  @map("request_payload")
+  responsePayload       Json?                  @map("response_payload")
+  errorMessage          String?                @map("error_message") @db.Text
+  errorCode             String?                @map("error_code") @db.VarChar(50)
+  
+  // Special Fields
+  bundleId              String?                @map("bundle_id") @db.VarChar(50)
+  invoiceNumber         String?                @map("invoice_number") @db.VarChar(100)
+  meterNumber           String?                @map("meter_number") @db.VarChar(50)
+  
+  // Metadata
+  metadata              Json?                  // Additional context
+  
+  // Timestamps
+  processedAt           DateTime?              @map("processed_at")
+  completedAt           DateTime?              @map("completed_at")
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
+  
+  // Audit
+  initiatedBy           String?                @map("initiated_by")
+  
+  @@index([billerType])
+  @@index([status])
+  @@index([ourTransactionId])
+  @@index([accountNumber])
+  @@index([createdAt])
+  @@index([billerConfigId])
+  @@map("biller_transactions")
+}

@@ -1,0 +1,1307 @@
+export const typeDefs = /* GraphQL */ `
+  scalar JSON
+
+  enum MobileUserContext {
+    MOBILE_BANKING
+    WALLET
+    VILLAGE_BANKING
+    AGENT
+    MERCHANT
+  }
+
+  enum AlertType {
+    LOW_BALANCE
+    LARGE_TRANSACTION
+    SUSPICIOUS_ACTIVITY
+    PAYMENT_DUE
+    ACCOUNT_LOGIN
+  }
+
+  enum NotificationChannel {
+    PUSH
+    SMS
+    EMAIL
+  }
+
+  enum AlertStatus {
+    PENDING
+    SENT
+    FAILED
+    ACKNOWLEDGED
+  }
+
+  enum TransactionType {
+    DEBIT
+    CREDIT
+  }
+
+  enum SuspicionReason {
+    UNUSUAL_LOCATION
+    MULTIPLE_FAILED_ATTEMPTS
+    NEW_DEVICE_TRANSACTION
+  }
+
+  enum PaymentType {
+    BILL
+    LOAN
+    SUBSCRIPTION
+    RECURRING
+  }
+
+  enum PaymentReminderInterval {
+    ONE_WEEK
+    THREE_DAYS
+    ONE_DAY
+  }
+
+  enum LoginAlertMode {
+    EVERY_LOGIN
+    NEW_DEVICE
+    NEW_LOCATION
+  }
+
+  enum LoginMethod {
+    PASSWORD
+    BIOMETRIC
+    PASSKEY
+    OTP
+  }
+
+  enum UserAction {
+    DISMISSED
+    THIS_WAS_ME
+    REPORT_FRAUD
+    QUICK_PAY
+  }
+
+  enum ResolutionAction {
+    CONFIRMED_LEGITIMATE
+    FRAUD_REPORTED
+    ACCOUNT_LOCKED
+  }
+
+  type AdminWebUser {
+    id: ID!
+    email: String!
+    name: String
+    isActive: Boolean!
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  input AdminWebLoginInput {
+    email: String!
+    password: String!
+  }
+
+  type AdminWebLoginResult {
+    success: Boolean!
+    user: AdminWebUser
+    token: String
+    message: String
+  }
+
+  input AdminWebPasswordResetRequestInput {
+    email: String!
+  }
+
+  input AdminWebPasswordResetInput {
+    token: String!
+    newPassword: String!
+  }
+
+  enum BeneficiaryType {
+    WALLET
+    BANK_INTERNAL
+    BANK_EXTERNAL
+  }
+
+  type TestResult {
+    ok: Boolean!
+    message: String
+
+    # Optional HTTP request/response details (used by core banking tests)
+    url: String
+    method: String
+    requestHeadersJson: String
+    requestBody: String
+    statusCode: Int
+    statusText: String
+    responseBody: String
+  }
+
+  type Account {
+    id: ID!
+    accountNumber: String!
+    accountName: String
+    accountType: String
+    currency: String!
+    categoryId: String
+    categoryName: String
+    accountStatus: String
+    holderName: String
+    balance: String
+    workingBalance: String
+    isPrimary: Boolean!
+    isActive: Boolean!
+    mobileUserId: String!
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  type MobileUser {
+    id: ID!
+    context: MobileUserContext!
+    username: String
+    phoneNumber: String
+    customerNumber: String
+    accountNumber: String
+    accounts: [Account!]!
+    primaryAccount: Account
+    profile: MobileUserProfile
+    isActive: Boolean!
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  type MobileUserProfile {
+    id: ID!
+    mobileUserId: Int!
+    firstName: String
+    lastName: String
+    email: String
+    phone: String
+    address: String
+    city: String
+    country: String
+    zip: String
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  input CreateMobileUserInput {
+    context: MobileUserContext!
+    username: String
+    phoneNumber: String
+    passwordHash: String
+  }
+
+  input UpdateMobileUserInput {
+    id: ID!
+    isActive: Boolean
+  }
+
+  input ResetMobileUserPasswordInput {
+    userId: ID!
+  }
+
+  type ResetMobileUserPasswordResult {
+    success: Boolean!
+    tempPassword: String!
+    message: String
+  }
+
+  type RotateTokenResult {
+    success: Boolean!
+    token: String
+    message: String
+  }
+
+  type LoginResult {
+    success: Boolean!
+    user: MobileUser
+    token: String
+    message: String
+    devicePending: Boolean!
+    
+    # New device verification flow
+    requiresVerification: Boolean
+    verificationMethod: String
+    maskedContact: String
+    verificationToken: String
+    
+    # Admin approval flow
+    requiresApproval: Boolean
+    
+    # App structure based on user's context
+    appStructure: [AppScreen!]
+  }
+  
+  type VerifyDeviceOtpResult {
+    success: Boolean!
+    token: String!
+    user: MobileUser
+    device: MobileDevice
+    message: String
+  }
+  
+  type DeviceLoginAttempt {
+    id: ID!
+    mobileUserId: Int
+    username: String
+    context: String
+    deviceId: String
+    deviceName: String
+    deviceModel: String
+    deviceOs: String
+    ipAddress: String
+    location: String
+    attemptType: String!
+    status: String!
+    failureReason: String
+    otpCode: String
+    otpSentTo: String
+    otpSentAt: String
+    otpExpiresAt: String
+    otpVerifiedAt: String
+    otpAttempts: Int!
+    verificationToken: String
+    attemptedAt: String!
+    mobileUser: MobileUser
+  }
+  
+  type LoginAttemptsResult {
+    attempts: [DeviceLoginAttempt!]!
+    total: Int!
+  }
+
+  input LoginInput {
+    username: String!
+    password: String!
+    context: MobileUserContext!
+    deviceId: String!
+    deviceName: String!
+    
+    # Optional metadata for tracking
+    ipAddress: String
+    location: String
+    deviceModel: String
+    deviceOs: String
+  }
+
+  type DatabaseConnection {
+    id: ID!
+    name: String!
+    engine: String!
+    host: String!
+    port: Int!
+    database: String!
+    username: String!
+    isReadOnly: Boolean!
+    createdAt: String!
+    updatedAt: String!
+    lastTestedAt: String
+    lastTestOk: Boolean
+    lastTestMessage: String
+  }
+
+  input DatabaseConnectionInput {
+    name: String!
+    engine: String!
+    host: String!
+    port: Int!
+    database: String!
+    username: String!
+    password: String
+    isReadOnly: Boolean
+  }
+
+  enum CoreBankingAuthType {
+    BASIC
+    BEARER
+  }
+
+  type CoreBankingConnection {
+    id: ID!
+    name: String!
+    username: String!
+    baseUrl: String!
+    isActive: Boolean!
+    authType: CoreBankingAuthType!
+    createdAt: String!
+    updatedAt: String!
+    lastTestedAt: String
+    lastTestOk: Boolean
+    lastTestMessage: String
+    endpoints: [CoreBankingEndpoint!]!
+  }
+
+  input CoreBankingConnectionInput {
+    name: String!
+    username: String
+    password: String
+    baseUrl: String!
+    isActive: Boolean
+    authType: CoreBankingAuthType
+    token: String
+  }
+
+  type CoreBankingEndpoint {
+    id: ID!
+    connectionId: Int!
+    name: String!
+    method: String!
+    path: String!
+    bodyTemplate: String
+    isActive: Boolean!
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  input CoreBankingEndpointInput {
+    connectionId: Int!
+    name: String!
+    method: String!
+    path: String!
+    bodyTemplate: String
+    isActive: Boolean
+  }
+
+  type DatabaseTable {
+    schema: String!
+    name: String!
+  }
+
+  type TableColumn {
+    name: String!
+    dataType: String!
+    isNullable: Boolean
+    defaultValue: String
+  }
+
+  type TableRow {
+    values: [String!]!
+  }
+
+  type TableData {
+    columns: [TableColumn!]!
+    rows: [TableRow!]!
+  }
+
+  enum MigrationStatus {
+    PENDING
+    RUNNING
+    COMPLETED
+    FAILED
+  }
+
+  type Migration {
+    id: ID!
+    name: String!
+    description: String
+    sourceConnectionId: Int!
+    sourceConnectionName: String!
+    sourceQuery: String!
+    targetTable: String!
+    targetInsertQuery: String!
+    status: MigrationStatus!
+    lastRunAt: String
+    lastRunSuccess: Boolean
+    lastRunMessage: String
+    lastRunRowsAffected: Int
+    createdAt: String!
+    updatedAt: String!
+    
+    isRecurring: Boolean!
+    cronExpression: String
+    nextRunAt: String
+  }
+
+  input MigrationInput {
+    name: String!
+    description: String
+    sourceConnectionId: Int!
+    sourceQuery: String!
+    targetTable: String!
+    targetInsertQuery: String!
+  }
+
+  type MigrationRunResult {
+    ok: Boolean!
+    message: String
+    rowsAffected: Int
+  }
+
+  enum DuplicateStrategy {
+    FAIL_ON_DUPLICATE
+    SKIP_DUPLICATES
+    UPDATE_EXISTING
+  }
+
+  type Beneficiary {
+    id: ID!
+    userId: Int!
+    user: MobileUser
+    name: String!
+    beneficiaryType: BeneficiaryType!
+    phoneNumber: String
+    accountNumber: String
+    bankCode: String
+    bankName: String
+    branch: String
+    description: String
+    isActive: Boolean!
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  input BeneficiaryInput {
+    userId: Int!
+    name: String!
+    beneficiaryType: BeneficiaryType!
+    phoneNumber: String
+    accountNumber: String
+    bankCode: String
+    bankName: String
+    branch: String
+    description: String
+    isActive: Boolean
+  }
+
+  type MobileDevice {
+    id: ID!
+    name: String
+    model: String
+    os: String
+    deviceId: String
+    credentialId: String!
+    transports: [String!]
+    isActive: Boolean!
+    lastUsedAt: String
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  type PasskeyRegistrationOptions {
+    rp: String!
+    user: String!
+    challenge: String! 
+    pubKeyCredParams: [String!]!
+    timeout: Int
+    attestation: String
+    authenticatorSelection: String
+    excludeCredentials: [String!]
+  }
+
+  type PasskeyAuthenticationOptions {
+    challenge: String!
+    rpId: String!
+    allowCredentials: [String!] 
+    timeout: Int
+    userVerification: String
+  }
+
+  type PasskeyRegistrationResult {
+    success: Boolean!
+    device: MobileDevice
+  }
+
+  type Backup {
+    id: ID!
+    filename: String!
+    sizeBytes: String!
+    createdAt: String!
+  }
+
+  type Query {
+    mobileUsers(context: MobileUserContext): [MobileUser!]!
+    mobileUserDevices(userId: ID!): [MobileDevice!]!
+    mobileUserAccounts(userId: ID!): [Account!]!
+    allMobileUserAccounts: [Account!]!
+    mobileUserAccount(accountNumber: String!): Account
+    adminWebUsers: [AdminWebUser!]!
+    backups: [Backup!]!
+    loginAttempts(
+      limit: Int
+      offset: Int
+      status: String
+      username: String
+    ): LoginAttemptsResult!
+    dbConnections: [DatabaseConnection!]!
+    dbConnection(id: ID!): DatabaseConnection
+    dbConnectionTables(id: ID!): [DatabaseTable!]!
+    dbConnectionTableData(
+      id: ID!
+      schema: String!
+      table: String!
+    ): TableData!
+    previewSourceQuery(connectionId: Int!, query: String!): TableData!
+    appDatabaseTables: [DatabaseTable!]!
+    appTableColumns(table: String!): [TableColumn!]!
+    migrations: [Migration!]!
+    migration(id: ID!): Migration
+    coreBankingConnections: [CoreBankingConnection!]!
+    coreBankingConnection(id: ID!): CoreBankingConnection
+    coreBankingEndpoints(connectionId: Int!): [CoreBankingEndpoint!]!
+    coreBankingEndpoint(id: ID!): CoreBankingEndpoint
+    beneficiaries(userId: ID!, type: BeneficiaryType): [Beneficiary!]!
+    beneficiary(id: ID!): Beneficiary
+  }
+
+  type Mutation {
+    login(input: LoginInput!): LoginResult!
+    adminWebLogin(input: AdminWebLoginInput!): AdminWebLoginResult!
+    adminWebRequestPasswordReset(
+      input: AdminWebPasswordResetRequestInput!
+    ): Boolean!
+    adminWebResetPassword(input: AdminWebPasswordResetInput!): Boolean!
+    
+    createMobileUser(input: CreateMobileUserInput!): MobileUser!
+    updateMobileUser(input: UpdateMobileUserInput!): MobileUser!
+    resetMobileUserPassword(input: ResetMobileUserPasswordInput!): ResetMobileUserPasswordResult!
+
+    createDbConnection(input: DatabaseConnectionInput!): DatabaseConnection!
+    updateDbConnection(id: ID!, input: DatabaseConnectionInput!): DatabaseConnection!
+    deleteDbConnection(id: ID!): Boolean!
+    testDbConnection(id: ID!): TestResult!
+
+    createCoreBankingConnection(input: CoreBankingConnectionInput!): CoreBankingConnection!
+    updateCoreBankingConnection(id: ID!, input: CoreBankingConnectionInput!): CoreBankingConnection!
+    deleteCoreBankingConnection(id: ID!): Boolean!
+    testCoreBankingConnection(id: ID!): TestResult!
+
+    # Test a single core banking endpoint, with optional JSON-encoded variables
+    # used to render {{placeholders}} in path and bodyTemplate
+    testCoreBankingEndpoint(id: ID!, variablesJson: String): TestResult!
+
+    createCoreBankingEndpoint(input: CoreBankingEndpointInput!): CoreBankingEndpoint!
+    updateCoreBankingEndpoint(id: ID!, input: CoreBankingEndpointInput!): CoreBankingEndpoint!
+    deleteCoreBankingEndpoint(id: ID!): Boolean!
+
+    createMigration(input: MigrationInput!): Migration!
+    updateMigration(id: ID!, input: MigrationInput!): Migration!
+    deleteMigration(id: ID!): Boolean!
+    runMigration(id: ID!, duplicateStrategy: DuplicateStrategy): MigrationRunResult!
+    # Recurring Migrations
+    scheduleMigration(id: ID!, cron: String!): Migration!
+    unscheduleMigration(id: ID!): Migration!
+
+    createBeneficiary(input: BeneficiaryInput!): Beneficiary!
+    updateBeneficiary(id: ID!, input: BeneficiaryInput!): Beneficiary!
+    deleteBeneficiary(id: ID!): Boolean!
+    toggleBeneficiaryStatus(id: ID!): Beneficiary!
+
+    # Passkey & Device Management
+    registerPasskeyStart(username: String!, context: MobileUserContext!): String! # Returns JSON string of options
+    registerPasskeyComplete(username: String!, context: MobileUserContext!, response: String!, deviceInfo: String): PasskeyRegistrationResult!
+    
+    loginWithPasskeyStart(username: String!, context: MobileUserContext!): String! # Returns JSON string of options
+    loginWithPasskeyComplete(username: String!, context: MobileUserContext!, response: String!): LoginResult!
+    
+    revokeDevice(deviceId: ID!): Boolean!
+    approveDevice(deviceId: ID!): Boolean!
+    deleteDevice(deviceId: ID!): Boolean!
+
+    # Backups
+    createBackup: Backup!
+    restoreBackup(id: ID!): Boolean!
+    deleteBackup(id: ID!): Boolean!
+
+    # Mobile User Accounts
+    linkAccountToUser(
+      userId: ID!
+      accountNumber: String!
+      accountName: String
+      accountType: String
+      isPrimary: Boolean
+    ): Account!
+    unlinkAccountFromUser(userId: ID!, accountId: ID!): Boolean!
+    setPrimaryAccount(userId: ID!, accountId: ID!): Boolean!
+    updateAccount(accountId: ID!, accountName: String, accountType: String): Account!
+    
+    # Device OTP Verification
+    verifyDeviceOtp(verificationToken: String!, otpCode: String!): VerifyDeviceOtpResult!
+    resendDeviceOtp(verificationToken: String!): Boolean!
+  }
+
+  type Subscription {
+    mobileUserCreated: MobileUser!
+    mobileUserUpdated: MobileUser!
+  }
+
+  type AccountCategory {
+    id: ID!
+    category: String!
+    categoryName: String
+    displayToMobile: Boolean!
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  input CreateAccountCategoryInput {
+    category: String!
+    displayToMobile: Boolean
+  }
+
+  input UpdateAccountCategoryInput {
+    id: ID!
+    category: String
+    displayToMobile: Boolean
+  }
+
+  extend type Query {
+    accountCategories: [AccountCategory!]!
+    accountCategory(id: ID!): AccountCategory
+  }
+
+  extend type Mutation {
+    createAccountCategory(input: CreateAccountCategoryInput!): AccountCategory!
+    updateAccountCategory(input: UpdateAccountCategoryInput!): AccountCategory!
+    deleteAccountCategory(id: ID!): Boolean!
+    createMobileUserProfile(input: CreateMobileUserProfileInput!): MobileUserProfile!
+    updateMobileUserProfile(input: UpdateMobileUserProfileInput!): MobileUserProfile!
+    deleteMobileUserProfile(mobileUserId: ID!): Boolean!
+  }
+
+  input CreateMobileUserProfileInput {
+    mobileUserId: Int!
+    firstName: String
+    lastName: String
+    email: String
+    phone: String
+    address: String
+    city: String
+    country: String
+    zip: String
+  }
+
+  input UpdateMobileUserProfileInput {
+    mobileUserId: Int!
+    firstName: String
+    lastName: String
+    email: String
+    phone: String
+    address: String
+    city: String
+    country: String
+    zip: String
+  }
+
+  type Form {
+    id: ID!
+    name: String!
+    description: String
+    category: String
+    schema: JSON!
+    isActive: Boolean!
+    isPublic: Boolean!
+    allowMultiple: Boolean!
+    requiresAuth: Boolean!
+    createdBy: Int!
+    version: Int!
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  input CreateFormInput {
+    name: String!
+    description: String
+    category: String
+    schema: JSON!
+    isActive: Boolean
+    isPublic: Boolean
+    allowMultiple: Boolean
+    requiresAuth: Boolean
+  }
+
+  input UpdateFormInput {
+    name: String
+    description: String
+    category: String
+    schema: JSON
+    isActive: Boolean
+    isPublic: Boolean
+    allowMultiple: Boolean
+    requiresAuth: Boolean
+  }
+
+  type FormsResult {
+    forms: [Form!]!
+    total: Int!
+  }
+
+  extend type Query {
+    forms(
+      isActive: Boolean
+      category: String
+      page: Int
+      limit: Int
+    ): FormsResult!
+    form(id: ID!): Form
+  }
+
+  extend type Mutation {
+    createForm(input: CreateFormInput!): Form!
+    updateForm(id: ID!, input: UpdateFormInput!): Form!
+    deleteForm(id: ID!): Boolean!
+    toggleFormActive(id: ID!): Form!
+  }
+
+  extend type Query {
+    appScreens(
+      context: MobileUserContext
+      page: Int
+      limit: Int
+    ): AppScreensResult!
+    appScreen(id: ID!): AppScreen
+    appScreenPages(screenId: ID!): [AppScreenPage!]!
+    
+    workflows(page: Int, limit: Int, isActive: Boolean): WorkflowsResult!
+    workflow(id: ID!): Workflow
+    workflowSteps(workflowId: ID!): [WorkflowStep!]!
+    workflowStep(id: ID!): WorkflowStep
+    pageWorkflows(pageId: ID!): [AppScreenPageWorkflow!]!
+  }
+
+  extend type Mutation {
+    createAppScreen(input: CreateAppScreenInput!): AppScreen!
+    updateAppScreen(id: ID!, input: UpdateAppScreenInput!): AppScreen!
+    deleteAppScreen(id: ID!): Boolean!
+    reorderAppScreens(context: MobileUserContext!, screenIds: [ID!]!): [AppScreen!]!
+    
+    createAppScreenPage(input: CreateAppScreenPageInput!): AppScreenPage!
+    updateAppScreenPage(id: ID!, input: UpdateAppScreenPageInput!): AppScreenPage!
+    deleteAppScreenPage(id: ID!): Boolean!
+    reorderAppScreenPages(screenId: ID!, pageIds: [ID!]!): [AppScreenPage!]!
+    
+    createWorkflow(input: CreateWorkflowInput!): Workflow!
+    createWorkflowWithSteps(input: CreateWorkflowWithStepsInput!): Workflow!
+    updateWorkflow(id: ID!, input: UpdateWorkflowInput!): Workflow!
+    deleteWorkflow(id: ID!): Boolean!
+    
+    createWorkflowStep(input: CreateWorkflowStepInput!): WorkflowStep!
+    updateWorkflowStep(id: ID!, input: UpdateWorkflowStepInput!): WorkflowStep!
+    deleteWorkflowStep(id: ID!): Boolean!
+    reorderWorkflowSteps(workflowId: ID!, stepIds: [ID!]!): [WorkflowStep!]!
+    
+    attachWorkflowToPage(input: AttachWorkflowToPageInput!): AppScreenPageWorkflow!
+    detachWorkflowFromPage(id: ID!): Boolean!
+    updatePageWorkflow(id: ID!, input: UpdatePageWorkflowInput!): AppScreenPageWorkflow!
+    reorderPageWorkflows(pageId: ID!, workflowIds: [ID!]!): [AppScreenPageWorkflow!]!
+  }
+
+  type DeviceSession {
+    id: ID!
+    deviceId: String!
+    lastActivityAt: String!
+    createdAt: String!
+    expiresAt: String!
+    ipAddress: String
+    userAgent: String
+  }
+
+  input SecureRotateTokenInput {
+    currentToken: String!
+    deviceId: String!
+  }
+
+  type AppScreen {
+    id: ID!
+    name: String!
+    context: MobileUserContext!
+    icon: String!
+    order: Int!
+    isActive: Boolean!
+    isTesting: Boolean!
+    pages: [AppScreenPage!]!
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  type AppScreenPage {
+    id: ID!
+    name: String!
+    icon: String!
+    order: Int!
+    isActive: Boolean!
+    isTesting: Boolean!
+    screenId: String!
+    screen: AppScreen!
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  input CreateAppScreenInput {
+    name: String!
+    context: MobileUserContext!
+    icon: String!
+    order: Int
+    isActive: Boolean
+    isTesting: Boolean
+  }
+
+  input UpdateAppScreenInput {
+    name: String
+    icon: String
+    order: Int
+    isActive: Boolean
+    isTesting: Boolean
+  }
+
+  input CreateAppScreenPageInput {
+    name: String!
+    icon: String!
+    order: Int
+    isActive: Boolean
+    isTesting: Boolean
+    screenId: String!
+  }
+
+  input UpdateAppScreenPageInput {
+    name: String
+    icon: String
+    order: Int
+    isActive: Boolean
+    isTesting: Boolean
+  }
+
+  type AppScreensResult {
+    screens: [AppScreen!]!
+    total: Int!
+  }
+
+  # ========================================
+  # WORKFLOWS
+  # ========================================
+
+  enum WorkflowStepType {
+    FORM
+    API_CALL
+    VALIDATION
+    CONFIRMATION
+    DISPLAY
+    REDIRECT
+  }
+
+  type WorkflowStep {
+    id: ID!
+    workflowId: String!
+    type: WorkflowStepType!
+    label: String!
+    order: Int!
+    config: JSON!
+    validation: JSON
+    isActive: Boolean!
+    createdAt: String!
+    updatedAt: String!
+    workflow: Workflow!
+  }
+
+  type Workflow {
+    id: ID!
+    name: String!
+    description: String
+    isActive: Boolean!
+    version: Int!
+    createdAt: String!
+    updatedAt: String!
+    steps: [WorkflowStep!]!
+    screenPages: [AppScreenPageWorkflow!]!
+  }
+
+  type AppScreenPageWorkflow {
+    id: ID!
+    pageId: String!
+    workflowId: String!
+    order: Int!
+    isActive: Boolean!
+    configOverride: JSON
+    createdAt: String!
+    updatedAt: String!
+    page: AppScreenPage!
+    workflow: Workflow!
+  }
+
+  type WorkflowsResult {
+    workflows: [Workflow!]!
+    total: Int!
+  }
+
+  input CreateWorkflowInput {
+    name: String!
+    description: String
+    isActive: Boolean
+  }
+
+  input UpdateWorkflowInput {
+    name: String
+    description: String
+    isActive: Boolean
+  }
+
+  input CreateWorkflowStepInput {
+    workflowId: ID!
+    type: WorkflowStepType!
+    label: String!
+    order: Int
+    config: JSON!
+    validation: JSON
+    isActive: Boolean
+  }
+
+  input UpdateWorkflowStepInput {
+    type: WorkflowStepType
+    label: String
+    order: Int
+    config: JSON
+    validation: JSON
+    isActive: Boolean
+  }
+
+  input CreateWorkflowWithStepsInput {
+    name: String!
+    description: String
+    isActive: Boolean
+    steps: [StepInput!]!
+  }
+
+  input StepInput {
+    type: WorkflowStepType!
+    label: String!
+    order: Int!
+    config: JSON!
+    validation: JSON
+    isActive: Boolean
+  }
+
+  input AttachWorkflowToPageInput {
+    pageId: String!
+    workflowId: String!
+    order: Int
+    isActive: Boolean
+    configOverride: JSON
+  }
+
+  input UpdatePageWorkflowInput {
+    order: Int
+    isActive: Boolean
+    configOverride: JSON
+  }
+
+  type RevokeSessionsResult {
+    success: Boolean!
+    message: String
+  }
+
+  extend type Query {
+    activeSessions(userId: ID!): [DeviceSession!]!
+  }
+
+  extend type Mutation {
+    secureRotateUserToken(input: SecureRotateTokenInput!): RotateTokenResult!
+    revokeAllUserSessions(userId: ID!): RevokeSessionsResult!
+    revokeDeviceSessions(userId: ID!, deviceId: String!): RevokeSessionsResult!
+  }
+
+  # ========================================
+  # MOBILE API (JWT Authentication)
+  # ========================================
+
+  type MyDevice {
+    id: ID!
+    deviceId: String!
+    name: String
+    model: String
+    os: String
+    isActive: Boolean!
+    isCurrent: Boolean!
+    lastUsedAt: String
+    createdAt: String!
+    activeSessions: [MySession!]!
+  }
+
+  type MySession {
+    id: ID!
+    deviceId: String!
+    lastActivityAt: String!
+    createdAt: String!
+    expiresAt: String!
+    ipAddress: String
+    isActive: Boolean!
+    isCurrent: Boolean!
+  }
+
+  input UpdateMyProfileInput {
+    firstName: String
+    lastName: String
+    email: String
+    phone: String
+    address: String
+    city: String
+    country: String
+    zip: String
+  }
+
+  extend type Query {
+    # Device & Session Management
+    myDevices: [MyDevice!]!
+    mySessions: [MySession!]!
+    
+    # Profile & Accounts
+    myProfile: MobileUserProfile
+    myAccounts: [Account!]!
+    myPrimaryAccount: Account
+    
+    # Beneficiaries
+    myBeneficiaries(type: BeneficiaryType): [Beneficiary!]!
+  }
+
+  extend type Mutation {
+    # Profile
+    updateMyProfile(input: UpdateMyProfileInput!): MobileUserProfile!
+    
+    # Device Management
+    revokeMyDevice(deviceId: String!): Boolean!
+    renameMyDevice(deviceId: String!, name: String!): MyDevice!
+    
+    # Session Management
+    revokeMySession(sessionId: String!): Boolean!
+    revokeAllMyOtherSessions: RevokeSessionsResult!
+  }
+
+  # ========================================
+  # PASSWORD RESET
+  # ========================================
+
+  input InitiatePasswordResetInput {
+    username: String!
+    memoWord: String!
+    phoneNumber: String
+    deviceId: String!
+    deviceName: String
+  }
+
+  type InitiatePasswordResetResult {
+    success: Boolean!
+    message: String!
+    resetToken: String
+    otpSentTo: String
+  }
+
+  input VerifyResetOTPInput {
+    resetToken: String!
+    otp: String!
+    deviceId: String!
+  }
+
+  type VerifyResetOTPResult {
+    success: Boolean!
+    message: String!
+    verifiedToken: String
+  }
+
+  input CompletePasswordResetInput {
+    verifiedToken: String!
+    newPassword: String!
+    deviceId: String!
+  }
+
+  type CompletePasswordResetResult {
+    success: Boolean!
+    message: String!
+    token: String
+  }
+
+  extend type Mutation {
+    initiatePasswordReset(input: InitiatePasswordResetInput!): InitiatePasswordResetResult!
+    verifyResetOTP(input: VerifyResetOTPInput!): VerifyResetOTPResult!
+    completePasswordReset(input: CompletePasswordResetInput!): CompletePasswordResetResult!
+  }
+
+  # ========================================
+  # TRANSACTIONS
+  # ========================================
+
+  type Transaction {
+    transactionId: ID!
+    accountNumber: String!
+    transactionDate: String!
+    valueDate: String!
+    amount: String!
+    debitAmount: String
+    creditAmount: String
+    type: String!
+    description: String!
+    reference: String!
+    balance: String
+    currency: String!
+    status: String
+    narrative: String
+  }
+
+  type TransactionConnection {
+    transactions: [Transaction!]!
+    totalCount: Int!
+    accountNumber: String!
+    status: String!
+  }
+
+  extend type Query {
+    # Get transactions for a specific account from T24
+    accountTransactions(accountNumber: String!): TransactionConnection!
+  }
+
+  # ============================================
+  # Account Alerts Types
+  # ============================================
+
+  type AccountAlertSettings {
+    id: ID!
+    mobileUserId: Int!
+    accountNumber: String!
+
+    # Low Balance Alert
+    lowBalanceEnabled: Boolean!
+    lowBalanceThreshold: String
+    lowBalanceChannels: [NotificationChannel!]!
+
+    # Large Transaction Alert
+    largeTransactionEnabled: Boolean!
+    largeTransactionThreshold: String
+    largeTransactionChannels: [NotificationChannel!]!
+    largeTransactionDebitOnly: Boolean!
+
+    # Suspicious Activity Alert
+    alertUnusualLocation: Boolean!
+    alertMultipleFailedAttempts: Boolean!
+    alertNewDeviceTransaction: Boolean!
+    suspiciousActivityChannels: [NotificationChannel!]!
+
+    # Payment Due Alert
+    paymentDueEnabled: Boolean!
+    paymentDueChannels: [NotificationChannel!]!
+    paymentReminderInterval: PaymentReminderInterval!
+
+    # Login Alert
+    loginAlertMode: LoginAlertMode!
+    loginAlertChannels: [NotificationChannel!]!
+
+    # Quiet Hours
+    quietHoursEnabled: Boolean!
+    quietHoursStart: String
+    quietHoursEnd: String
+
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  type AccountAlert {
+    id: ID!
+    mobileUserId: Int!
+    accountNumber: String
+    alertType: AlertType!
+    alertData: JSON!
+    status: AlertStatus!
+    channelsSent: [NotificationChannel!]!
+    sentAt: String
+    deliveryStatus: JSON
+    acknowledgedAt: String
+    userAction: UserAction
+    triggeredAt: String!
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  type SuspiciousActivityLog {
+    id: ID!
+    alertId: Int
+    mobileUserId: Int!
+    accountNumber: String
+    suspicionReason: SuspicionReason!
+    riskScore: Int!
+    detectionDetails: JSON!
+    relatedTransactionIds: [String!]!
+    deviceId: String
+    ipAddress: String
+    location: String
+    isResolved: Boolean!
+    resolvedAt: String
+    resolutionAction: ResolutionAction
+    adminNotes: String
+    detectedAt: String!
+    createdAt: String!
+  }
+
+  type AccountAlertsResult {
+    alerts: [AccountAlert!]!
+    totalCount: Int!
+  }
+
+  input AccountAlertSettingsInput {
+    accountNumber: String!
+
+    # Low Balance Alert
+    lowBalanceEnabled: Boolean
+    lowBalanceThreshold: String
+    lowBalanceChannels: [NotificationChannel!]
+
+    # Large Transaction Alert
+    largeTransactionEnabled: Boolean
+    largeTransactionThreshold: String
+    largeTransactionChannels: [NotificationChannel!]
+    largeTransactionDebitOnly: Boolean
+
+    # Suspicious Activity Alert
+    alertUnusualLocation: Boolean
+    alertMultipleFailedAttempts: Boolean
+    alertNewDeviceTransaction: Boolean
+    suspiciousActivityChannels: [NotificationChannel!]
+
+    # Payment Due Alert
+    paymentDueEnabled: Boolean
+    paymentDueChannels: [NotificationChannel!]
+    paymentReminderInterval: PaymentReminderInterval
+
+    # Login Alert
+    loginAlertMode: LoginAlertMode
+    loginAlertChannels: [NotificationChannel!]
+
+    # Quiet Hours
+    quietHoursEnabled: Boolean
+    quietHoursStart: String
+    quietHoursEnd: String
+  }
+
+  extend type Query {
+    # Get alert settings for an account
+    accountAlertSettings(accountNumber: String!): AccountAlertSettings
+
+    # Get alert history
+    accountAlerts(
+      accountNumber: String
+      alertType: AlertType
+      startDate: String
+      endDate: String
+      limit: Int
+      offset: Int
+    ): AccountAlertsResult!
+
+    # Get suspicious activity logs
+    suspiciousActivities(
+      mobileUserId: Int
+      isResolved: Boolean
+      limit: Int
+      offset: Int
+    ): [SuspiciousActivityLog!]!
+  }
+
+  extend type Mutation {
+    # Update alert settings
+    updateAccountAlertSettings(
+      settings: AccountAlertSettingsInput!
+    ): AccountAlertSettings!
+
+    # Acknowledge alert
+    acknowledgeAlert(alertId: ID!, action: UserAction): Boolean!
+
+    # Test alert (for user to verify channels)
+    testAlert(accountNumber: String!, alertType: AlertType!): Boolean!
+
+    # Resolve suspicious activity
+    resolveSuspiciousActivity(
+      logId: ID!
+      action: ResolutionAction!
+      adminNotes: String
+    ): Boolean!
+  }
+`;

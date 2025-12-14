@@ -1,0 +1,260 @@
+import { prisma } from "@/lib/db/prisma";
+import jwt, { type Secret, type SignOptions } from "jsonwebtoken";
+import crypto from "crypto";
+
+const JWT_SECRET: Secret =
+  process.env.JWT_SECRET || "your-secret-key-change-in-production";
+const JWT_EXPIRES_IN: SignOptions["expiresIn"] =
+  (process.env.JWT_EXPIRES_IN as SignOptions["expiresIn"]) || "24h";
+
+export const deviceVerificationResolvers = {
+  Mutation: {
+    async verifyDeviceOtp(
+      _parent: unknown,
+      args: { verificationToken: string; otpCode: string }
+    ) {
+      const { verificationToken, otpCode } = args;
+
+      // Find attempt
+      const attempt = await prisma.deviceLoginAttempt.findUnique({
+        where: { verificationToken },
+        include: { mobileUser: true },
+      });
+
+      if (!attempt) {
+        throw new Error("Invalid verification token");
+      }
+
+      // Check expiry
+      if (attempt.otpExpiresAt && new Date() > attempt.otpExpiresAt) {
+        await prisma.deviceLoginAttempt.update({
+          where: { id: attempt.id },
+          data: { status: "EXPIRED" },
+        });
+        throw new Error("Verification code expired. Please request a new code.");
+      }
+
+      // Check max attempts
+      if (attempt.otpAttempts >= 5) {
+        throw new Error("Too many failed attempts. Please request a new code.");
+      }
+
+      // Verify OTP
+      if (attempt.otpCode !== otpCode) {
+        await prisma.deviceLoginAttempt.update({
+          where: { id: attempt.id },
+          data: {
+            otpAttempts: { increment: 1 },
+            status: "FAILED_OTP",
+          },
+        });
+        throw new Error("Invalid verification code");
+      }
+
+      // ✅ OTP VERIFIED - Create device!
+      const device = await prisma.mobileDevice.create({
+        data: {
+          mobileUserId: attempt.mobileUserId!,
+          deviceId: attempt.deviceId!,
+          name: attempt.deviceName || "Mobile Device",
+          model: attempt.deviceModel,
+          os: attempt.deviceOs,
+          verifiedVia: attempt.otpSentTo?.includes("@") ? "OTP_EMAIL" : "OTP_SMS",
+          verificationIp: attempt.ipAddress,
+          verificationLocation: attempt.location,
+          isActive: true,
+        },
+      });
+
+      // Update attempt status
+      await prisma.deviceLoginAttempt.update({
+        where: { id: attempt.id },
+        data: {
+          status: "VERIFIED",
+          otpVerifiedAt: new Date(),
+        },
+      });
+
+      // Fetch user's accounts and profile
+      const accounts = await prisma.mobileUserAccount.findMany({
+        where: { mobileUserId: attempt.mobileUserId! },
+        orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+      });
+
+      const profile = await prisma.mobileUserProfile.findUnique({
+        where: { mobileUserId: attempt.mobileUserId! },
+      });
+
+      // Generate session ID and JWT token
+      const sessionId = crypto.randomUUID();
+      const token = jwt.sign(
+        {
+          userId: attempt.mobileUserId,
+          username: attempt.mobileUser!.username,
+          phoneNumber: attempt.mobileUser!.phoneNumber,
+          context: attempt.context,
+          deviceId: device.deviceId,
+          sessionId,
+        },
+        JWT_SECRET,
+        {
+          expiresIn: JWT_EXPIRES_IN,
+          issuer: "service-manager-admin",
+          subject: String(attempt.mobileUserId),
+        }
+      );
+
+      // Create device session
+      const tokenHash = crypto
+        .createHash("sha256")
+        .update(token)
+        .digest("hex");
+
+      await prisma.deviceSession.create({
+        data: {
+          deviceId: device.deviceId,
+          mobileUserId: attempt.mobileUserId!,
+          tokenHash,
+          sessionId,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+          ipAddress: attempt.ipAddress,
+          isActive: true,
+        },
+      });
+
+      return {
+        success: true,
+        token,
+        user: {
+          id: attempt.mobileUser!.id,
+          context: attempt.mobileUser!.context,
+          username: attempt.mobileUser!.username,
+          phoneNumber: attempt.mobileUser!.phoneNumber,
+          customerNumber: attempt.mobileUser!.customerNumber,
+          accountNumber: attempt.mobileUser!.accountNumber,
+          isActive: attempt.mobileUser!.isActive,
+          accounts: accounts.map((acc) => ({
+            id: acc.id,
+            accountNumber: acc.accountNumber,
+            accountName: acc.accountName,
+            accountType: acc.accountType,
+            currency: acc.currency,
+            balance: acc.balance?.toString(),
+            isPrimary: acc.isPrimary,
+            isActive: acc.isActive,
+            createdAt: acc.createdAt.toISOString(),
+            updatedAt: acc.updatedAt.toISOString(),
+          })),
+          primaryAccount: accounts.find((acc) => acc.isPrimary)
+            ? {
+                id: accounts.find((acc) => acc.isPrimary)!.id,
+                accountNumber: accounts.find((acc) => acc.isPrimary)!
+                  .accountNumber,
+                accountName: accounts.find((acc) => acc.isPrimary)!.accountName,
+                accountType: accounts.find((acc) => acc.isPrimary)!.accountType,
+                currency: accounts.find((acc) => acc.isPrimary)!.currency,
+                balance: accounts
+                  .find((acc) => acc.isPrimary)!
+                  .balance?.toString(),
+                isPrimary: true,
+                isActive: accounts.find((acc) => acc.isPrimary)!.isActive,
+                createdAt: accounts
+                  .find((acc) => acc.isPrimary)!
+                  .createdAt.toISOString(),
+                updatedAt: accounts
+                  .find((acc) => acc.isPrimary)!
+                  .updatedAt.toISOString(),
+              }
+            : null,
+          profile: profile
+            ? {
+                id: profile.id,
+                mobileUserId: profile.mobileUserId,
+                firstName: profile.firstName,
+                lastName: profile.lastName,
+                email: profile.email,
+                phone: profile.phone,
+                address: profile.address,
+                city: profile.city,
+                country: profile.country,
+                zip: profile.zip,
+                createdAt: profile.createdAt.toISOString(),
+                updatedAt: profile.updatedAt.toISOString(),
+              }
+            : null,
+          createdAt: attempt.mobileUser!.createdAt.toISOString(),
+          updatedAt: attempt.mobileUser!.updatedAt.toISOString(),
+        },
+        device: {
+          id: device.id,
+          name: device.name,
+          model: device.model,
+          os: device.os,
+          isActive: device.isActive,
+          createdAt: device.createdAt.toISOString(),
+          updatedAt: device.updatedAt.toISOString(),
+        },
+        message: "Device verified successfully",
+      };
+    },
+
+    async resendDeviceOtp(
+      _parent: unknown,
+      args: { verificationToken: string }
+    ) {
+      const { verificationToken } = args;
+
+      const attempt = await prisma.deviceLoginAttempt.findUnique({
+        where: { verificationToken },
+        include: { mobileUser: true },
+      });
+
+      if (!attempt || !attempt.mobileUser) {
+        throw new Error("Invalid verification token");
+      }
+
+      // Check if already verified
+      if (attempt.status === "VERIFIED") {
+        throw new Error("Device already verified");
+      }
+
+      // Rate limiting: Check if last OTP was sent < 60 seconds ago
+      if (
+        attempt.otpSentAt &&
+        new Date().getTime() - attempt.otpSentAt.getTime() < 60000
+      ) {
+        throw new Error("Please wait 60 seconds before requesting a new code");
+      }
+
+      // Generate new OTP
+      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+
+      // Update attempt
+      await prisma.deviceLoginAttempt.update({
+        where: { id: attempt.id },
+        data: {
+          otpCode,
+          otpSentAt: new Date(),
+          otpExpiresAt,
+          otpAttempts: 0, // Reset attempts
+          status: "PENDING_VERIFICATION",
+        },
+      });
+
+      // Send OTP (integrate with SMS/Email service)
+      const sentTo = attempt.otpSentTo!;
+      if (sentTo.includes("@")) {
+        // Send email
+        console.log(`📧 Email OTP to ${sentTo}: ${otpCode}`);
+        // await sendEmail(sentTo, "Your Verification Code", `Your code is: ${otpCode}`);
+      } else {
+        // Send SMS
+        console.log(`📱 SMS OTP to ${sentTo}: ${otpCode}`);
+        // await sendSMS(sentTo, `Your verification code is: ${otpCode}`);
+      }
+
+      return true;
+    },
+  },
+};
