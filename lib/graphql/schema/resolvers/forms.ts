@@ -6,9 +6,6 @@ type CreateFormInput = {
   category?: string;
   schema: any;
   isActive?: boolean;
-  isPublic?: boolean;
-  allowMultiple?: boolean;
-  requiresAuth?: boolean;
 };
 
 type UpdateFormInput = {
@@ -17,9 +14,6 @@ type UpdateFormInput = {
   category?: string;
   schema?: any;
   isActive?: boolean;
-  isPublic?: boolean;
-  allowMultiple?: boolean;
-  requiresAuth?: boolean;
 };
 
 export const formsResolvers = {
@@ -95,9 +89,6 @@ export const formsResolvers = {
           category: input.category,
           schema: input.schema,
           isActive: input.isActive ?? true,
-          isPublic: input.isPublic ?? false,
-          allowMultiple: input.allowMultiple ?? false,
-          requiresAuth: input.requiresAuth ?? true,
           createdBy: userId,
         },
       });
@@ -125,13 +116,6 @@ export const formsResolvers = {
           ...(input.category !== undefined && { category: input.category }),
           ...(input.schema && { schema: input.schema }),
           ...(input.isActive !== undefined && { isActive: input.isActive }),
-          ...(input.isPublic !== undefined && { isPublic: input.isPublic }),
-          ...(input.allowMultiple !== undefined && {
-            allowMultiple: input.allowMultiple,
-          }),
-          ...(input.requiresAuth !== undefined && {
-            requiresAuth: input.requiresAuth,
-          }),
         },
       });
 

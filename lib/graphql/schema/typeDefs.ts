@@ -684,9 +684,6 @@ export const typeDefs = /* GraphQL */ `
     category: String
     schema: JSON!
     isActive: Boolean!
-    isPublic: Boolean!
-    allowMultiple: Boolean!
-    requiresAuth: Boolean!
     createdBy: Int!
     version: Int!
     createdAt: String!
@@ -699,9 +696,6 @@ export const typeDefs = /* GraphQL */ `
     category: String
     schema: JSON!
     isActive: Boolean
-    isPublic: Boolean
-    allowMultiple: Boolean
-    requiresAuth: Boolean
   }
 
   input UpdateFormInput {
@@ -710,9 +704,6 @@ export const typeDefs = /* GraphQL */ `
     category: String
     schema: JSON
     isActive: Boolean
-    isPublic: Boolean
-    allowMultiple: Boolean
-    requiresAuth: Boolean
   }
 
   type FormsResult {
@@ -751,6 +742,9 @@ export const typeDefs = /* GraphQL */ `
     workflowSteps(workflowId: ID!): [WorkflowStep!]!
     workflowStep(id: ID!): WorkflowStep
     pageWorkflows(pageId: ID!): [AppScreenPageWorkflow!]!
+    
+    workflowExecution(id: ID!): WorkflowExecution
+    userWorkflowExecutions(userId: ID!, status: WorkflowExecutionStatus, limit: Int): [WorkflowExecution!]!
   }
 
   extend type Mutation {
@@ -778,6 +772,11 @@ export const typeDefs = /* GraphQL */ `
     detachWorkflowFromPage(id: ID!): Boolean!
     updatePageWorkflow(id: ID!, input: UpdatePageWorkflowInput!): AppScreenPageWorkflow!
     reorderPageWorkflows(pageId: ID!, workflowIds: [ID!]!): [AppScreenPageWorkflow!]!
+    
+    startWorkflowExecution(workflowId: ID!, pageId: ID!, initialContext: JSON): WorkflowExecution!
+    executeWorkflowStep(executionId: ID!, stepId: ID!, input: JSON, timing: TriggerTiming!): StepExecutionResponse!
+    completeWorkflowExecution(executionId: ID!): WorkflowCompletionResult!
+    cancelWorkflowExecution(executionId: ID!, reason: String): WorkflowExecution!
   }
 
   type DeviceSession {
@@ -873,6 +872,27 @@ export const typeDefs = /* GraphQL */ `
     REDIRECT
   }
 
+  enum StepExecutionMode {
+    CLIENT_ONLY
+    SERVER_SYNC
+    SERVER_ASYNC
+    SERVER_VALIDATION
+  }
+
+  enum TriggerTiming {
+    BEFORE_STEP
+    AFTER_STEP
+    BOTH
+  }
+
+  enum WorkflowExecutionStatus {
+    PENDING
+    IN_PROGRESS
+    COMPLETED
+    FAILED
+    CANCELLED
+  }
+
   type WorkflowStep {
     id: ID!
     workflowId: String!
@@ -882,9 +902,42 @@ export const typeDefs = /* GraphQL */ `
     config: JSON!
     validation: JSON
     isActive: Boolean!
+    executionMode: StepExecutionMode!
+    triggerTiming: TriggerTiming
+    triggerEndpoint: String
+    triggerConfig: JSON
+    timeoutMs: Int
+    retryConfig: JSON
     createdAt: String!
     updatedAt: String!
     workflow: Workflow!
+  }
+
+  type WorkflowExecution {
+    id: ID!
+    workflowId: String!
+    userId: String!
+    sessionId: String!
+    currentStepId: String
+    status: WorkflowExecutionStatus!
+    finalResult: JSON
+    error: String
+    startedAt: String!
+    completedAt: String
+    workflow: Workflow
+  }
+
+  type StepExecutionResponse {
+    success: Boolean!
+    result: JSON
+    shouldProceed: Boolean!
+    error: String
+  }
+
+  type WorkflowCompletionResult {
+    success: Boolean!
+    result: JSON!
+    executionId: ID!
   }
 
   type Workflow {
@@ -893,6 +946,7 @@ export const typeDefs = /* GraphQL */ `
     description: String
     isActive: Boolean!
     version: Int!
+    config: JSON
     createdAt: String!
     updatedAt: String!
     steps: [WorkflowStep!]!
@@ -937,6 +991,12 @@ export const typeDefs = /* GraphQL */ `
     config: JSON!
     validation: JSON
     isActive: Boolean
+    executionMode: StepExecutionMode
+    triggerTiming: TriggerTiming
+    triggerEndpoint: String
+    triggerConfig: JSON
+    timeoutMs: Int
+    retryConfig: JSON
   }
 
   input UpdateWorkflowStepInput {
@@ -946,6 +1006,12 @@ export const typeDefs = /* GraphQL */ `
     config: JSON
     validation: JSON
     isActive: Boolean
+    executionMode: StepExecutionMode
+    triggerTiming: TriggerTiming
+    triggerEndpoint: String
+    triggerConfig: JSON
+    timeoutMs: Int
+    retryConfig: JSON
   }
 
   input CreateWorkflowWithStepsInput {
@@ -1303,5 +1369,206 @@ export const typeDefs = /* GraphQL */ `
       action: ResolutionAction!
       adminNotes: String
     ): Boolean!
+  }
+
+  # ==========================================
+  # BILLER TYPES (Mobile Integration)
+  # ==========================================
+
+  enum BillerType {
+    REGISTER_GENERAL
+    BWB_POSTPAID
+    LWB_POSTPAID
+    SRWB_POSTPAID
+    SRWB_PREPAID
+    MASM
+    AIRTEL_VALIDATION
+    TNM_BUNDLES
+  }
+
+  enum BillerTransactionStatus {
+    PENDING
+    PROCESSING
+    COMPLETED
+    FAILED
+  }
+
+  type BillerInfo {
+    type: BillerType!
+    name: String!
+    displayName: String!
+    description: String
+    isActive: Boolean!
+    features: BillerFeatures!
+    validationRules: BillerValidationRules!
+    supportedCurrencies: [String!]!
+    defaultCurrency: String!
+  }
+
+  type BillerFeatures {
+    supportsInvoice: Boolean!
+    supportsBalanceCheck: Boolean!
+    requiresTwoStep: Boolean!
+    supportsAccountLookup: Boolean!
+    isBundleBased: Boolean
+    validationOnly: Boolean
+    requiresAccountType: Boolean
+  }
+
+  type BillerValidationRules {
+    accountNumberFormat: String
+    minAmount: Float
+    maxAmount: Float
+  }
+
+  type AccountLookupResult {
+    accountNumber: String!
+    customerName: String!
+    balance: String
+    status: String!
+    billerDetails: JSON
+  }
+
+  type BillerPaymentResult {
+    success: Boolean!
+    transactionId: String
+    externalReference: String
+    message: String
+    transaction: BillerTransaction!
+  }
+
+  type BillerTransaction {
+    id: ID!
+    ourTransactionId: String!
+    billerType: BillerType!
+    billerName: String!
+    accountNumber: String!
+    amount: Float
+    currency: String!
+    status: BillerTransactionStatus!
+    transactionType: String!
+    accountType: String
+    customerAccountName: String
+    errorMessage: String
+    errorCode: String
+    requestPayload: JSON
+    responsePayload: JSON
+    completedAt: String
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  type BillerTransactionsResult {
+    transactions: [BillerTransaction!]!
+    total: Int!
+    hasMore: Boolean!
+  }
+
+  type BillerInvoice {
+    invoiceNumber: String!
+    accountNumber: String!
+    amount: String!
+    dueDate: String
+    description: String
+    details: JSON
+  }
+
+  type BillerBundle {
+    bundleId: String!
+    name: String!
+    description: String!
+    amount: String!
+    validity: String
+    dataAmount: String
+  }
+
+  input BillerAccountLookupInput {
+    billerType: BillerType!
+    accountNumber: String!
+    accountType: String
+  }
+
+  input BillerPaymentInput {
+    billerType: BillerType!
+    accountNumber: String!
+    amount: Float!
+    currency: String
+    accountType: String
+    creditAccount: String
+    creditAccountType: String
+    debitAccount: String!
+    debitAccountType: String!
+    customerAccountNumber: String
+    customerAccountName: String
+    metadata: JSON
+  }
+
+  input BillerInvoiceInput {
+    billerType: BillerType!
+    accountNumber: String!
+  }
+
+  input BillerInvoiceConfirmInput {
+    billerType: BillerType!
+    invoiceNumber: String!
+    accountNumber: String!
+    amount: Float!
+    currency: String
+    debitAccount: String!
+    debitAccountType: String!
+  }
+
+  input BillerBundleInput {
+    bundleId: String!
+  }
+
+  input BillerBundlePurchaseInput {
+    bundleId: String!
+    phoneNumber: String!
+    amount: Float!
+    debitAccount: String!
+    debitAccountType: String!
+  }
+
+  extend type Query {
+    # Get available billers for current user
+    availableBillers: [BillerInfo!]!
+    
+    # Get specific biller info
+    billerInfo(type: BillerType!): BillerInfo
+    
+    # Lookup account before payment
+    billerAccountLookup(input: BillerAccountLookupInput!): AccountLookupResult!
+    
+    # Get invoice details (for two-step billers)
+    billerInvoice(input: BillerInvoiceInput!): BillerInvoice!
+    
+    # Get bundle details
+    billerBundle(input: BillerBundleInput!): BillerBundle!
+    
+    # Get user's biller transactions
+    myBillerTransactions(
+      billerType: BillerType
+      status: BillerTransactionStatus
+      limit: Int
+      offset: Int
+    ): BillerTransactionsResult!
+    
+    # Get specific transaction
+    billerTransaction(id: ID!): BillerTransaction
+  }
+
+  extend type Mutation {
+    # Process biller payment
+    billerPayment(input: BillerPaymentInput!): BillerPaymentResult!
+    
+    # Confirm invoice payment (for two-step billers)
+    billerInvoiceConfirm(input: BillerInvoiceConfirmInput!): BillerPaymentResult!
+    
+    # Purchase bundle
+    billerBundlePurchase(input: BillerBundlePurchaseInput!): BillerPaymentResult!
+    
+    # Retry failed transaction
+    billerRetryTransaction(transactionId: ID!): BillerPaymentResult!
   }
 `;

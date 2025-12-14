@@ -24,6 +24,7 @@ import { transactionResolvers } from "./transaction";
 import { accountAlertResolvers } from "./accountAlert";
 import { workflowResolvers } from "./workflow";
 import { workflowStepResolvers } from "./workflowStep";
+import { workflowExecutionResolvers } from "./workflowExecution";
 import { JSONResolver } from "graphql-scalars";
 
 export const resolvers = {
@@ -52,6 +53,8 @@ export const resolvers = {
     ...accountAlertResolvers.Query,
     ...workflowResolvers.Query,
     ...workflowStepResolvers.Query,
+    ...workflowExecutionResolvers.Query,
+    ...billersResolvers.Query,
   },
   Mutation: {
     ...authResolvers.Mutation,
@@ -77,6 +80,8 @@ export const resolvers = {
     ...accountAlertResolvers.Mutation,
     ...workflowResolvers.Mutation,
     ...workflowStepResolvers.Mutation,
+    ...workflowExecutionResolvers.Mutation,
+    ...billersResolvers.Mutation,
   },
   CoreBankingConnection: {
     ...coreBankingEndpointResolvers.CoreBankingConnection,
@@ -89,6 +94,9 @@ export const resolvers = {
   },
   WorkflowStep: {
     ...workflowStepResolvers.WorkflowStep,
+  },
+  WorkflowExecution: {
+    ...workflowExecutionResolvers.WorkflowExecution,
   },
   AppScreenPageWorkflow: {
     ...workflowResolvers.AppScreenPageWorkflow,

@@ -459,20 +459,20 @@ model AdminWebUser {
 }
 
 model AdminWebPasskey {
-  id                  String   @id @default(cuid())
-  userId              Int      @map("user_id")
-  credentialId        String   @unique @map("credential_id") @db.Text
-  publicKey           String   @map("public_key") @db.Text
-  counter             BigInt   @default(0)
-  deviceName          String?  @map("device_name") @db.Text
-  transports          String[] @default([])
-  backupEligible      Boolean  @default(false) @map("backup_eligible")
-  backupState         Boolean  @default(false) @map("backup_state")
-  attestationFormat   String?  @map("attestation_format") @db.Text
-  aaguid              String?  @db.Text
-  lastUsedAt          DateTime? @map("last_used_at")
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  id                String    @id @default(cuid())
+  userId            Int       @map("user_id")
+  credentialId      String    @unique @map("credential_id") @db.Text
+  publicKey         String    @map("public_key") @db.Text
+  counter           BigInt    @default(0)
+  deviceName        String?   @map("device_name") @db.Text
+  transports        String[]  @default([])
+  backupEligible    Boolean   @default(false) @map("backup_eligible")
+  backupState       Boolean   @default(false) @map("backup_state")
+  attestationFormat String?   @map("attestation_format") @db.Text
+  aaguid            String?   @db.Text
+  lastUsedAt        DateTime? @map("last_used_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
   user AdminWebUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -515,11 +515,6 @@ model Form {
 
   // Settings
   isActive Boolean @default(true) @map("is_active")
-  isPublic Boolean @default(false) @map("is_public")
-
-  // Submission settings
-  allowMultiple Boolean @default(false) @map("allow_multiple")
-  requiresAuth  Boolean @default(true) @map("requires_auth")
 
   // Metadata
   createdBy Int @map("created_by")
@@ -823,35 +818,35 @@ enum CheckbookRequestStatus {
 }
 
 model CheckbookRequest {
-  id            Int                    @id @default(autoincrement())
-  mobileUserId  Int                    @map("mobile_user_id")
-  accountNumber String                 @map("account_number") @db.Text
-  
+  id            Int    @id @default(autoincrement())
+  mobileUserId  Int    @map("mobile_user_id")
+  accountNumber String @map("account_number") @db.Text
+
   // Checkbook details
   numberOfCheckbooks Int    @default(1) @map("number_of_checkbooks")
   collectionPoint    String @map("collection_point") @db.Text
-  
+
   // Status tracking
-  status       CheckbookRequestStatus @default(PENDING)
-  requestedAt  DateTime               @default(now()) @map("requested_at")
-  approvedAt   DateTime?              @map("approved_at")
-  approvedBy   Int?                   @map("approved_by")
-  readyAt      DateTime?              @map("ready_at")
-  collectedAt  DateTime?              @map("collected_at")
-  cancelledAt  DateTime?              @map("cancelled_at")
-  rejectedAt   DateTime?              @map("rejected_at")
-  
+  status      CheckbookRequestStatus @default(PENDING)
+  requestedAt DateTime               @default(now()) @map("requested_at")
+  approvedAt  DateTime?              @map("approved_at")
+  approvedBy  Int?                   @map("approved_by")
+  readyAt     DateTime?              @map("ready_at")
+  collectedAt DateTime?              @map("collected_at")
+  cancelledAt DateTime?              @map("cancelled_at")
+  rejectedAt  DateTime?              @map("rejected_at")
+
   // Additional information
-  notes          String? @db.Text
+  notes           String? @db.Text
   rejectionReason String? @map("rejection_reason") @db.Text
-  
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  
+
   // Relations
-  mobileUser      MobileUser    @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
-  approvedByUser  AdminWebUser? @relation(fields: [approvedBy], references: [id], onDelete: SetNull)
-  
+  mobileUser     MobileUser    @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
+  approvedByUser AdminWebUser? @relation(fields: [approvedBy], references: [id], onDelete: SetNull)
+
   @@index([mobileUserId])
   @@index([accountNumber])
   @@index([status])
@@ -860,52 +855,65 @@ model CheckbookRequest {
 }
 
 model Workflow {
-  id          String   @id @default(cuid())
-  name        String   @unique @db.Text
-  description String?  @db.Text
-  
-  isActive    Boolean  @default(true) @map("is_active")
-  version     Int      @default(1)
-  
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  
+  id          String  @id @default(cuid())
+  name        String  @unique @db.Text
+  description String? @db.Text
+
+  isActive Boolean @default(true) @map("is_active")
+  version  Int     @default(1)
+
+  // Workflow-level configuration for API mapping
+  config Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   // Relations
   steps       WorkflowStep[]
   screenPages AppScreenPageWorkflow[]
-  
+  executions  WorkflowExecution[]
+
   @@index([isActive])
   @@map("workflows")
 }
 
 model WorkflowStep {
-  id         String   @id @default(cuid())
-  workflowId String   @map("workflow_id")
-  
+  id         String @id @default(cuid())
+  workflowId String @map("workflow_id")
+
   // Step details
-  type       WorkflowStepType
-  label      String   @db.Text
-  order      Int      @default(0)
-  
+  type  WorkflowStepType
+  label String           @db.Text
+  order Int              @default(0)
+
   // Step configuration (JSON for flexibility)
-  config     Json
-  
+  config Json
+
   // Validation rules (optional)
   validation Json?
-  
+
   // Status
-  isActive   Boolean  @default(true) @map("is_active")
-  
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-  
+  isActive Boolean @default(true) @map("is_active")
+
+  // Execution configuration
+  executionMode   StepExecutionMode @default(CLIENT_ONLY) @map("execution_mode")
+  triggerTiming   TriggerTiming?    @map("trigger_timing")
+  triggerEndpoint String?           @map("trigger_endpoint") @db.Text
+  triggerConfig   Json?             @map("trigger_config")
+  timeoutMs       Int?              @map("timeout_ms")
+  retryConfig     Json?             @map("retry_config")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   // Relations
-  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
   @@index([workflowId])
   @@index([type])
   @@index([order])
   @@index([isActive])
+  @@index([executionMode])
   @@map("workflow_steps")
 }
 
@@ -918,25 +926,72 @@ enum WorkflowStepType {
   REDIRECT
 }
 
+enum StepExecutionMode {
+  CLIENT_ONLY // No backend trigger
+  SERVER_SYNC // Wait for server response
+  SERVER_ASYNC // Fire and forget
+  SERVER_VALIDATION // Validate on server
+}
+
+enum TriggerTiming {
+  BEFORE_STEP // Execute before showing step
+  AFTER_STEP // Execute after user completes step
+  BOTH // Execute before AND after
+}
+
+enum WorkflowExecutionStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model WorkflowExecution {
+  id         String @id @default(cuid())
+  workflowId String @map("workflow_id")
+  userId     String @map("user_id")
+  sessionId  String @map("session_id")
+
+  currentStepId String?                 @map("current_step_id")
+  status        WorkflowExecutionStatus @default(IN_PROGRESS)
+
+  // Only store final result, NOT intermediate inputs (stored in Redis)
+  finalResult Json?   @map("final_result")
+  error       String? @db.Text
+
+  startedAt   DateTime  @default(now()) @map("started_at")
+  completedAt DateTime? @map("completed_at")
+
+  // Relations
+  workflow Workflow @relation(fields: [workflowId], references: [id])
+
+  @@index([workflowId])
+  @@index([userId])
+  @@index([sessionId])
+  @@index([status])
+  @@map("workflow_executions")
+}
+
 model AppScreenPageWorkflow {
-  id        String   @id @default(cuid())
-  
-  pageId    String   @map("page_id")
-  workflowId String  @map("workflow_id")
-  
-  order     Int      @default(0)
-  isActive  Boolean  @default(true) @map("is_active")
-  
+  id String @id @default(cuid())
+
+  pageId     String @map("page_id")
+  workflowId String @map("workflow_id")
+
+  order    Int     @default(0)
+  isActive Boolean @default(true) @map("is_active")
+
   // Override config if needed (optional)
   configOverride Json? @map("config_override")
-  
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  
+
   // Relations
-  page      AppScreenPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
-  workflow  Workflow      @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  
+  page     AppScreenPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  workflow Workflow      @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
   @@unique([pageId, workflowId])
   @@index([pageId])
   @@index([workflowId])
@@ -978,102 +1033,102 @@ enum BillerTransactionStatus {
 }
 
 model BillerConfig {
-  id                    String       @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   // Identity
-  billerType            BillerType   @unique @map("biller_type")
-  billerName            String       @map("biller_name") @db.Text
-  displayName           String       @map("display_name") @db.Text
-  description           String?      @db.Text
-  isActive              Boolean      @default(true) @map("is_active")
-  
+  billerType  BillerType @unique @map("biller_type")
+  billerName  String     @map("biller_name") @db.Text
+  displayName String     @map("display_name") @db.Text
+  description String?    @db.Text
+  isActive    Boolean    @default(true) @map("is_active")
+
   // API Configuration
-  baseUrl               String       @map("base_url") @db.Text
-  endpoints             Json         // { accountDetails, payment, invoice, etc. }
-  authentication        Json?        // Encrypted credentials
-  
+  baseUrl        String @map("base_url") @db.Text
+  endpoints      Json // { accountDetails, payment, invoice, etc. }
+  authentication Json? // Encrypted credentials
+
   // Transaction Settings
-  defaultCurrency       String       @default("MWK") @map("default_currency") @db.VarChar(3)
-  supportedCurrencies   String[]     @default(["MWK"]) @map("supported_currencies")
-  timeoutMs             Int          @default(30000) @map("timeout_ms")
-  retryAttempts         Int          @default(3) @map("retry_attempts")
-  
+  defaultCurrency     String   @default("MWK") @map("default_currency") @db.VarChar(3)
+  supportedCurrencies String[] @default(["MWK"]) @map("supported_currencies")
+  timeoutMs           Int      @default(30000) @map("timeout_ms")
+  retryAttempts       Int      @default(3) @map("retry_attempts")
+
   // Features & Validation
-  features              Json         // { supportsInvoice, supportsBalanceCheck, etc. }
-  validationRules       Json         // { accountNumberFormat, minAmount, maxAmount }
-  
+  features        Json // { supportsInvoice, supportsBalanceCheck, etc. }
+  validationRules Json // { accountNumberFormat, minAmount, maxAmount }
+
   // Audit
-  createdAt             DateTime     @default(now()) @map("created_at")
-  updatedAt             DateTime     @updatedAt @map("updated_at")
-  createdBy             String?      @map("created_by")
-  updatedBy             String?      @map("updated_by")
-  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
   // Relations
-  transactions          BillerTransaction[]
-  
+  transactions BillerTransaction[]
+
   @@index([billerType])
   @@index([isActive])
   @@map("biller_configs")
 }
 
 model BillerTransaction {
-  id                    String       @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   // Biller Reference
-  billerConfigId        String?                @map("biller_config_id")
-  billerConfig          BillerConfig?          @relation(fields: [billerConfigId], references: [id])
-  billerType            BillerType             @map("biller_type")
-  billerName            String                 @map("biller_name") @db.Text
-  
+  billerConfigId String?       @map("biller_config_id")
+  billerConfig   BillerConfig? @relation(fields: [billerConfigId], references: [id])
+  billerType     BillerType    @map("biller_type")
+  billerName     String        @map("biller_name") @db.Text
+
   // Transaction Identity
-  ourTransactionId      String                 @unique @map("our_transaction_id") @db.VarChar(50)
-  externalTransactionId String?                @map("external_transaction_id") @db.Text
-  
+  ourTransactionId      String  @unique @map("our_transaction_id") @db.VarChar(50)
+  externalTransactionId String? @map("external_transaction_id") @db.Text
+
   // Transaction Type
-  transactionType       BillerTransactionType  @map("transaction_type")
-  
+  transactionType BillerTransactionType @map("transaction_type")
+
   // Account Information
-  accountNumber         String                 @map("account_number") @db.Text
-  accountType           String?                @map("account_type") @db.VarChar(20)
-  customerAccountName   String?                @map("customer_account_name") @db.Text
-  
+  accountNumber       String  @map("account_number") @db.Text
+  accountType         String? @map("account_type") @db.VarChar(20)
+  customerAccountName String? @map("customer_account_name") @db.Text
+
   // T24 Integration
-  creditAccount         String?                @map("credit_account") @db.VarChar(20)
-  creditAccountType     String?                @map("credit_account_type") @db.VarChar(20)
-  debitAccount          String?                @map("debit_account") @db.VarChar(20)
-  debitAccountType      String?                @map("debit_account_type") @db.VarChar(20)
-  
+  creditAccount     String? @map("credit_account") @db.VarChar(20)
+  creditAccountType String? @map("credit_account_type") @db.VarChar(20)
+  debitAccount      String? @map("debit_account") @db.VarChar(20)
+  debitAccountType  String? @map("debit_account_type") @db.VarChar(20)
+
   // Amount
-  amount                Decimal                @db.Decimal(18, 2)
-  currency              String                 @default("MWK") @db.VarChar(3)
-  
+  amount   Decimal @db.Decimal(18, 2)
+  currency String  @default("MWK") @db.VarChar(3)
+
   // Status & Processing
-  status                BillerTransactionStatus
-  
+  status BillerTransactionStatus
+
   // API Details
-  apiEndpoint           String?                @map("api_endpoint") @db.Text
-  requestPayload        Json?                  @map("request_payload")
-  responsePayload       Json?                  @map("response_payload")
-  errorMessage          String?                @map("error_message") @db.Text
-  errorCode             String?                @map("error_code") @db.VarChar(50)
-  
+  apiEndpoint     String? @map("api_endpoint") @db.Text
+  requestPayload  Json?   @map("request_payload")
+  responsePayload Json?   @map("response_payload")
+  errorMessage    String? @map("error_message") @db.Text
+  errorCode       String? @map("error_code") @db.VarChar(50)
+
   // Special Fields
-  bundleId              String?                @map("bundle_id") @db.VarChar(50)
-  invoiceNumber         String?                @map("invoice_number") @db.VarChar(100)
-  meterNumber           String?                @map("meter_number") @db.VarChar(50)
-  
+  bundleId      String? @map("bundle_id") @db.VarChar(50)
+  invoiceNumber String? @map("invoice_number") @db.VarChar(100)
+  meterNumber   String? @map("meter_number") @db.VarChar(50)
+
   // Metadata
-  metadata              Json?                  // Additional context
-  
+  metadata Json? // Additional context
+
   // Timestamps
-  processedAt           DateTime?              @map("processed_at")
-  completedAt           DateTime?              @map("completed_at")
-  createdAt             DateTime               @default(now()) @map("created_at")
-  updatedAt             DateTime               @updatedAt @map("updated_at")
-  
+  processedAt DateTime? @map("processed_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
   // Audit
-  initiatedBy           String?                @map("initiated_by")
-  
+  initiatedBy String? @map("initiated_by")
+
   @@index([billerType])
   @@index([status])
   @@index([ourTransactionId])

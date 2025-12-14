@@ -98,27 +98,36 @@ export abstract class BaseBillerService {
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
     try {
-      const response = await fetch(url, {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/xml",
+        ...this.getAuthHeaders(),
+        ...options?.headers,
+      };
+
+      const fetchOptions: RequestInit = {
         method: options?.method || "POST",
-        headers: {
-          "Content-Type": "application/xml",
-          ...this.getAuthHeaders(),
-          ...options?.headers,
-        },
-        body: typeof body === "string" ? body : JSON.stringify(body),
+        headers,
         signal: controller.signal,
-      });
+      };
+
+      // Only add body for POST/PUT/PATCH requests
+      if (body && (options?.method !== "GET" && options?.method !== "HEAD")) {
+        fetchOptions.body = typeof body === "string" ? body : JSON.stringify(body);
+      }
+
+      const response = await fetch(url, fetchOptions);
 
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
       }
 
       const contentType = response.headers.get("content-type");
       if (contentType?.includes("application/json")) {
         return await response.json();
-      } else if (contentType?.includes("application/xml")) {
+      } else if (contentType?.includes("application/xml") || contentType?.includes("text/xml")) {
         return await response.text();
       } else {
         return await response.text();

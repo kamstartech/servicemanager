@@ -61,11 +61,12 @@ const UPDATE_FORM = gql`
 
 interface FormField {
   id: string;
-  type: "text" | "number" | "date" | "dropdown" | "toggle";
+  type: "text" | "number" | "date" | "dropdown" | "toggle" | "beneficiary";
   label: string;
   required: boolean;
   placeholder?: string;
   options?: string[];
+  beneficiaryType?: "WALLET" | "BANK_INTERNAL" | "BANK_EXTERNAL" | "ALL";
   validation?: {
     minLength?: number;
     maxLength?: number;
@@ -133,6 +134,7 @@ function SortableField({
                   <option value="date">Date</option>
                   <option value="dropdown">Dropdown</option>
                   <option value="toggle">Toggle</option>
+                  <option value="beneficiary">Beneficiary</option>
                 </select>
               </div>
 
@@ -148,7 +150,7 @@ function SortableField({
               </div>
             </div>
 
-            {field.type !== "toggle" && (
+            {field.type !== "toggle" && field.type !== "beneficiary" && (
               <div className="space-y-2">
                 <Label>Placeholder</Label>
                 <Input
@@ -178,6 +180,29 @@ function SortableField({
                   }
                   placeholder="Option 1, Option 2, Option 3"
                 />
+              </div>
+            )}
+
+            {field.type === "beneficiary" && (
+              <div className="space-y-2">
+                <Label>Beneficiary Type Filter</Label>
+                <select
+                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                  value={field.beneficiaryType || "ALL"}
+                  onChange={(e) =>
+                    updateField(index, {
+                      beneficiaryType: e.target.value as FormField["beneficiaryType"],
+                    })
+                  }
+                >
+                  <option value="ALL">All Beneficiaries</option>
+                  <option value="WALLET">Wallet Only</option>
+                  <option value="BANK_INTERNAL">Bank Internal Only</option>
+                  <option value="BANK_EXTERNAL">Bank External Only</option>
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  Filter beneficiaries by type shown to the user
+                </p>
               </div>
             )}
 
@@ -636,6 +661,21 @@ export default function EditFormPage() {
                                 <span className="text-sm text-muted-foreground">
                                   Toggle value
                                 </span>
+                              </div>
+                            )}
+                            {field.type === "beneficiary" && (
+                              <div>
+                                <select
+                                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                                  disabled
+                                >
+                                  <option value="">Select a beneficiary</option>
+                                  <option value="sample1">John Doe - **** 1234</option>
+                                  <option value="sample2">Jane Smith - +265 999 123 456</option>
+                                </select>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Filter: {field.beneficiaryType || "All Beneficiaries"}
+                                </p>
                               </div>
                             )}
                             {field.validation && (

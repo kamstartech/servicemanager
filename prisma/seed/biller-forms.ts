@@ -1,5 +1,6 @@
-import { prisma } from "@/lib/db";
-import { BillerType } from "@prisma/client";
+import { PrismaClient, BillerType } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 /**
  * Seed form schemas for biller configurations
@@ -285,30 +286,105 @@ const billerConfigForm = {
     },
   },
   isActive: true,
-  isPublic: false,
-  allowMultiple: true,
-  requiresAuth: true,
+};
+
+// Example form with beneficiary field
+const transferForm = {
+  name: "Money Transfer Form",
+  description: "Form for transferring money to beneficiaries",
+  category: "transactions",
+  schema: {
+    fields: [
+      {
+        id: "field_beneficiary",
+        type: "beneficiary",
+        label: "Select Beneficiary",
+        required: true,
+        beneficiaryType: "ALL",
+      },
+      {
+        id: "field_amount",
+        type: "number",
+        label: "Amount",
+        required: true,
+        placeholder: "Enter amount",
+        validation: {
+          min: 100,
+          max: 1000000,
+          errorMessage: "Amount must be between 100 and 1,000,000",
+        },
+      },
+      {
+        id: "field_reference",
+        type: "text",
+        label: "Reference/Notes",
+        required: false,
+        placeholder: "Optional reference",
+        validation: {
+          maxLength: 100,
+        },
+      },
+    ],
+  },
+  isActive: true,
 };
 
 async function seedBillerForms() {
   console.log("🌱 Seeding biller forms...");
 
-  const form = await prisma.form.upsert({
+  // Seed biller config form
+  const existingForm = await prisma.form.findFirst({
     where: {
-      // Find by name and category combo (you might need to adjust this)
       name: billerConfigForm.name,
-    },
-    update: billerConfigForm,
-    create: {
-      ...billerConfigForm,
-      createdBy: 1, // System user
+      category: billerConfigForm.category,
     },
   });
 
-  console.log(`✓ Created/Updated form: ${form.name} (ID: ${form.id})`);
+  let form;
+  if (existingForm) {
+    form = await prisma.form.update({
+      where: { id: existingForm.id },
+      data: billerConfigForm,
+    });
+    console.log(`✓ Updated form: ${form.name} (ID: ${form.id})`);
+  } else {
+    form = await prisma.form.create({
+      data: {
+        ...billerConfigForm,
+        createdBy: 1, // System user
+      },
+    });
+    console.log(`✓ Created form: ${form.name} (ID: ${form.id})`);
+  }
+
+  // Seed transfer form with beneficiary field
+  const existingTransferForm = await prisma.form.findFirst({
+    where: {
+      name: transferForm.name,
+      category: transferForm.category,
+    },
+  });
+
+  let transferFormResult;
+  if (existingTransferForm) {
+    transferFormResult = await prisma.form.update({
+      where: { id: existingTransferForm.id },
+      data: transferForm,
+    });
+    console.log(`✓ Updated form: ${transferFormResult.name} (ID: ${transferFormResult.id})`);
+  } else {
+    transferFormResult = await prisma.form.create({
+      data: {
+        ...transferForm,
+        createdBy: 1, // System user
+      },
+    });
+    console.log(`✓ Created form: ${transferFormResult.name} (ID: ${transferFormResult.id})`);
+  }
+  
   console.log("✅ Biller forms seeded successfully!");
   
-  return form;
+  return { billerForm: form, transferForm: transferFormResult };
 }
 
 // Run if executed directly
@@ -323,4 +399,4 @@ if (require.main === module) {
     });
 }
 
-export { seedBillerForms, billerConfigForm };
+export { seedBillerForms, billerConfigForm, transferForm };

@@ -8,6 +8,12 @@ type CreateWorkflowStepInput = {
   config: any;
   validation?: any;
   isActive?: boolean;
+  executionMode?: string;
+  triggerTiming?: string;
+  triggerEndpoint?: string;
+  triggerConfig?: any;
+  timeoutMs?: number;
+  retryConfig?: any;
 };
 
 type UpdateWorkflowStepInput = {
@@ -17,6 +23,12 @@ type UpdateWorkflowStepInput = {
   config?: any;
   validation?: any;
   isActive?: boolean;
+  executionMode?: string;
+  triggerTiming?: string;
+  triggerEndpoint?: string;
+  triggerConfig?: any;
+  timeoutMs?: number;
+  retryConfig?: any;
 };
 
 export const workflowStepResolvers = {
@@ -76,6 +88,12 @@ export const workflowStepResolvers = {
           config: input.config,
           validation: input.validation,
           isActive: input.isActive ?? true,
+          executionMode: input.executionMode as any || 'CLIENT_ONLY',
+          triggerTiming: input.triggerTiming as any,
+          triggerEndpoint: input.triggerEndpoint,
+          triggerConfig: input.triggerConfig,
+          timeoutMs: input.timeoutMs,
+          retryConfig: input.retryConfig,
         },
       });
 
@@ -115,6 +133,12 @@ export const workflowStepResolvers = {
           ...(input.config && { config: input.config }),
           ...(input.validation !== undefined && { validation: input.validation }),
           ...(input.isActive !== undefined && { isActive: input.isActive }),
+          ...(input.executionMode && { executionMode: input.executionMode as any }),
+          ...(input.triggerTiming !== undefined && { triggerTiming: input.triggerTiming as any }),
+          ...(input.triggerEndpoint !== undefined && { triggerEndpoint: input.triggerEndpoint }),
+          ...(input.triggerConfig !== undefined && { triggerConfig: input.triggerConfig }),
+          ...(input.timeoutMs !== undefined && { timeoutMs: input.timeoutMs }),
+          ...(input.retryConfig !== undefined && { retryConfig: input.retryConfig }),
         },
       });
 

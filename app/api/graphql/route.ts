@@ -32,7 +32,7 @@ const RATE_LIMIT = {
 };
 
 // Complexity rule: prevent expensive queries
-const complexityRule = createComplexityLimitRule(1000, {
+const complexityRule = createComplexityLimitRule(5000, {
   scalarCost: 1,
   objectCost: 2,
   listFactor: 10,
@@ -53,8 +53,8 @@ const yoga = createYoga({
   plugins: [
     {
       onValidate: ({ addValidationRule }) => {
-        // Limit query depth to 10 levels
-        addValidationRule(depthLimit(10));
+        // Limit query depth to 15 levels (increased for nested data)
+        addValidationRule(depthLimit(15));
         
         // Limit query complexity
         addValidationRule(complexityRule as any);

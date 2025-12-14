@@ -1,7 +1,7 @@
 "use client";
 
 import { gql, useQuery, useMutation } from "@apollo/client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -77,6 +77,12 @@ const WORKFLOW_QUERY = gql`
         config
         validation
         isActive
+        executionMode
+        triggerTiming
+        triggerEndpoint
+        triggerConfig
+        timeoutMs
+        retryConfig
         createdAt
         updatedAt
       }
@@ -109,6 +115,25 @@ const FORMS_QUERY = gql`
         isActive
       }
       total
+    }
+  }
+`;
+
+const CORE_BANKING_ENDPOINTS_QUERY = gql`
+  query CoreBankingEndpoints {
+    coreBankingConnections {
+      id
+      name
+      baseUrl
+      isActive
+      endpoints {
+        id
+        name
+        method
+        path
+        bodyTemplate
+        isActive
+      }
     }
   }
 `;
@@ -200,7 +225,30 @@ function SortableStepRow({ step, onEdit, onDelete }: any) {
         <Badge variant="outline">{step.type}</Badge>
       </TableCell>
       <TableCell>
-        <p className="font-medium">{step.label}</p>
+        <div className="flex flex-col gap-1">
+          <p className="font-medium">{step.label}</p>
+          {step.executionMode !== "CLIENT_ONLY" && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <span className="inline-flex items-center">
+                {step.executionMode === "SERVER_SYNC" && "🔄"}
+                {step.executionMode === "SERVER_ASYNC" && "🚀"}
+                {step.executionMode === "SERVER_VALIDATION" && "✅"}
+                <span className="ml-1">
+                  {step.executionMode === "SERVER_SYNC" && "Sync"}
+                  {step.executionMode === "SERVER_ASYNC" && "Async"}
+                  {step.executionMode === "SERVER_VALIDATION" && "Validation"}
+                </span>
+              </span>
+              {step.triggerTiming && (
+                <span className="text-muted-foreground">
+                  • {step.triggerTiming === "BEFORE_STEP" && "Before"}
+                  {step.triggerTiming === "AFTER_STEP" && "After"}
+                  {step.triggerTiming === "BOTH" && "Before & After"}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
       </TableCell>
       <TableCell>
         <Badge variant={step.isActive ? "default" : "secondary"}>
@@ -246,6 +294,18 @@ export default function WorkflowDetailPage() {
   const [stepConfig, setStepConfig] = useState("{}");
   const [stepValidation, setStepValidation] = useState("");
   const [selectedFormId, setSelectedFormId] = useState("");
+  
+  // Execution configuration state
+  const [executionMode, setExecutionMode] = useState("CLIENT_ONLY");
+  const [triggerTiming, setTriggerTiming] = useState("");
+  const [triggerEndpoint, setTriggerEndpoint] = useState("");
+  const [triggerMethod, setTriggerMethod] = useState("POST");
+  const [timeoutMs, setTimeoutMs] = useState("30000");
+  const [maxRetries, setMaxRetries] = useState("0");
+  
+  // Core banking endpoint integration
+  const [selectedEndpointId, setSelectedEndpointId] = useState("");
+  const [parameterMapping, setParameterMapping] = useState<Record<string, string>>({});
 
   // Workflow edit dialog state
   const [workflowDialogOpen, setWorkflowDialogOpen] = useState(false);
@@ -266,6 +326,10 @@ export default function WorkflowDetailPage() {
 
   const { data: formsData, loading: formsLoading } = useQuery(FORMS_QUERY, {
     variables: { isActive: true },
+  });
+
+  const { data: endpointsData, loading: endpointsLoading } = useQuery(CORE_BANKING_ENDPOINTS_QUERY, {
+    skip: stepType !== "API_CALL",
   });
 
   const [createStep, { loading: creating }] = useMutation(CREATE_STEP, {
@@ -309,6 +373,32 @@ export default function WorkflowDetailPage() {
     },
   });
 
+  // Smart defaults based on step type
+  useEffect(() => {
+    if (!editingStep && stepType) {
+      // Set smart defaults based on step type
+      switch (stepType) {
+        case "API_CALL":
+          setExecutionMode("SERVER_SYNC");
+          setTriggerTiming("AFTER_STEP");
+          break;
+        case "VALIDATION":
+          setExecutionMode("SERVER_VALIDATION");
+          setTriggerTiming("BEFORE_STEP");
+          break;
+        case "FORM":
+        case "CONFIRMATION":
+        case "DISPLAY":
+        case "REDIRECT":
+          setExecutionMode("CLIENT_ONLY");
+          setTriggerTiming("");
+          break;
+        default:
+          break;
+      }
+    }
+  }, [stepType, editingStep]);
+
   const handleOpenWorkflowDialog = () => {
     const workflow = data?.workflow;
     if (workflow) {
@@ -344,9 +434,26 @@ export default function WorkflowDetailPage() {
       setStepLabel(step.label);
       setStepConfig(JSON.stringify(step.config, null, 2));
       setStepValidation(step.validation ? JSON.stringify(step.validation, null, 2) : "");
+      
       // Extract formId if step type is FORM
       if (step.type === "FORM" && step.config?.formId) {
         setSelectedFormId(step.config.formId);
+      }
+      
+      // Set execution configuration
+      setExecutionMode(step.executionMode || "CLIENT_ONLY");
+      setTriggerTiming(step.triggerTiming || "");
+      setTriggerEndpoint(step.triggerEndpoint || "");
+      setTriggerMethod(step.triggerConfig?.method || "POST");
+      setTimeoutMs(step.timeoutMs?.toString() || "30000");
+      setMaxRetries(step.retryConfig?.maxRetries?.toString() || "0");
+      
+      // Extract core banking endpoint and parameter mapping
+      if (step.config?.endpointId) {
+        setSelectedEndpointId(step.config.endpointId);
+      }
+      if (step.config?.parameterMapping) {
+        setParameterMapping(step.config.parameterMapping);
       }
     } else {
       setEditingStep(null);
@@ -355,6 +462,18 @@ export default function WorkflowDetailPage() {
       setStepConfig("{}");
       setStepValidation("");
       setSelectedFormId("");
+      
+      // Reset execution configuration
+      setExecutionMode("CLIENT_ONLY");
+      setTriggerTiming("");
+      setTriggerEndpoint("");
+      setTriggerMethod("POST");
+      setTimeoutMs("30000");
+      setMaxRetries("0");
+      
+      // Reset core banking endpoint
+      setSelectedEndpointId("");
+      setParameterMapping({});
     }
     setDialogOpen(true);
   };
@@ -367,6 +486,18 @@ export default function WorkflowDetailPage() {
     setStepConfig("{}");
     setStepValidation("");
     setSelectedFormId("");
+    
+    // Reset execution configuration
+    setExecutionMode("CLIENT_ONLY");
+    setTriggerTiming("");
+    setTriggerEndpoint("");
+    setTriggerMethod("POST");
+    setTimeoutMs("30000");
+    setMaxRetries("0");
+    
+    // Reset core banking endpoint
+    setSelectedEndpointId("");
+    setParameterMapping({});
   };
 
   const handleSubmit = async () => {
@@ -379,6 +510,26 @@ export default function WorkflowDetailPage() {
     if (stepType === "FORM" && !selectedFormId) {
       alert("Please select a form");
       return;
+    }
+
+    // Validate endpoint selection for API_CALL type
+    if (stepType === "API_CALL" && executionMode !== "CLIENT_ONLY") {
+      if (!selectedEndpointId) {
+        alert("Please select a core banking endpoint for API_CALL");
+        return;
+      }
+    }
+
+    // Validate execution configuration
+    if (executionMode !== "CLIENT_ONLY") {
+      if (!triggerTiming) {
+        alert("Please select trigger timing for server execution");
+        return;
+      }
+      if (!triggerEndpoint && stepType !== "API_CALL") {
+        alert("Please enter a trigger endpoint for server execution");
+        return;
+      }
     }
 
     let parsedConfig;
@@ -396,6 +547,27 @@ export default function WorkflowDetailPage() {
       parsedConfig = { ...parsedConfig, formId: selectedFormId };
     }
 
+    // Merge endpoint and parameter mapping into config for API_CALL type
+    if (stepType === "API_CALL" && selectedEndpointId) {
+      const selectedEndpoint = endpointsData?.coreBankingConnections
+        ?.flatMap((conn: any) => conn.endpoints)
+        ?.find((endpoint: any) => endpoint.id === selectedEndpointId);
+      
+      if (selectedEndpoint) {
+        parsedConfig = {
+          ...parsedConfig,
+          endpointId: selectedEndpointId,
+          endpointName: selectedEndpoint.name,
+          parameterMapping,
+        };
+        
+        // Auto-set trigger endpoint from the selected core banking endpoint
+        if (!triggerEndpoint) {
+          setTriggerEndpoint(selectedEndpoint.path);
+        }
+      }
+    }
+
     if (stepValidation.trim()) {
       try {
         parsedValidation = JSON.parse(stepValidation);
@@ -404,6 +576,17 @@ export default function WorkflowDetailPage() {
         return;
       }
     }
+
+    // Prepare trigger config
+    const triggerConfig = triggerEndpoint ? {
+      method: triggerMethod,
+    } : null;
+
+    // Prepare retry config
+    const retryConfig = maxRetries !== "0" ? {
+      maxRetries: parseInt(maxRetries),
+      initialDelayMs: 1000,
+    } : null;
 
     if (editingStep) {
       await updateStep({
@@ -414,6 +597,12 @@ export default function WorkflowDetailPage() {
             label: stepLabel,
             config: parsedConfig,
             validation: parsedValidation,
+            executionMode,
+            triggerTiming: triggerTiming || null,
+            triggerEndpoint: triggerEndpoint || null,
+            triggerConfig,
+            timeoutMs: parseInt(timeoutMs),
+            retryConfig,
           },
         },
       });
@@ -429,6 +618,12 @@ export default function WorkflowDetailPage() {
             config: parsedConfig,
             validation: parsedValidation,
             isActive: true,
+            executionMode,
+            triggerTiming: triggerTiming || null,
+            triggerEndpoint: triggerEndpoint || null,
+            triggerConfig,
+            timeoutMs: parseInt(timeoutMs),
+            retryConfig,
           },
         },
       });
@@ -784,6 +979,135 @@ export default function WorkflowDetailPage() {
               </div>
             )}
 
+            {/* Core Banking Endpoint Selector - Only show when step type is API_CALL */}
+            {stepType === "API_CALL" && executionMode !== "CLIENT_ONLY" && (
+              <div className="space-y-2">
+                <Label htmlFor="endpoint">Select Core Banking Endpoint *</Label>
+                <Select value={selectedEndpointId} onValueChange={(value) => {
+                  setSelectedEndpointId(value);
+                  // Auto-populate trigger endpoint and method
+                  const selectedEndpoint = endpointsData?.coreBankingConnections
+                    ?.flatMap((conn: any) => conn.endpoints)
+                    ?.find((endpoint: any) => endpoint.id === value);
+                  if (selectedEndpoint) {
+                    setTriggerEndpoint(selectedEndpoint.path);
+                    setTriggerMethod(selectedEndpoint.method);
+                  }
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select an endpoint" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {endpointsLoading ? (
+                      <div className="p-2 text-sm text-muted-foreground">Loading endpoints...</div>
+                    ) : !endpointsData?.coreBankingConnections?.length ? (
+                      <div className="p-2 text-sm text-muted-foreground">No endpoints available</div>
+                    ) : (
+                      endpointsData.coreBankingConnections.map((connection: any) => (
+                        connection.endpoints?.length > 0 && (
+                          <div key={connection.id}>
+                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                              {connection.name}
+                            </div>
+                            {connection.endpoints.map((endpoint: any) => (
+                              <SelectItem key={endpoint.id} value={endpoint.id}>
+                                <div>
+                                  <p className="font-medium">{endpoint.name}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {endpoint.method} {endpoint.path}
+                                  </p>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </div>
+                        )
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Select the core banking API endpoint to call
+                </p>
+              </div>
+            )}
+
+            {/* Parameter Mapping - Show when endpoint is selected */}
+            {stepType === "API_CALL" && selectedEndpointId && (
+              <div className="space-y-2">
+                <Label>Parameter Mapping</Label>
+                <div className="border rounded-md p-3 space-y-2 bg-muted/50">
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Map endpoint parameters to data collected in previous steps.
+                    Use dot notation for nested fields (e.g., "step_0.amount").
+                  </p>
+                  {(() => {
+                    const selectedEndpoint = endpointsData?.coreBankingConnections
+                      ?.flatMap((conn: any) => conn.endpoints)
+                      ?.find((endpoint: any) => endpoint.id === selectedEndpointId);
+                    
+                    if (!selectedEndpoint?.bodyTemplate) {
+                      return (
+                        <p className="text-xs text-muted-foreground">
+                          No parameters defined for this endpoint
+                        </p>
+                      );
+                    }
+
+                    let parameters: string[] = [];
+                    try {
+                      const template = JSON.parse(selectedEndpoint.bodyTemplate);
+                      // Extract parameter names from template (simple heuristic)
+                      const extractParams = (obj: any, prefix = ''): void => {
+                        Object.keys(obj).forEach(key => {
+                          const fullKey = prefix ? `${prefix}.${key}` : key;
+                          if (typeof obj[key] === 'string' && obj[key].startsWith('{{') && obj[key].endsWith('}}')) {
+                            parameters.push(fullKey);
+                          } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+                            extractParams(obj[key], fullKey);
+                          }
+                        });
+                      };
+                      extractParams(template);
+                    } catch (e) {
+                      console.error('Failed to parse bodyTemplate:', e);
+                    }
+
+                    if (parameters.length === 0) {
+                      return (
+                        <p className="text-xs text-muted-foreground">
+                          No parameters found in endpoint template
+                        </p>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-2">
+                        {parameters.map((param) => (
+                          <div key={param} className="flex items-center gap-2">
+                            <Label className="text-xs min-w-[120px]">{param}</Label>
+                            <Input
+                              placeholder="e.g., step_0.amount"
+                              value={parameterMapping[param] || ""}
+                              onChange={(e) => {
+                                setParameterMapping({
+                                  ...parameterMapping,
+                                  [param]: e.target.value
+                                });
+                              }}
+                              className="text-xs"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Available data keys: step_0, step_1, step_2, etc. (based on step order)
+                </p>
+              </div>
+            )}
+
             {/* Step Label */}
             <div className="space-y-2">
               <Label htmlFor="label">Step Label *</Label>
@@ -827,6 +1151,155 @@ export default function WorkflowDetailPage() {
               <p className="text-xs text-muted-foreground">
                 Optional validation rules for this step
               </p>
+            </div>
+
+            {/* Execution Configuration Section */}
+            <div className="border-t pt-4 mt-4">
+              <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                <span className="text-lg">⚙️</span>
+                Execution Configuration
+              </h3>
+              <div className="bg-muted/50 p-3 rounded-md mb-4">
+                <p className="text-xs text-muted-foreground">
+                  Configure how and when this step interacts with the backend. 
+                  Choose <strong>Client Only</strong> for UI-only steps (forms, confirmations), 
+                  or select a server mode to trigger backend actions.
+                </p>
+              </div>
+
+              {/* Execution Mode */}
+              <div className="space-y-2 mb-4">
+                <Label htmlFor="executionMode">Execution Mode *</Label>
+                <Select value={executionMode} onValueChange={setExecutionMode}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CLIENT_ONLY">
+                      <div>
+                        <p className="font-medium">Client Only</p>
+                        <p className="text-xs text-muted-foreground">No backend trigger</p>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="SERVER_SYNC">
+                      <div>
+                        <p className="font-medium">Server Sync</p>
+                        <p className="text-xs text-muted-foreground">Wait for backend response</p>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="SERVER_ASYNC">
+                      <div>
+                        <p className="font-medium">Server Async</p>
+                        <p className="text-xs text-muted-foreground">Fire and forget</p>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="SERVER_VALIDATION">
+                      <div>
+                        <p className="font-medium">Server Validation</p>
+                        <p className="text-xs text-muted-foreground">Validate before proceeding</p>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Show trigger fields only if not CLIENT_ONLY */}
+              {executionMode !== "CLIENT_ONLY" && (
+                <>
+                  {/* Trigger Timing */}
+                  <div className="space-y-2 mb-4">
+                    <Label htmlFor="triggerTiming">Trigger Timing *</Label>
+                    <Select value={triggerTiming} onValueChange={setTriggerTiming}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select when to trigger" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="BEFORE_STEP">
+                          <div>
+                            <p className="font-medium">Before Step</p>
+                            <p className="text-xs text-muted-foreground">Execute before showing step</p>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="AFTER_STEP">
+                          <div>
+                            <p className="font-medium">After Step</p>
+                            <p className="text-xs text-muted-foreground">Execute after user completes step</p>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="BOTH">
+                          <div>
+                            <p className="font-medium">Before & After</p>
+                            <p className="text-xs text-muted-foreground">Execute before AND after</p>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Trigger Endpoint */}
+                  <div className="space-y-2 mb-4">
+                    <Label htmlFor="triggerEndpoint">Trigger Endpoint *</Label>
+                    <Input
+                      id="triggerEndpoint"
+                      placeholder="/api/accounts/validate"
+                      value={triggerEndpoint}
+                      onChange={(e) => setTriggerEndpoint(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      API endpoint to call for this step
+                    </p>
+                  </div>
+
+                  {/* HTTP Method */}
+                  <div className="space-y-2 mb-4">
+                    <Label htmlFor="triggerMethod">HTTP Method</Label>
+                    <Select value={triggerMethod} onValueChange={setTriggerMethod}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="GET">GET</SelectItem>
+                        <SelectItem value="POST">POST</SelectItem>
+                        <SelectItem value="PUT">PUT</SelectItem>
+                        <SelectItem value="PATCH">PATCH</SelectItem>
+                        <SelectItem value="DELETE">DELETE</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Timeout */}
+                  <div className="space-y-2 mb-4">
+                    <Label htmlFor="timeoutMs">Timeout (milliseconds)</Label>
+                    <Input
+                      id="timeoutMs"
+                      type="number"
+                      placeholder="30000"
+                      value={timeoutMs}
+                      onChange={(e) => setTimeoutMs(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Maximum time to wait for response (default: 30000ms)
+                    </p>
+                  </div>
+
+                  {/* Max Retries */}
+                  <div className="space-y-2 mb-4">
+                    <Label htmlFor="maxRetries">Max Retries</Label>
+                    <Input
+                      id="maxRetries"
+                      type="number"
+                      min="0"
+                      max="10"
+                      placeholder="0"
+                      value={maxRetries}
+                      onChange={(e) => setMaxRetries(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Number of retry attempts on failure (0 = no retries)
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

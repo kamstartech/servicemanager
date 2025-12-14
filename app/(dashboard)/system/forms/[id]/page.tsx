@@ -21,9 +21,6 @@ const GET_FORM = gql`
       category
       schema
       isActive
-      isPublic
-      allowMultiple
-      requiresAuth
       version
       createdAt
       updatedAt
@@ -33,11 +30,12 @@ const GET_FORM = gql`
 
 interface FormField {
   id: string;
-  type: "text" | "number" | "date" | "dropdown" | "toggle";
+  type: "text" | "number" | "date" | "dropdown" | "toggle" | "beneficiary";
   label: string;
   required: boolean;
   placeholder?: string;
   options?: string[];
+  beneficiaryType?: "WALLET" | "BANK_INTERNAL" | "BANK_EXTERNAL" | "ALL";
   validation?: {
     minLength?: number;
     maxLength?: number;
@@ -160,48 +158,13 @@ export default function ViewFormPage() {
           </CardContent>
         </Card>
 
-        {/* Form Settings */}
+        {/* Form Schema */}
         <Card>
           <CardHeader>
-            <CardTitle>Form Settings</CardTitle>
+            <CardTitle>Form Schema</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <p className="font-medium">Public Access</p>
-                  <p className="text-sm text-muted-foreground">
-                    Form is {form.isPublic ? "publicly" : "not publicly"}{" "}
-                    accessible
-                  </p>
-                </div>
-                <Badge variant={form.isPublic ? "default" : "outline"}>
-                  {form.isPublic ? "Public" : "Private"}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <p className="font-medium">Multiple Submissions</p>
-                  <p className="text-sm text-muted-foreground">
-                    Users can {form.allowMultiple ? "" : "not "}submit multiple
-                    times
-                  </p>
-                </div>
-                <Badge variant={form.allowMultiple ? "default" : "outline"}>
-                  {form.allowMultiple ? "Allowed" : "Once Only"}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <p className="font-medium">Authentication</p>
-                  <p className="text-sm text-muted-foreground">
-                    {form.requiresAuth ? "Login required" : "No login needed"}
-                  </p>
-                </div>
-                <Badge variant={form.requiresAuth ? "default" : "outline"}>
-                  {form.requiresAuth ? "Required" : "Optional"}
-                </Badge>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div>
                   <p className="font-medium">Total Fields</p>
@@ -211,6 +174,15 @@ export default function ViewFormPage() {
                   </p>
                 </div>
                 <Badge variant="secondary">{fields.length}</Badge>
+              </div>
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <p className="font-medium">Schema Type</p>
+                  <p className="text-sm text-muted-foreground">
+                    JSON Schema format
+                  </p>
+                </div>
+                <Badge variant="outline">JSON</Badge>
               </div>
             </div>
           </CardContent>
@@ -300,6 +272,21 @@ export default function ViewFormPage() {
                                 <span className="text-sm text-muted-foreground">
                                   Toggle value
                                 </span>
+                              </div>
+                            )}
+                            {field.type === "beneficiary" && (
+                              <div>
+                                <select
+                                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                                  disabled
+                                >
+                                  <option value="">Select a beneficiary</option>
+                                  <option value="sample1">John Doe - **** 1234</option>
+                                  <option value="sample2">Jane Smith - +265 999 123 456</option>
+                                </select>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Filter: {field.beneficiaryType || "All Beneficiaries"}
+                                </p>
                               </div>
                             )}
                           </div>

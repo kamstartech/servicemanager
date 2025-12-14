@@ -1,14 +1,15 @@
-import { PrismaClient, BillerTransaction, BillerTransactionStatus } from "@prisma/client";
+import { PrismaClient, BillerTransaction, BillerTransactionStatus, BillerType } from "@prisma/client";
 import { nanoid } from "nanoid";
+import { BillerServiceFactory } from "./factory";
 
 const prisma = new PrismaClient();
 
 export interface CreateTransactionData {
-  billerConfigId: string;
+  billerConfigId?: string;
   billerType: string;
   billerName: string;
   accountNumber: string;
-  amount: number | string;
+  amount?: number | string;
   currency: string;
   transactionType: string;
   initiatedBy?: string;
@@ -18,6 +19,9 @@ export interface CreateTransactionData {
   creditAccountType?: string;
   debitAccount?: string;
   debitAccountType?: string;
+  bundleId?: string;
+  invoiceNumber?: string;
+  meterNumber?: string;
   metadata?: any;
 }
 
@@ -43,7 +47,9 @@ export class BillerTransactionService {
     return await prisma.billerTransaction.create({
       data: {
         ...data,
-        amount: typeof data.amount === "string" ? parseFloat(data.amount) : data.amount,
+        amount: data.amount 
+          ? (typeof data.amount === "string" ? parseFloat(data.amount) : data.amount)
+          : undefined,
         status: BillerTransactionStatus.PENDING,
         ourTransactionId: this.generateTransactionId(),
       } as any,
@@ -220,6 +226,254 @@ export class BillerTransactionService {
       totalAmount: totalAmount._sum.amount || 0,
     };
   }
+
+  /**
+   * Process account lookup
+   */
+  async processAccountLookup(
+    billerType: BillerType,
+    accountNumber: string,
+    accountType?: string
+  ) {
+    // Get biller config
+    const config = await prisma.billerConfig.findUnique({
+      where: { billerType, isActive: true },
+    });
+
+    if (!config) {
+      throw new Error("Biller configuration not found or inactive");
+    }
+
+    // Create transaction record
+    const transaction = await this.createTransaction({
+      billerConfigId: config.id,
+      billerType,
+      billerName: config.billerName,
+      accountNumber,
+      accountType,
+      currency: config.defaultCurrency,
+      transactionType: "ACCOUNT_DETAILS",
+    });
+
+    try {
+      // Get biller service
+      const billerService = BillerServiceFactory.create(config);
+
+      // Update to processing
+      await this.updateTransaction(transaction.id, {
+        status: BillerTransactionStatus.PROCESSING,
+      });
+
+      // Perform lookup
+      const accountDetails = await billerService.lookupAccount(
+        accountNumber,
+        accountType
+      );
+
+      // Complete transaction
+      await this.completeTransaction(transaction.id, accountDetails);
+
+      return {
+        success: true,
+        transaction: await this.getTransaction(transaction.id),
+        accountDetails,
+      };
+    } catch (error: any) {
+      // Fail transaction
+      await this.failTransaction(transaction.id, error.message);
+
+      return {
+        success: false,
+        transaction: await this.getTransaction(transaction.id),
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Process payment
+   */
+  async processPayment(
+    billerType: BillerType,
+    paymentData: {
+      accountNumber: string;
+      amount: number | string;
+      currency?: string;
+      accountType?: string;
+      creditAccount?: string;
+      creditAccountType?: string;
+      debitAccount?: string;
+      debitAccountType?: string;
+      customerAccountNumber?: string;
+      customerAccountName?: string;
+      metadata?: any;
+    }
+  ) {
+    // Get biller config
+    const config = await prisma.billerConfig.findUnique({
+      where: { billerType, isActive: true },
+    });
+
+    if (!config) {
+      throw new Error("Biller configuration not found or inactive");
+    }
+
+    const amount = typeof paymentData.amount === "string"
+      ? parseFloat(paymentData.amount)
+      : paymentData.amount;
+
+    // Create transaction record
+    const transaction = await this.createTransaction({
+      billerConfigId: config.id,
+      billerType,
+      billerName: config.billerName,
+      accountNumber: paymentData.accountNumber,
+      amount,
+      currency: paymentData.currency || config.defaultCurrency,
+      accountType: paymentData.accountType,
+      creditAccount: paymentData.creditAccount,
+      creditAccountType: paymentData.creditAccountType,
+      debitAccount: paymentData.debitAccount,
+      debitAccountType: paymentData.debitAccountType,
+      customerAccountName: paymentData.customerAccountName,
+      transactionType: "POST_TRANSACTION",
+      metadata: paymentData.metadata,
+    });
+
+    try {
+      // Get biller service
+      const billerService = BillerServiceFactory.create(config);
+
+      // Update to processing
+      await this.updateTransaction(transaction.id, {
+        status: BillerTransactionStatus.PROCESSING,
+      });
+
+      // Process payment
+      const result = await billerService.processPayment({
+        accountNumber: paymentData.accountNumber,
+        amount,
+        currency: paymentData.currency || config.defaultCurrency,
+        accountType: paymentData.accountType,
+        metadata: {
+          ourTransactionId: transaction.ourTransactionId,
+          creditAccount: paymentData.creditAccount,
+          creditAccountType: paymentData.creditAccountType,
+          debitAccount: paymentData.debitAccount,
+          debitAccountType: paymentData.debitAccountType,
+          customerAccountNumber: paymentData.customerAccountNumber,
+          customerAccountName: paymentData.customerAccountName,
+          ...paymentData.metadata,
+        },
+      });
+
+      if (result.success) {
+        await this.completeTransaction(transaction.id, result);
+      } else {
+        await this.failTransaction(transaction.id, result.error || "Payment failed");
+      }
+
+      return {
+        success: result.success,
+        transaction: await this.getTransaction(transaction.id),
+        result,
+      };
+    } catch (error: any) {
+      // Fail transaction
+      await this.failTransaction(transaction.id, error.message);
+
+      return {
+        success: false,
+        transaction: await this.getTransaction(transaction.id),
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Retry failed transaction
+   */
+  async retryTransaction(transactionId: string) {
+    const transaction = await this.getTransaction(transactionId);
+
+    if (!transaction) {
+      throw new Error("Transaction not found");
+    }
+
+    if (transaction.status !== BillerTransactionStatus.FAILED) {
+      throw new Error("Only failed transactions can be retried");
+    }
+
+    // Reset transaction status
+    await this.updateTransaction(transactionId, {
+      status: BillerTransactionStatus.PENDING,
+      errorMessage: null,
+      errorCode: null,
+    });
+
+    // Re-process based on transaction type
+    const config = await prisma.billerConfig.findUnique({
+      where: { billerType: transaction.billerType as BillerType },
+    });
+
+    if (!config) {
+      throw new Error("Biller configuration not found");
+    }
+
+    try {
+      const billerService = BillerServiceFactory.create(config);
+
+      await this.updateTransaction(transactionId, {
+        status: BillerTransactionStatus.PROCESSING,
+      });
+
+      let result;
+
+      switch (transaction.transactionType) {
+        case "ACCOUNT_DETAILS":
+          result = await billerService.lookupAccount(
+            transaction.accountNumber,
+            transaction.accountType || undefined
+          );
+          await this.completeTransaction(transactionId, result);
+          break;
+
+        case "POST_TRANSACTION":
+          result = await billerService.processPayment({
+            accountNumber: transaction.accountNumber,
+            amount: transaction.amount!,
+            currency: transaction.currency,
+            accountType: transaction.accountType || undefined,
+            metadata: transaction.metadata as any,
+          });
+          
+          if (result.success) {
+            await this.completeTransaction(transactionId, result);
+          } else {
+            await this.failTransaction(transactionId, result.error || "Payment failed");
+          }
+          break;
+
+        default:
+          throw new Error("Unsupported transaction type for retry");
+      }
+
+      return {
+        success: true,
+        transaction: await this.getTransaction(transactionId),
+      };
+    } catch (error: any) {
+      await this.failTransaction(transactionId, error.message);
+
+      return {
+        success: false,
+        transaction: await this.getTransaction(transactionId),
+        error: error.message,
+      };
+    }
+  }
 }
+
+export const billerTransactionService = new BillerTransactionService();
 
 export const billerTransactionService = new BillerTransactionService();
