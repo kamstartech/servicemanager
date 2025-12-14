@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Smartphone, Wallet, Users, ChevronDown, PanelLeft, Database, ArrowLeftRight, Save, ShieldAlert, Tag, FileText, Activity, Landmark, UserPlus, BookOpen, Workflow, Receipt } from "lucide-react";
+import { Smartphone, Wallet, Users, ChevronDown, PanelLeft, Database, ArrowLeftRight, Save, ShieldAlert, Tag, FileText, Activity, Landmark, UserPlus, BookOpen, Workflow, Receipt, UserCog } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/providers/i18n-provider";
@@ -279,6 +279,15 @@ export function AdminSidebar() {
               collapsed={collapsed}
             />
           </div>
+        </div>
+
+        <div className={`mt-auto space-y-1 pt-4 border-t ${collapsed ? "" : ""}`}>
+          <NavItem
+            href="/profile"
+            icon={UserCog}
+            label="Profile"
+            collapsed={collapsed}
+          />
         </div>
       </nav>
     </aside>
