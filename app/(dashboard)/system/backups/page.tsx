@@ -2,8 +2,9 @@
 
 import { gql, useMutation, useQuery } from "@apollo/client";
 import { toast } from "sonner";
-import { Download, Plus, RefreshCw, Trash2, RotateCcw } from "lucide-react";
+import { Download, Plus, RefreshCw, Trash2, RotateCcw, Upload } from "lucide-react";
 import Link from "next/link";
+import { useRef, useState } from "react";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -80,6 +81,9 @@ export default function BackupsPage() {
     const [createBackup, { loading: creating }] = useMutation(CREATE_BACKUP);
     const [restoreBackup, { loading: restoring }] = useMutation(RESTORE_BACKUP);
     const [deleteBackup, { loading: deleting }] = useMutation(DELETE_BACKUP);
+    
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleCreateBackup = async () => {
         try {
@@ -114,6 +118,58 @@ export default function BackupsPage() {
             refetch();
         } catch (err: any) {
             toast.error(`Delete failed: ${err.message}`);
+        }
+    };
+
+    const handleUploadClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        // Validate file type
+        if (!file.name.endsWith('.sql')) {
+            toast.error("Only .sql files are allowed");
+            return;
+        }
+
+        // Validate file size (max 500MB)
+        const maxSize = 500 * 1024 * 1024;
+        if (file.size > maxSize) {
+            toast.error("File size exceeds 500MB limit");
+            return;
+        }
+
+        setUploading(true);
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            toast.info(`Uploading ${file.name}...`);
+            
+            const response = await fetch("/api/backups/upload", {
+                method: "POST",
+                body: formData,
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "Upload failed");
+            }
+
+            toast.success(`Backup uploaded successfully: ${result.filename}`);
+            refetch();
+        } catch (err: any) {
+            toast.error(`Upload failed: ${err.message}`);
+        } finally {
+            setUploading(false);
+            // Reset file input
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
         }
     };
 
@@ -218,6 +274,17 @@ export default function BackupsPage() {
                             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                             Refresh
                         </Button>
+                        <Button variant="outline" size="sm" onClick={handleUploadClick} disabled={uploading}>
+                            <Upload className="h-4 w-4 mr-2" />
+                            {uploading ? "Uploading..." : "Upload Backup"}
+                        </Button>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".sql"
+                            onChange={handleFileSelect}
+                            className="hidden"
+                        />
                         <Button size="sm" onClick={handleCreateBackup} disabled={creating}>
                             <Plus className="h-4 w-4 mr-2" />
                             {creating ? "Creating..." : "Create Backup"}

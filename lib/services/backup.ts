@@ -186,6 +186,67 @@ export class BackupService {
 
         return filepath;
     }
+
+    /**
+     * Upload a backup file
+     */
+    async uploadBackup(fileBuffer: Buffer, originalFilename: string): Promise<string> {
+        // Validate filename
+        if (!originalFilename.endsWith('.sql')) {
+            throw new Error("Only .sql files are allowed");
+        }
+
+        // Generate unique filename with timestamp
+        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+        const sanitizedName = originalFilename.replace(/[^a-zA-Z0-9.-]/g, "_");
+        const filename = `uploaded-${timestamp}-${sanitizedName}`;
+        const filepath = path.join(BACKUP_DIR, filename);
+
+        try {
+            // Save file locally
+            fs.writeFileSync(filepath, fileBuffer);
+            const stats = fs.statSync(filepath);
+
+            // Upload to MinIO storage
+            let storageUrl: string | null = null;
+            try {
+                const result = await uploadFile(
+                    BUCKETS.BACKUPS,
+                    filename,
+                    fileBuffer,
+                    {
+                        "Content-Type": "application/sql",
+                        "X-Backup-Timestamp": timestamp,
+                        "X-Backup-Type": "uploaded",
+                        "X-Original-Filename": originalFilename,
+                    }
+                );
+                storageUrl = result.url;
+                console.log(`✅ Uploaded backup to MinIO: ${storageUrl}`);
+            } catch (storageError) {
+                console.error("⚠️ Failed to upload backup to MinIO:", storageError);
+                // Continue anyway - we still have local backup
+            }
+
+            // Save to database
+            await prisma.backup.create({
+                data: {
+                    filename,
+                    sizeBytes: BigInt(stats.size),
+                    storageUrl,
+                },
+            });
+
+            return filename;
+        } catch (error) {
+            console.error("Upload failed:", error);
+            // Cleanup file if it was created
+            if (fs.existsSync(filepath)) {
+                fs.unlinkSync(filepath);
+            }
+            throw new Error(`Upload failed: ${error}`);
+        }
+    }
 }
 
 export const backupService = new BackupService();

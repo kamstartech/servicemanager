@@ -7,9 +7,11 @@ import fs from "fs";
  * GET /api/backups/[id]/download
  * Download a backup file
  */
-export const GET = withAuth(async (request: NextRequest, user: any, params: any) => {
-    // Ensure we have an ID
+export const GET = withAuth(async (request: NextRequest, user: any, context: any) => {
+    // In Next.js 15+, params is a Promise and must be awaited
+    const params = await context.params;
     const id = params?.id;
+    
     if (!id) {
         return NextResponse.json({ error: "Backup ID required" }, { status: 400 });
     }
