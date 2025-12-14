@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -13,13 +14,10 @@ function ResetPasswordForm() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
-  const [message, setMessage] = useState("");
 
   useEffect(() => {
     if (!token) {
-      setStatus("error");
-      setMessage("Invalid or missing reset token.");
+      toast.error("Invalid or missing reset token.");
     }
   }, [token]);
 
@@ -27,20 +25,16 @@ function ResetPasswordForm() {
     e.preventDefault();
 
     if (password !== confirmPassword) {
-      setStatus("error");
-      setMessage("Passwords do not match.");
+      toast.error("Passwords do not match.");
       return;
     }
 
     if (password.length < 8) {
-      setStatus("error");
-      setMessage("Password must be at least 8 characters long.");
+      toast.error("Password must be at least 8 characters long.");
       return;
     }
 
     setIsLoading(true);
-    setStatus("idle");
-    setMessage("");
 
     try {
       const response = await fetch("/api/auth/reset-password", {
@@ -54,18 +48,15 @@ function ResetPasswordForm() {
       const data = await response.json();
 
       if (response.ok) {
-        setStatus("success");
-        setMessage("Password reset successfully! Redirecting to login...");
+        toast.success("Password reset successfully! Redirecting to login...");
         setTimeout(() => {
           router.push("/login");
         }, 2000);
       } else {
-        setStatus("error");
-        setMessage(data.error || "An error occurred. Please try again.");
+        toast.error(data.error || "Failed to reset password. Please try again.");
       }
     } catch (error) {
-      setStatus("error");
-      setMessage("An error occurred. Please try again.");
+      toast.error("An error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -93,18 +84,6 @@ function ResetPasswordForm() {
             </h2>
             <p className="text-gray-600">Enter your new password below.</p>
           </div>
-
-          {status === "success" && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-green-800 text-sm">{message}</p>
-            </div>
-          )}
-
-          {status === "error" && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-800 text-sm">{message}</p>
-            </div>
-          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>

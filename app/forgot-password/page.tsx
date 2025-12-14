@@ -3,18 +3,15 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { toast } from "sonner";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
-  const [message, setMessage] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setStatus("idle");
-    setMessage("");
 
     try {
       const response = await fetch("/api/auth/forgot-password", {
@@ -28,18 +25,15 @@ export default function ForgotPasswordPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setStatus("success");
-        setMessage(
-          "If an account exists with this email, you will receive a password reset link shortly."
-        );
+        toast.success("Reset link sent!", {
+          description: "If an account exists with this email, you will receive a password reset link shortly.",
+        });
         setEmail("");
       } else {
-        setStatus("error");
-        setMessage(data.error || "An error occurred. Please try again.");
+        toast.error(data.error || "An error occurred. Please try again.");
       }
     } catch (error) {
-      setStatus("error");
-      setMessage("An error occurred. Please try again.");
+      toast.error("An error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -70,18 +64,6 @@ export default function ForgotPasswordPage() {
               password.
             </p>
           </div>
-
-          {status === "success" && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-green-800 text-sm">{message}</p>
-            </div>
-          )}
-
-          {status === "error" && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-800 text-sm">{message}</p>
-            </div>
-          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>

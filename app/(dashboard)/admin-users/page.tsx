@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Mail, Calendar, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { Plus, Mail, Calendar, CheckCircle, XCircle } from "lucide-react";
+import { toast } from "sonner";
 
 interface AdminUser {
   id: number;
@@ -17,7 +18,6 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Form state
   const [email, setEmail] = useState("");
@@ -36,6 +36,7 @@ export default function AdminUsersPage() {
       }
     } catch (error) {
       console.error("Failed to fetch users:", error);
+      toast.error("Failed to load admin users");
     } finally {
       setLoading(false);
     }
@@ -44,7 +45,6 @@ export default function AdminUsersPage() {
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setAddLoading(true);
-    setMessage(null);
 
     try {
       const response = await fetch("/api/admin/users", {
@@ -58,26 +58,21 @@ export default function AdminUsersPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setMessage({
-          type: "success",
-          text: data.message || "Admin user created successfully!",
+        toast.success(data.message || "Admin user created successfully!", {
+          description: data.emailSent 
+            ? "Credentials have been sent to the user's email"
+            : "Please check the console for credentials",
         });
         setEmail("");
         setName("");
         setShowAddModal(false);
         fetchUsers(); // Refresh the list
       } else {
-        setMessage({
-          type: "error",
-          text: data.error || "Failed to create user",
-        });
+        toast.error(data.error || "Failed to create user");
       }
     } catch (error) {
       console.error("Create user error:", error);
-      setMessage({
-        type: "error",
-        text: "An error occurred. Please try again.",
-      });
+      toast.error("An error occurred. Please try again.");
     } finally {
       setAddLoading(false);
     }
@@ -101,24 +96,6 @@ export default function AdminUsersPage() {
           Add Admin User
         </button>
       </div>
-
-      {/* Message */}
-      {message && (
-        <div
-          className={`mb-6 p-4 rounded-lg flex items-center gap-2 ${
-            message.type === "success"
-              ? "bg-green-50 border border-green-200 text-green-800"
-              : "bg-red-50 border border-red-200 text-red-800"
-          }`}
-        >
-          {message.type === "success" ? (
-            <CheckCircle size={20} />
-          ) : (
-            <AlertCircle size={20} />
-          )}
-          <span>{message.text}</span>
-        </div>
-      )}
 
       {/* Users Table */}
       {loading ? (
@@ -254,7 +231,6 @@ export default function AdminUsersPage() {
                       setShowAddModal(false);
                       setEmail("");
                       setName("");
-                      setMessage(null);
                     }}
                     className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
                     disabled={addLoading}
