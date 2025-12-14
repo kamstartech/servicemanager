@@ -43,11 +43,6 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Get token from cookie or header
-  const token =
-    request.cookies.get("admin_token")?.value ||
-    request.headers.get("authorization")?.split(" ")[1];
-
   // Check if token exists and is valid
   if (!token) {
     // Redirect to login for page routes
