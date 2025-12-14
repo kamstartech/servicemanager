@@ -475,5 +475,3 @@ export class BillerTransactionService {
 }
 
 export const billerTransactionService = new BillerTransactionService();
-
-export const billerTransactionService = new BillerTransactionService();
