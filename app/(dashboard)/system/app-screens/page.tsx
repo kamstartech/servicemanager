@@ -621,7 +621,7 @@ export default function AppScreensPage() {
                     {ICONS.map((icon) => (
                       <SelectItem key={icon.value} value={icon.value}>
                         <span className="flex items-center gap-2">
-                          <span className="text-xl">{icon.value}</span>
+                          <IconRenderer iconName={icon.value} className="h-4 w-4" />
                           {icon.label}
                         </span>
                       </SelectItem>
@@ -715,7 +715,7 @@ export default function AppScreensPage() {
                     {ICONS.map((icon) => (
                       <SelectItem key={icon.value} value={icon.value}>
                         <span className="flex items-center gap-2">
-                          <span className="text-xl">{icon.value}</span>
+                          <IconRenderer iconName={icon.value} className="h-4 w-4" />
                           {icon.label}
                         </span>
                       </SelectItem>
