@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/db/prisma";
 import { billerTransactionService } from "@/lib/services/billers/transactions";
 import { BillerType, BillerTransactionStatus } from "@prisma/client";
 import type { GraphQLContext } from "../context";
