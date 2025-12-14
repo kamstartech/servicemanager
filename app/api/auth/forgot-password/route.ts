@@ -93,8 +93,9 @@ async function sendPasswordResetEmail(
     text: `Hello ${name},\n\nYou requested to reset your password for the FDH Bank Admin Panel.\n\nClick the link below to reset your password:\n${resetLink}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this, please ignore this email.\n\nBest regards,\nFDH Bank Admin Team`,
     html: `
       <div style="font-family: 'Poppins', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #154E9E; margin: 0;">FDH Bank</h1>
+        <div style="text-align: center; margin-bottom: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 10px;">
+          <img src="cid:logo" alt="FDH Bank" style="width: 80px; height: auto; margin-bottom: 10px;" />
+          <h1 style="color: #154E9E; margin: 10px 0 0 0;">FDH Bank</h1>
           <p style="color: #666; margin-top: 5px;">Admin Panel</p>
         </div>
         
@@ -143,6 +144,13 @@ async function sendPasswordResetEmail(
         </div>
       </div>
     `,
+    attachments: [
+      {
+        filename: "fdh-logo.png",
+        path: process.cwd() + "/public/images/logo/BLUE PNG/FDH LOGO-06.png",
+        cid: "logo",
+      },
+    ],
   });
 }
 
