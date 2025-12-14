@@ -20,7 +20,7 @@ export default function LoginPage() {
   return (
     <div className="flex h-screen">
       {/* Left side - Login Form */}
-      <div className="w-1/2 bg-white p-6 flex flex-col">
+      <div className="w-full md:w-1/2 bg-white p-6 flex flex-col overflow-y-auto">
         <div className="flex items-center mb-8">
           <Image
             src="/images/logo/BLUE PNG/FDH LOGO-06.png"
@@ -94,19 +94,8 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Right side - Background Image */}
-      <div className="w-1/2 relative overflow-hidden">
-        <div className="absolute top-8 right-12 z-10">
-          <a
-            href="https://www.fdhbank.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-white hover:underline"
-          >
-            Go to website
-          </a>
-        </div>
-
+      {/* Right side - Background Image - Hidden on mobile */}
+      <div className="hidden md:flex md:w-1/2 relative overflow-hidden">
         <div className="h-full flex flex-col justify-center items-center p-12 z-10 relative">
           <div className="text-center text-white">
             <h1 className="text-4xl font-light mb-2">Welcome to</h1>
