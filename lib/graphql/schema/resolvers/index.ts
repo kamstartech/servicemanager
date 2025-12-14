@@ -25,6 +25,7 @@ import { accountAlertResolvers } from "./accountAlert";
 import { workflowResolvers } from "./workflow";
 import { workflowStepResolvers } from "./workflowStep";
 import { workflowExecutionResolvers } from "./workflowExecution";
+import { billersResolvers } from "./billers";
 import { JSONResolver } from "graphql-scalars";
 
 export const resolvers = {
