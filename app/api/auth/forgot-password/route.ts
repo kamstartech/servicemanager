@@ -59,12 +59,9 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Generate reset link
-    const resetLink = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/reset-password?token=${token}`;
-
-    // Send email using the email service
+    // Send email with reset link
     try {
-      await sendPasswordResetEmail(user.email, user.name || "Admin", resetLink);
+      await sendPasswordResetEmail(user.email, user.name || "Admin", token);
     } catch (emailError) {
       console.error("Failed to send reset email:", emailError);
       // Don't expose email sending errors to the user
@@ -86,12 +83,28 @@ export async function POST(request: NextRequest) {
 async function sendPasswordResetEmail(
   email: string,
   name: string,
-  resetLink: string
+  token: string
 ) {
+  const resetUrl = `https://mobile-banking-v2.abakula.com/reset-password?token=${token}`;
+
   await emailService.sendEmail({
     to: email,
     subject: "Reset Your FDH Bank Admin Password",
-    text: `Hello ${name},\n\nYou requested to reset your password for the FDH Bank Admin Panel.\n\nClick the link below to reset your password:\n${resetLink}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this, please ignore this email.\n\nBest regards,\nFDH Bank Admin Team`,
+    text: `
+Hello ${name},
+
+You requested to reset your password for the FDH Bank Admin Panel.
+
+Click the link below to reset your password:
+${resetUrl}
+
+This link will expire in 1 hour.
+
+If you didn't request this, please ignore this email. Your password will remain unchanged.
+
+Best regards,
+FDH Bank Admin Team
+    `,
     html: `
       <div style="font-family: 'Poppins', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 10px;">
@@ -102,39 +115,41 @@ async function sendPasswordResetEmail(
         
         <div style="background-color: #f8f9fa; padding: 30px; border-radius: 10px;">
           <h2 style="color: #154E9E; margin-top: 0;">Reset Your Password</h2>
-          <p style="color: #333; line-height: 1.6;">Hello ${name},</p>
+          <p style="color: #333; line-height: 1.6;">
+            Hello <strong>${name}</strong>,
+          </p>
           <p style="color: #333; line-height: 1.6;">
             You requested to reset your password for the FDH Bank Admin Panel.
           </p>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${resetLink}" 
+            <a href="${resetUrl}" 
                style="display: inline-block; 
-                      padding: 14px 32px; 
+                      padding: 16px 40px; 
                       background-color: #f59e0b; 
                       color: white; 
                       text-decoration: none; 
-                      border-radius: 9999px; 
+                      border-radius: 50px; 
                       font-weight: 600;
-                      font-size: 16px;">
+                      font-size: 16px;
+                      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
               Reset Password
             </a>
           </div>
           
-          <p style="color: #666; font-size: 14px; line-height: 1.6;">
-            Or copy and paste this link into your browser:
-          </p>
-          <p style="color: #154E9E; word-break: break-all; font-size: 14px;">
-            ${resetLink}
-          </p>
+          <div style="background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0;">
+            <p style="color: #666; font-size: 14px; margin: 0; line-height: 1.6;">
+              Or copy and paste this link into your browser:
+            </p>
+            <p style="color: #154E9E; font-size: 12px; word-break: break-all; margin: 10px 0 0 0;">
+              ${resetUrl}
+            </p>
+          </div>
           
           <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
-            <p style="color: #666; font-size: 13px; line-height: 1.6;">
-              <strong>⏰ This link will expire in 1 hour.</strong>
-            </p>
-            <p style="color: #666; font-size: 13px; line-height: 1.6;">
-              If you didn't request this password reset, please ignore this email. 
-              Your password will remain unchanged.
+            <p style="color: #d97706; font-size: 13px; line-height: 1.6;">
+              <strong>⏰ This link will expire in 1 hour.</strong><br>
+              If you didn't request this password reset, please ignore this email. Your password will remain unchanged.
             </p>
           </div>
         </div>
