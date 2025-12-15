@@ -49,14 +49,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user is active
-    if (!resetToken.user.isActive) {
-      return NextResponse.json(
-        { error: "This account is not active" },
-        { status: 400 }
-      );
-    }
-
     // Hash the new password
     const passwordHash = await bcrypt.hash(password, 10);
 
