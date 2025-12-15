@@ -33,13 +33,16 @@ export async function GET(request: NextRequest) {
       // Handle stdout
       dockerLogs.stdout.on("data", (data) => {
         try {
+          if (controller.desiredSize === null) return; // Controller closed
           const logLines = data.toString().split('\n').filter((line: string) => line.trim());
           logLines.forEach((line: string) => {
-            controller.enqueue(
-              encoder.encode(
-                `data: ${JSON.stringify({ log: line, timestamp: new Date().toISOString() })}\n\n`
-              )
-            );
+            if (controller.desiredSize !== null) {
+              controller.enqueue(
+                encoder.encode(
+                  `data: ${JSON.stringify({ log: line, timestamp: new Date().toISOString() })}\n\n`
+                )
+              );
+            }
           });
         } catch (error) {
           console.error("Error processing log data:", error);
@@ -49,11 +52,13 @@ export async function GET(request: NextRequest) {
       // Handle stderr
       dockerLogs.stderr.on("data", (data) => {
         try {
-          controller.enqueue(
-            encoder.encode(
-              `data: ${JSON.stringify({ log: `[ERROR] ${data.toString()}`, timestamp: new Date().toISOString() })}\n\n`
-            )
-          );
+          if (controller.desiredSize !== null) {
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({ log: `[ERROR] ${data.toString()}`, timestamp: new Date().toISOString() })}\n\n`
+              )
+            );
+          }
         } catch (error) {
           console.error("Error processing error data:", error);
         }
@@ -62,17 +67,23 @@ export async function GET(request: NextRequest) {
       // Handle process errors
       dockerLogs.on("error", (error) => {
         console.error("Docker logs process error:", error);
-        controller.enqueue(
-          encoder.encode(
-            `data: ${JSON.stringify({ log: `[ERROR] Failed to start docker logs: ${error.message}`, timestamp: new Date().toISOString() })}\n\n`
-          )
-        );
+        if (controller.desiredSize !== null) {
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({ log: `[ERROR] Failed to start docker logs: ${error.message}`, timestamp: new Date().toISOString() })}\n\n`
+            )
+          );
+        }
       });
 
       // Keep-alive ping every 30 seconds
       const keepAliveInterval = setInterval(() => {
         try {
-          controller.enqueue(encoder.encode(": keep-alive\n\n"));
+          if (controller.desiredSize !== null) {
+            controller.enqueue(encoder.encode(": keep-alive\n\n"));
+          } else {
+            clearInterval(keepAliveInterval);
+          }
         } catch (error) {
           clearInterval(keepAliveInterval);
         }
