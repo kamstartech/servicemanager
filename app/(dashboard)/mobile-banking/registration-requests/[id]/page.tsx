@@ -84,12 +84,14 @@ export default function RegistrationRequestDetailPage() {
       }
 
       // If final status reached, refresh the registration
-      if ([
+      const finalStatuses = new Set<RegistrationStatus>([
         RegistrationStatus.COMPLETED,
         RegistrationStatus.FAILED,
         RegistrationStatus.DUPLICATE,
-        RegistrationStatus.APPROVED
-      ].includes(update.status)) {
+        RegistrationStatus.APPROVED,
+      ]);
+
+      if (finalStatuses.has(update.status)) {
         setTimeout(() => {
           fetchRegistration();
           setRealtimeUpdate(null);
@@ -391,7 +393,16 @@ export default function RegistrationRequestDetailPage() {
         </div>
 
         {/* Validation Data - Show if APPROVED */}
-        {registration.status === RegistrationStatus.APPROVED && registration.validationData && (
+        {(() => {
+          const validationData = (registration as any).validationData as
+            | { accounts?: any[] }
+            | undefined;
+
+          if (registration.status !== RegistrationStatus.APPROVED || !validationData) {
+            return null;
+          }
+
+          return (
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Validation Results</CardTitle>
@@ -401,7 +412,7 @@ export default function RegistrationRequestDetailPage() {
                 <div>
                   <p className="text-sm font-medium mb-2">Customer Accounts Found</p>
                   <div className="space-y-2">
-                    {(registration.validationData as any).accounts?.map((account: any, index: number) => (
+                    {validationData.accounts?.map((account: any, index: number) => (
                       <div key={index} className="bg-muted p-3 rounded-md">
                         <div className="grid grid-cols-2 gap-2 text-sm">
                           <div>
@@ -429,7 +440,8 @@ export default function RegistrationRequestDetailPage() {
               </div>
             </CardContent>
           </Card>
-        )}
+          );
+        })()}
 
         {/* Processing Information */}
         {(registration.mobileUser || registration.processedByUser || registration.notes || registration.errorMessage) && (

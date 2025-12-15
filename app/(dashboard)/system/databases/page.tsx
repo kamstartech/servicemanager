@@ -10,7 +10,9 @@ import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { CheckCircle, Clock, Eye, FlaskConical, XCircle } from "lucide-react";
 import { DatabaseConnectionDialog } from "@/components/database-connection-dialog";
+import { translateStatusOneWord } from "@/lib/utils";
 import {
+  COMMON_TABLE_HEADERS,
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table";
@@ -119,7 +121,7 @@ export default function DatabaseConnectionsPage() {
     },
     {
       id: "status",
-      header: "Status",
+      header: COMMON_TABLE_HEADERS.status,
       accessor: (row) => {
         const hasTest = !!row.lastTestedAt;
         const when = hasTest
@@ -140,7 +142,7 @@ export default function DatabaseConnectionsPage() {
               aria-label={tooltip}
             >
               <Clock size={14} />
-              Not tested
+              {translateStatusOneWord("UNTESTED", translate, "UNTESTED")}
             </span>
           );
         }
@@ -153,7 +155,7 @@ export default function DatabaseConnectionsPage() {
               aria-label={tooltip}
             >
               <CheckCircle size={14} />
-              OK
+              {translateStatusOneWord("OK", translate, "OK")}
             </span>
           );
         }
@@ -165,7 +167,7 @@ export default function DatabaseConnectionsPage() {
             aria-label={tooltip}
           >
             <XCircle size={14} />
-            Failed
+            {translateStatusOneWord("FAILED", translate, "FAILED")}
           </span>
         );
       },

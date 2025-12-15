@@ -6,7 +6,9 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { CheckCircle, Eye, Star, XCircle } from "lucide-react";
+import { translateStatusOneWord } from "@/lib/utils";
 
 const GET_ACCOUNTS = gql`
   query GetMobileUserAccounts {
@@ -52,6 +54,7 @@ interface Account {
 
 export default function AccountsPage() {
   const router = useRouter();
+  const { translate } = useI18n();
   const { data, loading, error, refetch } = useQuery(GET_ACCOUNTS);
 
   const accounts: Account[] = data?.allMobileUserAccounts ?? [];
@@ -59,7 +62,7 @@ export default function AccountsPage() {
   const columns: DataTableColumn<Account>[] = [
     {
       id: "accountNumber",
-      header: "Account Number",
+      header: translate("common.table.columns.accountNumber"),
       accessor: (row) => (
         <span className="font-medium font-mono">{row.accountNumber}</span>
       ),
@@ -67,13 +70,13 @@ export default function AccountsPage() {
     },
     {
       id: "holderName",
-      header: "Holder Name",
+      header: translate("common.table.columns.holderName"),
       accessor: (row) => row.holderName || row.accountName || "-",
       sortKey: "holderName",
     },
     {
       id: "type",
-      header: "Type",
+      header: translate("common.table.columns.type"),
       accessor: (row) => (
         <Badge variant="outline" className="text-xs">
           {row.accountType || "N/A"}
@@ -82,7 +85,7 @@ export default function AccountsPage() {
     },
     {
       id: "category",
-      header: "Category",
+      header: translate("common.table.columns.category"),
       accessor: (row) => (
         <div className="text-sm">
           {row.categoryName ? (
@@ -102,7 +105,7 @@ export default function AccountsPage() {
     },
     {
       id: "balance",
-      header: "Balance",
+      header: translate("common.table.columns.balance"),
       accessor: (row) => (
         <div className="text-right">
           {row.balance != null ? (
@@ -126,13 +129,13 @@ export default function AccountsPage() {
     },
     {
       id: "status",
-      header: "Status",
+      header: translate("common.table.columns.status"),
       accessor: (row) => (
         <div className="flex flex-col gap-1">
           {row.isPrimary && (
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
               <Star size={14} />
-              Primary
+              {translateStatusOneWord("PRIMARY", translate, "PRIMARY")}
             </span>
           )}
           {row.accountStatus && (
@@ -144,13 +147,13 @@ export default function AccountsPage() {
               }`}
             >
               <CheckCircle size={14} />
-              {row.accountStatus}
+              {translateStatusOneWord(row.accountStatus, translate, "UNKNOWN")}
             </span>
           )}
           {!row.isActive && (
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
               <XCircle size={14} />
-              Inactive
+              {translateStatusOneWord("INACTIVE", translate, "INACTIVE")}
             </span>
           )}
         </div>
@@ -159,7 +162,7 @@ export default function AccountsPage() {
     },
     {
       id: "actions",
-      header: "Actions",
+      header: translate("common.table.columns.actions"),
       accessor: (row) => (
         <div className="flex justify-center">
           <Button
@@ -169,7 +172,7 @@ export default function AccountsPage() {
             onClick={() => router.push(`/mobile-banking/accounts/${row.accountNumber}`)}
           >
             <Eye className="h-4 w-4 mr-2" />
-            View
+            {translate("common.actions.details")}
           </Button>
         </div>
       ),
@@ -218,7 +221,7 @@ export default function AccountsPage() {
               pageSize={20}
               searchPlaceholder="Search by account number, holder name, type..."
               showRowNumbers
-              rowNumberHeader="#"
+              rowNumberHeader={translate("common.table.columns.index")}
             />
           )}
         </CardContent>

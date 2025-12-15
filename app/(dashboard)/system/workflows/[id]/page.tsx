@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { useI18n } from "@/components/providers/i18n-provider";
 import {
   Select,
   SelectContent,
@@ -283,6 +284,7 @@ function SortableStepRow({ step, onEdit, onDelete, rowIndex }: any) {
 }
 
 export default function WorkflowDetailPage() {
+  const { translate } = useI18n();
   const params = useParams();
   const router = useRouter();
   const workflowId = params.id as string;
@@ -792,12 +794,12 @@ export default function WorkflowDetailPage() {
                 <Table className="bg-white">
                   <TableHeader className="bg-gray-50">
                     <TableRow>
-                      <TableHead className="w-12 text-center">#</TableHead>
-                      <TableHead className="w-16">Order</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Label</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-center">Actions</TableHead>
+                      <TableHead className="w-12 text-center">{translate("common.table.columns.index")}</TableHead>
+                      <TableHead className="w-16">{translate("common.table.columns.order")}</TableHead>
+                      <TableHead>{translate("common.table.columns.type")}</TableHead>
+                      <TableHead>{translate("common.table.columns.label")}</TableHead>
+                      <TableHead>{translate("common.table.columns.status")}</TableHead>
+                      <TableHead className="text-center">{translate("common.table.columns.actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody className="bg-white divide-y divide-gray-200">

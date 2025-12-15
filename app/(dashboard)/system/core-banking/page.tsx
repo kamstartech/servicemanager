@@ -9,6 +9,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/providers/i18n-provider";
 import {
+  COMMON_TABLE_HEADERS,
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table";
@@ -18,6 +19,7 @@ import {
   type CoreBankingConnectionDialogMode,
 } from "@/components/core-banking/core-banking-connection-dialog";
 import { Calendar, CheckCircle, Eye, FlaskConical, Pencil, XCircle } from "lucide-react";
+import { translateStatusOneWord } from "@/lib/utils";
 
 const CORE_BANKING_CONNECTIONS_QUERY = gql`
   query CoreBankingConnections {
@@ -114,12 +116,12 @@ export default function CoreBankingConnectionsPage() {
         row.isActive ? (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
             <CheckCircle size={14} />
-            {translate("common.status.active")}
+            {translateStatusOneWord("ACTIVE", translate, "ACTIVE")}
           </span>
         ) : (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
             <XCircle size={14} />
-            {translate("common.status.inactive")}
+            {translateStatusOneWord("INACTIVE", translate, "INACTIVE")}
           </span>
         ),
       sortKey: "isActive",
@@ -141,7 +143,7 @@ export default function CoreBankingConnectionsPage() {
     },
     {
       id: "createdAt",
-      header: "Created",
+      header: COMMON_TABLE_HEADERS.created,
       accessor: (row) => (
         <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
           <Calendar size={16} />

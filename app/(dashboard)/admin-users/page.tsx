@@ -4,9 +4,11 @@ import { useState } from "react";
 import { Plus, Mail, Calendar, CheckCircle, XCircle, Key } from "lucide-react";
 import { toast } from "sonner";
 import { gql, useMutation, useQuery } from "@apollo/client";
-import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { COMMON_TABLE_HEADERS, DataTable, type DataTableColumn } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useI18n } from "@/components/providers/i18n-provider";
+import { translateStatusOneWord } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,6 +71,7 @@ interface AdminUser {
 }
 
 export default function AdminUsersPage() {
+  const { translate } = useI18n();
   const [showAddModal, setShowAddModal] = useState(false);
   const [resettingUserId, setResettingUserId] = useState<number | null>(null);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
@@ -173,7 +176,7 @@ export default function AdminUsersPage() {
   const columns: DataTableColumn<AdminUser>[] = [
     {
       id: "name",
-      header: "Name",
+      header: COMMON_TABLE_HEADERS.name,
       accessor: (user) => (
         <div className="text-sm font-medium text-gray-900">{user.name}</div>
       ),
@@ -181,7 +184,7 @@ export default function AdminUsersPage() {
     },
     {
       id: "email",
-      header: "Email",
+      header: COMMON_TABLE_HEADERS.email,
       accessor: (user) => (
         <div className="flex items-center gap-2 text-sm text-gray-600">
           <Mail size={16} />
@@ -192,17 +195,17 @@ export default function AdminUsersPage() {
     },
     {
       id: "status",
-      header: "Status",
+      header: COMMON_TABLE_HEADERS.status,
       accessor: (user) =>
         user.isActive ? (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
             <CheckCircle size={14} />
-            Active
+            {translateStatusOneWord("ACTIVE", translate, "ACTIVE")}
           </span>
         ) : (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
             <XCircle size={14} />
-            Inactive
+            {translateStatusOneWord("INACTIVE", translate, "INACTIVE")}
           </span>
         ),
       sortKey: "isActive",
@@ -210,7 +213,7 @@ export default function AdminUsersPage() {
     },
     {
       id: "createdAt",
-      header: "Created",
+      header: COMMON_TABLE_HEADERS.created,
       accessor: (user) => (
         <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
           <Calendar size={16} />
@@ -229,7 +232,7 @@ export default function AdminUsersPage() {
     },
     {
       id: "actions",
-      header: "Actions",
+      header: COMMON_TABLE_HEADERS.actions,
       accessor: (user) => (
         <div className="flex justify-center">
           <Button

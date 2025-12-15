@@ -6,7 +6,8 @@ import { useParams, useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { COMMON_TABLE_HEADERS, DataTable, type DataTableColumn } from "@/components/data-table";
+import { useI18n } from "@/components/providers/i18n-provider";
 import {
   ArrowLeft,
   RefreshCw,
@@ -17,6 +18,7 @@ import {
   Clock,
   XCircle,
 } from "lucide-react";
+import { translateStatusOneWord } from "@/lib/utils";
 
 const GET_ACCOUNT_TRANSACTIONS = gql`
   query GetAccountTransactions($accountNumber: String!) {
@@ -62,6 +64,7 @@ interface Transaction {
 }
 
 export default function AccountTransactionsPage() {
+  const { translate } = useI18n();
   const params = useParams();
   const router = useRouter();
   const accountNumber = params.accountNumber as string;
@@ -92,7 +95,7 @@ export default function AccountTransactionsPage() {
   const columns: DataTableColumn<Transaction>[] = [
     {
       id: "transactionDate",
-      header: "Date",
+      header: COMMON_TABLE_HEADERS.date,
       accessor: (row) => (
         <div className="text-sm">
           <div className="font-medium">
@@ -116,7 +119,7 @@ export default function AccountTransactionsPage() {
     },
     {
       id: "reference",
-      header: "Reference",
+      header: COMMON_TABLE_HEADERS.reference,
       accessor: (row) => (
         <span className="font-mono text-xs">{row.reference || row.transactionId}</span>
       ),
@@ -124,7 +127,7 @@ export default function AccountTransactionsPage() {
     },
     {
       id: "description",
-      header: "Description",
+      header: COMMON_TABLE_HEADERS.description,
       accessor: (row) => (
         <div className="max-w-xs">
           <div className="font-medium text-sm truncate">{row.description}</div>
@@ -138,7 +141,7 @@ export default function AccountTransactionsPage() {
     },
     {
       id: "type",
-      header: "Type",
+      header: COMMON_TABLE_HEADERS.type,
       accessor: (row) => {
         const type = row.type.toLowerCase();
         const variant = 
@@ -157,7 +160,7 @@ export default function AccountTransactionsPage() {
     },
     {
       id: "amount",
-      header: "Amount",
+      header: COMMON_TABLE_HEADERS.amount,
       accessor: (row) => {
         const isDebit = row.debitAmount || row.type.toLowerCase().includes("debit");
         const amount = row.debitAmount || row.creditAmount || row.amount;
@@ -181,7 +184,7 @@ export default function AccountTransactionsPage() {
     },
     {
       id: "balance",
-      header: "Balance",
+      header: COMMON_TABLE_HEADERS.balance,
       accessor: (row) => (
         <div className="text-right text-sm">
           {row.balance ? (
@@ -198,14 +201,14 @@ export default function AccountTransactionsPage() {
     },
     {
       id: "status",
-      header: "Status",
+      header: COMMON_TABLE_HEADERS.status,
       accessor: (row) => {
         const status = row.status?.toLowerCase() || "completed";
-        const label = row.status || "Completed";
+        const label = translateStatusOneWord(row.status, translate, "COMPLETED");
 
         if (status === "completed" || status === "success") {
           return (
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 capitalize">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
               <CheckCircle size={14} />
               {label}
             </span>
@@ -214,7 +217,7 @@ export default function AccountTransactionsPage() {
 
         if (status === "pending") {
           return (
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 capitalize">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
               <Clock size={14} />
               {label}
             </span>
@@ -223,7 +226,7 @@ export default function AccountTransactionsPage() {
 
         if (status === "failed") {
           return (
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 capitalize">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
               <XCircle size={14} />
               {label}
             </span>
@@ -231,7 +234,7 @@ export default function AccountTransactionsPage() {
         }
 
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 capitalize">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
             <Clock size={14} />
             {label}
           </span>

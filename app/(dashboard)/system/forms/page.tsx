@@ -6,6 +6,8 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { translateStatusOneWord } from "@/lib/utils";
+import { useI18n } from "@/components/providers/i18n-provider";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,6 +60,7 @@ const DELETE_FORM = gql`
 `;
 
 export default function FormsPage() {
+  const { translate } = useI18n();
   const [activeFilter, setActiveFilter] = useState<boolean | undefined>(undefined);
 
   const { data, loading, error, refetch } = useQuery(FORMS_QUERY, {
@@ -84,13 +87,13 @@ export default function FormsPage() {
   const columns: DataTableColumn<any>[] = [
     {
       id: "name",
-      header: "Name",
+      header: translate("common.table.columns.name"),
       accessor: (row) => <span className="font-medium">{row.name}</span>,
       sortKey: "name",
     },
     {
       id: "description",
-      header: "Description",
+      header: translate("common.table.columns.description"),
       accessor: (row) => (
         <span className="text-muted-foreground max-w-md truncate block">
           {row.description || "—"}
@@ -99,7 +102,7 @@ export default function FormsPage() {
     },
     {
       id: "category",
-      header: "Category",
+      header: translate("common.table.columns.category"),
       accessor: (row) =>
         row.category ? (
           <Badge variant="secondary">{row.category}</Badge>
@@ -110,17 +113,17 @@ export default function FormsPage() {
     },
     {
       id: "status",
-      header: "Status",
+      header: translate("common.table.columns.status"),
       accessor: (row) =>
         row.isActive ? (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
             <CheckCircle size={14} />
-            Active
+            {translateStatusOneWord("ACTIVE", translate, "ACTIVE")}
           </span>
         ) : (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
             <XCircle size={14} />
-            Inactive
+            {translateStatusOneWord("INACTIVE", translate, "INACTIVE")}
           </span>
         ),
       sortKey: "isActive",
@@ -128,7 +131,7 @@ export default function FormsPage() {
     },
     {
       id: "version",
-      header: "Version",
+      header: translate("common.table.columns.version"),
       accessor: (row) => (
         <span className="text-sm text-muted-foreground">v{row.version}</span>
       ),
@@ -136,7 +139,7 @@ export default function FormsPage() {
     },
     {
       id: "createdAt",
-      header: "Created",
+      header: translate("common.table.columns.created"),
       accessor: (row) => (
         <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
           <Calendar size={16} />
@@ -155,7 +158,7 @@ export default function FormsPage() {
     },
     {
       id: "actions",
-      header: "Actions",
+      header: translate("common.table.columns.actions"),
       accessor: (row) => (
         <div className="flex justify-center">
           <DropdownMenu>
@@ -294,7 +297,7 @@ export default function FormsPage() {
               pageSize={10}
               searchPlaceholder="Search forms..."
               showRowNumbers
-              rowNumberHeader="#"
+              rowNumberHeader={translate("common.table.columns.index")}
             />
           )}
 

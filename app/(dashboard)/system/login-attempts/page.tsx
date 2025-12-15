@@ -5,6 +5,7 @@ import { gql, useQuery } from "@apollo/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useI18n } from "@/components/providers/i18n-provider";
 import {
   DataTable,
   type DataTableColumn,
@@ -17,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Calendar, CheckCircle, Clock, XCircle } from "lucide-react";
+import { translateStatusOneWord } from "@/lib/utils";
 
 const GET_LOGIN_ATTEMPTS = gql`
   query GetLoginAttempts(
@@ -110,8 +112,8 @@ const statusColors: Record<string, "default" | "secondary" | "destructive"> = {
   PENDING_APPROVAL: "secondary",
 };
 
-function getStatusPill(status: string) {
-  const label = status?.replace(/_/g, " ") || "Unknown";
+function getStatusPill(status: string, translate: (key: string) => string) {
+  const label = translateStatusOneWord(status, translate, "UNKNOWN");
   const variant = statusColors[status] || "secondary";
 
   if (variant === "default") {
@@ -141,6 +143,7 @@ function getStatusPill(status: string) {
 }
 
 export default function LoginAttemptsPage() {
+  const { translate } = useI18n();
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
   const { data, loading, error, refetch } = useQuery(GET_LOGIN_ATTEMPTS, {
@@ -157,7 +160,7 @@ export default function LoginAttemptsPage() {
   const columns: DataTableColumn<LoginAttemptRow>[] = [
     {
       id: "attemptedAt",
-      header: "Date/Time",
+      header: translate("common.table.columns.dateTime"),
       accessor: (row) => {
         if (!row.attemptedAt) return "-";
         try {
@@ -185,7 +188,7 @@ export default function LoginAttemptsPage() {
     },
     {
       id: "username",
-      header: "User",
+      header: translate("common.table.columns.user"),
       accessor: (row) => (
         <div className="space-y-1">
           <div className="font-medium">{row.username}</div>
@@ -198,7 +201,7 @@ export default function LoginAttemptsPage() {
     },
     {
       id: "device",
-      header: "Device",
+      header: translate("common.table.columns.device"),
       accessor: (row) => (
         <div className="space-y-1">
           <div className="text-sm">{row.deviceName || "Unknown"}</div>
@@ -210,7 +213,7 @@ export default function LoginAttemptsPage() {
     },
     {
       id: "location",
-      header: "Location",
+      header: translate("common.table.columns.location"),
       accessor: (row) => (
         <div className="space-y-1">
           <div className="text-sm font-mono text-xs">{row.ipAddress}</div>
@@ -222,7 +225,7 @@ export default function LoginAttemptsPage() {
     },
     {
       id: "attemptType",
-      header: "Type",
+      header: translate("common.table.columns.type"),
       accessor: (row) => (
         <Badge variant="outline" className="text-xs">
           {row.attemptType?.replace(/_/g, " ")}
@@ -232,14 +235,14 @@ export default function LoginAttemptsPage() {
     },
     {
       id: "status",
-      header: "Status",
-      accessor: (row) => getStatusPill(row.status),
+      header: translate("common.table.columns.status"),
+      accessor: (row) => getStatusPill(row.status, translate),
       sortKey: "status",
       alignCenter: true,
     },
     {
       id: "details",
-      header: "Details",
+      header: translate("common.table.columns.details"),
       accessor: (row) => (
         <div className="text-xs space-y-1">
           {row.failureReason && (
@@ -325,18 +328,26 @@ export default function LoginAttemptsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">All statuses</SelectItem>
-                <SelectItem value="SUCCESS">Success</SelectItem>
+                <SelectItem value="SUCCESS">
+                  {translateStatusOneWord("SUCCESS", translate, "SUCCESS")}
+                </SelectItem>
                 <SelectItem value="PENDING_VERIFICATION">
-                  Pending verification
+                  {translateStatusOneWord("PENDING_VERIFICATION", translate, "PENDING")}
                 </SelectItem>
-                <SelectItem value="VERIFIED">Verified</SelectItem>
+                <SelectItem value="VERIFIED">
+                  {translateStatusOneWord("VERIFIED", translate, "VERIFIED")}
+                </SelectItem>
                 <SelectItem value="FAILED_CREDENTIALS">
-                  Failed credentials
+                  {translateStatusOneWord("FAILED_CREDENTIALS", translate, "FAILED")}
                 </SelectItem>
-                <SelectItem value="FAILED_OTP">Failed OTP</SelectItem>
-                <SelectItem value="EXPIRED">Expired</SelectItem>
+                <SelectItem value="FAILED_OTP">
+                  {translateStatusOneWord("FAILED_OTP", translate, "FAILED")}
+                </SelectItem>
+                <SelectItem value="EXPIRED">
+                  {translateStatusOneWord("EXPIRED", translate, "EXPIRED")}
+                </SelectItem>
                 <SelectItem value="PENDING_APPROVAL">
-                  Pending approval
+                  {translateStatusOneWord("PENDING_APPROVAL", translate, "PENDING")}
                 </SelectItem>
               </SelectContent>
             </Select>

@@ -8,7 +8,7 @@ import { toast } from "sonner";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { COMMON_TABLE_HEADERS, DataTable, type DataTableColumn } from "@/components/data-table";
 import { DatabaseConnectionDialog } from "@/components/database-connection-dialog";
 
 const DB_CONNECTION_QUERY = gql`
@@ -92,19 +92,19 @@ export default function DatabaseConnectionShowPage() {
   const tableColumns: DataTableColumn<TableRow>[] = [
     {
       id: "schema",
-      header: "Schema",
+      header: COMMON_TABLE_HEADERS.schema,
       accessor: (row) => row.schema,
       sortKey: "schema",
     },
     {
       id: "name",
-      header: "Table name",
+      header: COMMON_TABLE_HEADERS.tableName,
       accessor: (row) => row.name,
       sortKey: "name",
     },
     {
       id: "actions",
-      header: "Actions",
+      header: COMMON_TABLE_HEADERS.actions,
       accessor: (row) => (
         <Button asChild variant="outline" size="sm">
           <Link

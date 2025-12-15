@@ -18,8 +18,10 @@ import {
   X,
   XCircle,
 } from "lucide-react";
-import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { COMMON_TABLE_HEADERS, DataTable, type DataTableColumn } from "@/components/data-table";
 import { toast } from "sonner";
+import { useI18n } from "@/components/providers/i18n-provider";
+import { translateStatusOneWord } from "@/lib/utils";
 
 interface ServiceStatus {
   balanceSync: {
@@ -72,6 +74,7 @@ interface ServiceTableRow {
 }
 
 export default function ServicesMonitorPage() {
+  const { translate } = useI18n();
   const [status, setStatus] = useState<ServiceStatus | null>(null);
   const [smsStats, setSmsStats] = useState<SMSStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -284,13 +287,13 @@ export default function ServicesMonitorPage() {
   const serviceColumns: DataTableColumn<ServiceTableRow>[] = [
     {
       id: "name",
-      header: "Service Name",
+      header: COMMON_TABLE_HEADERS.serviceName,
       accessor: (row) => <span className="font-medium">{row.name}</span>,
       sortKey: "name",
     },
     {
       id: "type",
-      header: "Type",
+      header: COMMON_TABLE_HEADERS.type,
       accessor: (row) => (
         <Badge variant="outline" className="text-xs">
           {row.type}
@@ -300,7 +303,7 @@ export default function ServicesMonitorPage() {
     },
     {
       id: "description",
-      header: "Description",
+      header: COMMON_TABLE_HEADERS.description,
       accessor: (row) => (
         <span className="text-sm text-muted-foreground max-w-xs">
           {row.description}
@@ -309,7 +312,7 @@ export default function ServicesMonitorPage() {
     },
     {
       id: "status",
-      header: "Status",
+      header: COMMON_TABLE_HEADERS.status,
       accessor: (row) => {
         const tone =
           row.variant === "default"
@@ -341,7 +344,7 @@ export default function ServicesMonitorPage() {
             className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${classes}`}
           >
             <Icon size={14} />
-            {row.status}
+            {translateStatusOneWord(row.status, translate, "UNKNOWN")}
           </span>
         );
       },
@@ -350,7 +353,7 @@ export default function ServicesMonitorPage() {
     },
     {
       id: "interval",
-      header: "Interval",
+      header: COMMON_TABLE_HEADERS.interval,
       accessor: (row) => (
         <div className="flex items-center gap-1 text-sm">
           <Clock className="h-3 w-3" />
@@ -360,14 +363,14 @@ export default function ServicesMonitorPage() {
     },
     {
       id: "details",
-      header: "Details",
+      header: COMMON_TABLE_HEADERS.details,
       accessor: (row) => (
         <span className="text-xs text-muted-foreground">{row.details}</span>
       ),
     },
     {
       id: "actions",
-      header: "Actions",
+      header: COMMON_TABLE_HEADERS.actions,
       accessor: (row) => (
         <div className="flex gap-2">
           <Button

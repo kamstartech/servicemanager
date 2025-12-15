@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { CheckbookRequestStatus } from "@prisma/client";
 import type { CheckbookRequestWithUser } from "@/types/checkbook";
 import { 
@@ -20,6 +21,7 @@ import {
   Ban
 } from "lucide-react";
 import { toast } from "sonner";
+import { translateStatusOneWord } from "@/lib/utils";
 
 interface CheckbookRequest extends Omit<CheckbookRequestWithUser, 'createdAt' | 'updatedAt' | 'requestedAt' | 'approvedAt' | 'readyAt' | 'collectedAt' | 'cancelledAt' | 'rejectedAt'> {
   createdAt: string;
@@ -35,33 +37,34 @@ interface CheckbookRequest extends Omit<CheckbookRequestWithUser, 'createdAt' | 
 const statusConfig = {
   [CheckbookRequestStatus.PENDING]: {
     icon: Clock,
-    label: "Pending",
+    label: "PENDING",
   },
   [CheckbookRequestStatus.APPROVED]: {
     icon: CheckCircle,
-    label: "Approved",
+    label: "APPROVED",
   },
   [CheckbookRequestStatus.READY_FOR_COLLECTION]: {
     icon: Package,
-    label: "Ready for Collection",
+    label: "READY",
   },
   [CheckbookRequestStatus.COLLECTED]: {
     icon: CheckCircle,
-    label: "Collected",
+    label: "COLLECTED",
   },
   [CheckbookRequestStatus.CANCELLED]: {
     icon: Ban,
-    label: "Cancelled",
+    label: "CANCELLED",
   },
   [CheckbookRequestStatus.REJECTED]: {
     icon: XCircle,
-    label: "Rejected",
+    label: "REJECTED",
   },
 };
 
 export default function CheckbookRequestsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { translate } = useI18n();
   const [requests, setRequests] = useState<CheckbookRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -145,7 +148,7 @@ export default function CheckbookRequestsPage() {
   const columns: DataTableColumn<CheckbookRequest>[] = [
     {
       id: "mobileUser",
-      header: "User",
+      header: translate("common.table.columns.user"),
       accessor: (request) => (
         <div className="space-y-1">
           <div className="font-medium">
@@ -161,21 +164,21 @@ export default function CheckbookRequestsPage() {
     },
     {
       id: "accountNumber",
-      header: "Account",
+      header: translate("common.table.columns.account"),
       accessor: (request) => (
         <span className="font-mono text-sm">{request.accountNumber}</span>
       ),
     },
     {
       id: "numberOfCheckbooks",
-      header: "Quantity",
+      header: translate("common.table.columns.quantity"),
       accessor: (request) => (
         <span className="font-semibold">{request.numberOfCheckbooks}</span>
       ),
     },
     {
       id: "collectionPoint",
-      header: "Collection Point",
+      header: translate("common.table.columns.collectionPoint"),
       accessor: (request) => (
         <div className="flex items-center gap-2">
           <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -185,10 +188,11 @@ export default function CheckbookRequestsPage() {
     },
     {
       id: "status",
-      header: "Status",
+      header: translate("common.table.columns.status"),
       accessor: (request) => {
         const config = statusConfig[request.status];
         const Icon = config.icon;
+        const label = translateStatusOneWord(request.status, translate, config.label);
 
         const tone =
           request.status === CheckbookRequestStatus.PENDING
@@ -213,7 +217,7 @@ export default function CheckbookRequestsPage() {
             className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${classes}`}
           >
             <Icon size={14} />
-            {config.label}
+            {label}
           </span>
         );
       },
@@ -221,7 +225,7 @@ export default function CheckbookRequestsPage() {
     },
     {
       id: "requestedAt",
-      header: "Requested",
+      header: translate("common.table.columns.requested"),
       accessor: (request) => (
         <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
           <Calendar size={16} />
@@ -239,7 +243,7 @@ export default function CheckbookRequestsPage() {
     },
     {
       id: "actions",
-      header: "Actions",
+      header: translate("common.table.columns.actions"),
       accessor: (request) => (
         <div className="flex flex-wrap justify-center gap-2">
           {request.status === CheckbookRequestStatus.PENDING && (
@@ -333,7 +337,7 @@ export default function CheckbookRequestsPage() {
                   router.push(`/mobile-banking/checkbook-requests?status=${status}`);
                 }}
               >
-                {config.label}
+                {translateStatusOneWord(status, translate, config.label)}
               </Button>
             ))}
           </div>

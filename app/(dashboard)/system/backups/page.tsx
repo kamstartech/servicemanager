@@ -8,6 +8,7 @@ import { useRef, useState } from "react";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/components/providers/i18n-provider";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -74,6 +75,7 @@ function formatBytes(bytes: string | number, decimals = 2) {
 }
 
 export default function BackupsPage() {
+    const { translate } = useI18n();
     const { data, loading, error, refetch } = useQuery(BACKUPS_QUERY, {
         pollInterval: 10000, // Auto-refresh every 10s
     });
@@ -178,19 +180,19 @@ export default function BackupsPage() {
     const columns: DataTableColumn<BackupRow>[] = [
         {
             id: "filename",
-            header: "Filename",
+            header: translate("common.table.columns.filename"),
             accessor: (row) => row.filename,
             sortKey: "filename",
         },
         {
             id: "size",
-            header: "Size",
+            header: translate("common.table.columns.size"),
             accessor: (row) => formatBytes(row.sizeBytes),
             sortKey: "sizeBytes",
         },
         {
             id: "createdAt",
-            header: "Created",
+            header: translate("common.table.columns.created"),
             accessor: (row) => (
                 <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
                     <Calendar size={16} />
@@ -209,7 +211,7 @@ export default function BackupsPage() {
         },
         {
             id: "actions",
-            header: "Actions",
+            header: translate("common.table.columns.actions"),
             accessor: (row) => (
                 <div className="flex flex-wrap justify-center gap-2">
                     {/* Download */}
@@ -338,7 +340,7 @@ export default function BackupsPage() {
                         pageSize={10}
                         searchPlaceholder="Search backups..."
                         showRowNumbers
-                        rowNumberHeader="#"
+                        rowNumberHeader={translate("common.table.columns.index")}
                     />
                 </CardContent>
             </Card>

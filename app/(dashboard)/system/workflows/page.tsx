@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { useI18n } from "@/components/providers/i18n-provider";
+import { translateStatusOneWord } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -92,6 +94,7 @@ const UPDATE_WORKFLOW = gql`
 `;
 
 export default function WorkflowsPage() {
+  const { translate } = useI18n();
   const router = useRouter();
   const [filterActive, setFilterActive] = useState<boolean | undefined>(undefined);
   
@@ -143,13 +146,13 @@ export default function WorkflowsPage() {
   const columns: DataTableColumn<any>[] = [
     {
       id: "name",
-      header: "Name",
+      header: translate("common.table.columns.name"),
       accessor: (row) => <p className="font-medium">{row.name}</p>,
       sortKey: "name",
     },
     {
       id: "description",
-      header: "Description",
+      header: translate("common.table.columns.description"),
       accessor: (row) => (
         <p className="text-sm text-muted-foreground truncate max-w-xs">
           {row.description || "—"}
@@ -158,17 +161,17 @@ export default function WorkflowsPage() {
     },
     {
       id: "status",
-      header: "Status",
+      header: translate("common.table.columns.status"),
       accessor: (row) =>
         row.isActive ? (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
             <CheckCircle size={14} />
-            Active
+            {translateStatusOneWord("ACTIVE", translate, "ACTIVE")}
           </span>
         ) : (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
             <XCircle size={14} />
-            Inactive
+            {translateStatusOneWord("INACTIVE", translate, "INACTIVE")}
           </span>
         ),
       sortKey: "isActive",
@@ -176,13 +179,13 @@ export default function WorkflowsPage() {
     },
     {
       id: "version",
-      header: "Version",
+      header: translate("common.table.columns.version"),
       accessor: (row) => <Badge variant="outline">v{row.version}</Badge>,
       sortKey: "version",
     },
     {
       id: "attachedTo",
-      header: "Attached To",
+      header: translate("common.table.columns.attachedTo"),
       accessor: (row) =>
         row.screenPages?.length > 0 ? (
           <div className="flex flex-col gap-1">
@@ -203,7 +206,7 @@ export default function WorkflowsPage() {
     },
     {
       id: "actions",
-      header: "Actions",
+      header: translate("common.table.columns.actions"),
       accessor: (row) => (
         <div className="flex justify-center">
           <DropdownMenu>
@@ -389,7 +392,7 @@ export default function WorkflowsPage() {
               pageSize={10}
               searchPlaceholder="Search workflows..."
               showRowNumbers
-              rowNumberHeader="#"
+              rowNumberHeader={translate("common.table.columns.index")}
             />
           )}
 

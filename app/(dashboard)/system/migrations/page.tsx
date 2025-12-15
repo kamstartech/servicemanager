@@ -4,9 +4,11 @@ import Link from "next/link";
 import { gql, useMutation, useQuery } from "@apollo/client";
 import { toast } from "sonner";
 import { Calendar, Clock, Repeat, Eye, Edit, Trash2, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { translateStatusOneWord } from "@/lib/utils";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/components/providers/i18n-provider";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -82,6 +84,7 @@ function mapMigrations(data: any): MigrationRow[] {
 }
 
 export default function MigrationsPage() {
+  const { translate } = useI18n();
   const { data, loading, error, refetch } = useQuery(MIGRATIONS_QUERY, {
     pollInterval: 15000,
   });
@@ -92,7 +95,7 @@ export default function MigrationsPage() {
   const columns: DataTableColumn<MigrationRow>[] = [
     {
       id: "name",
-      header: "Name",
+      header: translate("common.table.columns.name"),
       accessor: (row) => (
         <div className="flex items-center gap-2">
           {row.name}
@@ -107,21 +110,21 @@ export default function MigrationsPage() {
     },
     {
       id: "source",
-      header: "Source",
+      header: translate("common.table.columns.source"),
       accessor: (row) => row.sourceConnectionName,
       sortKey: "sourceConnectionName",
     },
     {
       id: "target",
-      header: "Target Table",
+      header: translate("common.table.columns.targetTable"),
       accessor: (row) => row.targetTable,
       sortKey: "targetTable",
     },
     {
       id: "status",
-      header: "Status",
+      header: translate("common.table.columns.status"),
       accessor: (row) => {
-        const label = row.status?.replace(/_/g, " ") || "Unknown";
+        const label = translateStatusOneWord(row.status, translate, "UNKNOWN");
 
         if (row.status === "COMPLETED") {
           return (
@@ -162,7 +165,7 @@ export default function MigrationsPage() {
     },
     {
       id: "lastRun",
-      header: "Last Run",
+      header: translate("common.table.columns.lastRun"),
       accessor: (row) => {
         if (!row.lastRunAt) {
           return <span className="text-sm text-muted-foreground">Never</span>;
@@ -195,7 +198,7 @@ export default function MigrationsPage() {
     },
     {
       id: "nextRun",
-      header: "Next Run",
+      header: translate("common.table.columns.nextRun"),
       accessor: (row) => {
         if (!row.isRecurring || !row.nextRunAt) return "";
         return (
@@ -217,7 +220,7 @@ export default function MigrationsPage() {
     },
     {
       id: "actions",
-      header: "Actions",
+      header: translate("common.table.columns.actions"),
       accessor: (row) => (
         <div className="flex flex-wrap justify-center gap-2">
           <Button
@@ -338,7 +341,7 @@ export default function MigrationsPage() {
               pageSize={10}
               searchPlaceholder="Search migrations"
               showRowNumbers
-              rowNumberHeader="#"
+              rowNumberHeader={translate("common.table.columns.index")}
             />
           )}
         </CardContent>

@@ -19,6 +19,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { translateStatusOneWord } from "@/lib/utils";
 
 interface ThirdPartyClient {
   id: string;
@@ -43,7 +44,7 @@ export default function ThirdPartyClientsPage() {
   const columns: DataTableColumn<ThirdPartyClient>[] = [
     {
       id: "name",
-      header: "Name",
+      header: translate("common.table.columns.name"),
       accessor: (client) => (
         <div>
           <p className="font-medium">{client.name}</p>
@@ -56,24 +57,24 @@ export default function ThirdPartyClientsPage() {
     },
     {
       id: "contactEmail",
-      header: "Contact Email",
+      header: translate("common.table.columns.contactEmail"),
       accessor: (client) =>
         client.contactEmail || <span className="text-muted-foreground">-</span>,
       sortKey: "contactEmail",
     },
     {
       id: "status",
-      header: "Status",
+      header: translate("common.table.columns.status"),
       accessor: (client) =>
         client.isActive ? (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
             <CheckCircle size={14} />
-            Active
+            {translateStatusOneWord("ACTIVE", translate, "ACTIVE")}
           </span>
         ) : (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
             <XCircle size={14} />
-            Inactive
+            {translateStatusOneWord("INACTIVE", translate, "INACTIVE")}
           </span>
         ),
       sortKey: "isActive",
@@ -81,7 +82,7 @@ export default function ThirdPartyClientsPage() {
     },
     {
       id: "tokens",
-      header: "Tokens",
+      header: translate("common.table.columns.tokens"),
       accessor: (client) => (
         <span className="inline-flex items-center justify-center gap-1">
           <Key className="h-4 w-4 text-fdh-orange" />
@@ -92,7 +93,7 @@ export default function ThirdPartyClientsPage() {
     },
     {
       id: "apiCalls",
-      header: "API Calls",
+      header: translate("common.table.columns.apiCalls"),
       accessor: (client) => (
         <span className="inline-flex items-center justify-center gap-1">
           <Activity className="h-4 w-4 text-blue-600" />
@@ -103,7 +104,7 @@ export default function ThirdPartyClientsPage() {
     },
     {
       id: "createdAt",
-      header: "Created",
+      header: translate("common.table.columns.created"),
       accessor: (client) => (
         <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
           <Calendar size={16} />
@@ -122,7 +123,7 @@ export default function ThirdPartyClientsPage() {
     },
     {
       id: "actions",
-      header: "Actions",
+      header: translate("common.table.columns.actions"),
       accessor: (client) => (
         <div className="flex justify-center">
           <Button
@@ -133,7 +134,7 @@ export default function ThirdPartyClientsPage() {
           >
             <Link href={`/system/third-party/clients/${client.id}`}>
               <Eye className="h-4 w-4 mr-2" />
-              View
+              {translate("common.actions.details")}
             </Link>
           </Button>
         </div>

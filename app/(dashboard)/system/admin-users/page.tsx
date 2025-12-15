@@ -5,8 +5,9 @@ import { gql, useQuery } from "@apollo/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/providers/i18n-provider";
-import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { COMMON_TABLE_HEADERS, DataTable, type DataTableColumn } from "@/components/data-table";
 import { Calendar } from "lucide-react";
+import { translateStatusOneWord } from "@/lib/utils";
 
 const ADMIN_WEB_USERS_QUERY = gql`
   query AdminWebUsers {
@@ -44,14 +45,14 @@ export default function AdminWebUsersPage() {
       header: translate("adminUsers.columns.status"),
       accessor: (row) =>
         row.isActive
-          ? translate("common.status.active")
-          : translate("common.status.inactive"),
+          ? translateStatusOneWord("ACTIVE", translate, "ACTIVE")
+          : translateStatusOneWord("INACTIVE", translate, "INACTIVE"),
       sortKey: "isActive",
       alignCenter: true,
     },
     {
       id: "createdAt",
-      header: "Created",
+      header: COMMON_TABLE_HEADERS.created,
       accessor: (row) => (
         <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
           <Calendar size={16} />

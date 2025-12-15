@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { COMMON_TABLE_HEADERS, DataTable, type DataTableColumn } from "@/components/data-table";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { RegistrationStatus, RegistrationSource } from "@prisma/client";
 import type { RequestedRegistrationWithRelations } from "@/types/registration";
 import { AddRegistrationDialog } from "@/components/registration/add-registration-dialog";
@@ -21,6 +22,7 @@ import {
   PlayCircle,
   Plus 
 } from "lucide-react";
+import { translateStatusOneWord } from "@/lib/utils";
 
 interface RegistrationRequest extends Omit<RequestedRegistrationWithRelations, 'createdAt' | 'updatedAt' | 'processedAt' | 'lastRetryAt'> {
   createdAt: string;
@@ -54,6 +56,7 @@ const statusConfig = {
 
 export default function RegistrationRequestsPage() {
   const router = useRouter();
+  const { translate } = useI18n();
   const [registrations, setRegistrations] = useState<RegistrationRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -139,7 +142,7 @@ export default function RegistrationRequestsPage() {
   const columns: DataTableColumn<RegistrationRequest>[] = [
     {
       id: "customer",
-      header: "Customer Info",
+      header: COMMON_TABLE_HEADERS.customerInfo,
       accessor: (row) => (
         <div className="space-y-1">
           <div className="font-medium">
@@ -157,14 +160,14 @@ export default function RegistrationRequestsPage() {
     },
     {
       id: "email",
-      header: "Email",
+      header: COMMON_TABLE_HEADERS.email,
       accessor: (row) => (
         <span className="text-sm">{row.emailAddress || "-"}</span>
       ),
     },
     {
       id: "source",
-      header: "Source",
+      header: COMMON_TABLE_HEADERS.source,
       accessor: (row) => (
         <Badge variant="outline" className="text-xs">
           {row.source}
@@ -173,17 +176,18 @@ export default function RegistrationRequestsPage() {
     },
     {
       id: "sourceIp",
-      header: "Source IP",
+      header: COMMON_TABLE_HEADERS.sourceIp,
       accessor: (row) => (
         <span className="font-mono text-xs">{row.sourceIp}</span>
       ),
     },
     {
       id: "status",
-      header: "Status",
+      header: COMMON_TABLE_HEADERS.status,
       accessor: (row) => {
         const config = statusConfig[row.status];
         const Icon = config.icon;
+        const label = translateStatusOneWord(row.status, translate, config.label);
 
         const tone =
           row.status === RegistrationStatus.PENDING
@@ -208,7 +212,7 @@ export default function RegistrationRequestsPage() {
             className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${classes}`}
           >
             <Icon size={14} />
-            {config.label}
+            {label}
           </span>
         );
       },
@@ -216,7 +220,7 @@ export default function RegistrationRequestsPage() {
     },
     {
       id: "retry",
-      header: "Retries",
+      header: COMMON_TABLE_HEADERS.retries,
       accessor: (row) => (
         <div className="text-center">
           {row.retryCount > 0 ? (
@@ -231,7 +235,7 @@ export default function RegistrationRequestsPage() {
     },
     {
       id: "created",
-      header: "Created",
+      header: COMMON_TABLE_HEADERS.created,
       accessor: (row) => (
         <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
           <Calendar size={16} />
@@ -250,7 +254,7 @@ export default function RegistrationRequestsPage() {
     },
     {
       id: "actions",
-      header: "Actions",
+      header: COMMON_TABLE_HEADERS.actions,
       accessor: (row) => (
         <div className="flex flex-wrap justify-center gap-2">
           <Button

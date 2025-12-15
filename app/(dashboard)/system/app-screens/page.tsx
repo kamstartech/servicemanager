@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { useI18n } from "@/components/providers/i18n-provider";
 import {
   Table,
   TableBody,
@@ -274,6 +275,7 @@ function SortableScreenRow({ screen, onEdit, onDelete, rowIndex }: any) {
 }
 
 export default function AppScreensPage() {
+  const { translate } = useI18n();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeContext, setActiveContext] = useState<string>("MOBILE_BANKING");
 
@@ -545,13 +547,13 @@ export default function AppScreensPage() {
                       <Table className="bg-white">
                         <TableHeader className="bg-gray-50">
                           <TableRow>
-                            <TableHead className="w-12 text-center">#</TableHead>
-                            <TableHead className="w-16">Order</TableHead>
-                            <TableHead>Icon</TableHead>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Active</TableHead>
-                            <TableHead>Testing</TableHead>
-                            <TableHead className="text-center">Actions</TableHead>
+                            <TableHead className="w-12 text-center">{translate("common.table.columns.index")}</TableHead>
+                            <TableHead className="w-16">{translate("common.table.columns.order")}</TableHead>
+                            <TableHead>{translate("common.table.columns.icon")}</TableHead>
+                            <TableHead>{translate("common.table.columns.name")}</TableHead>
+                            <TableHead>{translate("common.table.columns.active")}</TableHead>
+                            <TableHead>{translate("common.table.columns.testing")}</TableHead>
+                            <TableHead className="text-center">{translate("common.table.columns.actions")}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody className="bg-white divide-y divide-gray-200">

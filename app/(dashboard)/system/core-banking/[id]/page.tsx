@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { Beaker, Pencil } from "lucide-react";
+import { translateStatusOneWord } from "@/lib/utils";
 import {
   CoreBankingConnectionDialog,
   type CoreBankingConnection,
@@ -162,8 +163,8 @@ export default function CoreBankingConnectionPage() {
       header: translate("coreBanking.connectionDetail.endpoints.columns.status"),
       accessor: (row) =>
         row.isActive
-          ? translate("common.status.active")
-          : translate("common.status.inactive"),
+          ? translateStatusOneWord("ACTIVE", translate, "ACTIVE")
+          : translateStatusOneWord("INACTIVE", translate, "INACTIVE"),
       sortKey: "isActive",
       alignCenter: true,
     },
@@ -348,8 +349,8 @@ export default function CoreBankingConnectionPage() {
               </p>
               <p className="font-medium">
                 {connection.isActive
-                  ? translate("common.status.active")
-                  : translate("common.status.inactive")}
+                  ? translateStatusOneWord("ACTIVE", translate, "ACTIVE")
+                  : translateStatusOneWord("INACTIVE", translate, "INACTIVE")}
               </p>
             </div>
             <div className="space-y-1">
