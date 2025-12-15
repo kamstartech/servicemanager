@@ -1,4 +1,4 @@
-import { messaging } from '@/lib/firebase/admin';
+import { getMessaging } from '@/lib/firebase/admin';
 import { prisma } from '@/lib/db/prisma';
 
 export interface SendPushNotificationParams {
@@ -76,6 +76,7 @@ export class PushNotificationService {
       console.log(`Sending push notification to ${tokens.length} device(s) for user ${userId}`);
 
       // Send via Firebase
+      const messaging = getMessaging();
       const response = await messaging.sendEachForMulticast(message);
 
       console.log(`Push notification sent: ${response.successCount} success, ${response.failureCount} failed`);
