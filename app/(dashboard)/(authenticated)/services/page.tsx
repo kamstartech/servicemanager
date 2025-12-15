@@ -138,6 +138,13 @@ export default function ServicesMonitorPage() {
     };
   }, []);
 
+  // Auto-scroll logs to bottom
+  useEffect(() => {
+    if (logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [logs]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -192,13 +199,6 @@ export default function ServicesMonitorPage() {
     setLogs([]);
     setLogsConnected(false);
   };
-
-  // Auto-scroll logs to bottom
-  useEffect(() => {
-    if (logsEndRef.current) {
-      logsEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [logs]);
 
   const runTest = async () => {
     if (!selectedService || !testParam) return;
