@@ -3,6 +3,7 @@ import { t24AccountDetailsService } from "@/lib/services/t24/account-details";
 
 /**
  * GET /api/services/account-details?accountNumber={accountNumber}
+ * POST /api/services/account-details with body: { accountNumber: string }
  * 
  * Fetches detailed account information from T24
  */
@@ -50,6 +51,42 @@ export async function GET(request: NextRequest) {
         message: "Internal server error",
         error: "INTERNAL_ERROR",
       },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const { accountNumber } = await request.json();
+
+    if (!accountNumber) {
+      return NextResponse.json(
+        { success: false, error: "accountNumber is required" },
+        { status: 400 }
+      );
+    }
+
+    console.log(`📞 API: Testing account details for ${accountNumber}`);
+
+    const result = await t24AccountDetailsService.getAccountDetailsFormatted(accountNumber);
+
+    if (!result.ok) {
+      return NextResponse.json({
+        success: false,
+        error: result.error || "Failed to fetch account details",
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: result.data,
+      message: `Account details fetched: ${result.data?.holderName || "N/A"}`,
+    });
+  } catch (error: any) {
+    console.error("❌ Account details test failed:", error);
+    return NextResponse.json(
+      { success: false, error: error.message },
       { status: 500 }
     );
   }

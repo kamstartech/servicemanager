@@ -3,8 +3,13 @@
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, CheckCircle, Clock, Activity } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { RefreshCw, CheckCircle, Clock, Activity, TestTube, Loader2 } from "lucide-react";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { toast } from "sonner";
 
 interface ServiceStatus {
   balanceSync: {
@@ -37,12 +42,23 @@ interface ServiceTableRow {
   interval: string;
   details: string;
   variant: "default" | "secondary" | "destructive" | "outline";
+  testable?: boolean;
+  testConfig?: {
+    endpoint: string;
+    paramName: string;
+    paramLabel: string;
+    paramPlaceholder: string;
+  };
 }
 
 export default function ServicesMonitorPage() {
   const [status, setStatus] = useState<ServiceStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
+  const [testDialogOpen, setTestDialogOpen] = useState(false);
+  const [selectedService, setSelectedService] = useState<ServiceTableRow | null>(null);
+  const [testParam, setTestParam] = useState("");
+  const [testLoading, setTestLoading] = useState(false);
   const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
@@ -125,6 +141,48 @@ export default function ServicesMonitorPage() {
     );
   }
 
+  const handleTestService = (service: ServiceTableRow) => {
+    setSelectedService(service);
+    setTestParam("");
+    setTestDialogOpen(true);
+  };
+
+  const runTest = async () => {
+    if (!selectedService || !testParam) return;
+
+    setTestLoading(true);
+    try {
+      const response = await fetch(selectedService.testConfig!.endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          [selectedService.testConfig!.paramName]: selectedService.testConfig!.paramName === "userId" 
+            ? parseInt(testParam) 
+            : testParam,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success("Test Successful", {
+          description: data.message || "Service test completed successfully",
+        });
+      } else {
+        toast.error("Test Failed", {
+          description: data.error || data.message || "Service test failed",
+        });
+      }
+    } catch (error) {
+      toast.error("Test Error", {
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+      });
+    } finally {
+      setTestLoading(false);
+      setTestDialogOpen(false);
+    }
+  };
+
   // Define DataTable columns
   const serviceColumns: DataTableColumn<ServiceTableRow>[] = [
     {
@@ -175,6 +233,23 @@ export default function ServicesMonitorPage() {
         <span className="text-xs text-muted-foreground">{row.details}</span>
       ),
     },
+    {
+      id: "actions",
+      header: "Actions",
+      accessor: (row) => (
+        row.testable ? (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleTestService(row)}
+            className="h-7 text-xs"
+          >
+            <TestTube className="h-3 w-3 mr-1" />
+            Test
+          </Button>
+        ) : null
+      ),
+    },
   ];
 
   const servicesTableData: ServiceTableRow[] = status ? [
@@ -186,6 +261,13 @@ export default function ServicesMonitorPage() {
       interval: `${status.balanceSync.intervalMinutes}m`,
       details: `Priority: ${status.balanceSync.priority}, Background: ${status.balanceSync.background}`,
       variant: (status.balanceSync.processing ? "default" : "secondary") as "default" | "secondary",
+      testable: true,
+      testConfig: {
+        endpoint: "/api/services/balance-sync",
+        paramName: "userId",
+        paramLabel: "User ID",
+        paramPlaceholder: "e.g., 1",
+      },
     },
     {
       name: "Account Discovery Service",
@@ -195,6 +277,13 @@ export default function ServicesMonitorPage() {
       interval: `${status.accountDiscovery.intervalHours}h`,
       details: `Pagination Queue: ${status.accountDiscovery.paginationQueueSize}`,
       variant: (status.accountDiscovery.discovering ? "default" : (status.accountDiscovery.running ? "secondary" : "destructive")) as "default" | "secondary" | "destructive",
+      testable: true,
+      testConfig: {
+        endpoint: "/api/services/account-discovery",
+        paramName: "userId",
+        paramLabel: "User ID",
+        paramPlaceholder: "e.g., 1",
+      },
     },
     {
       name: "Account Enrichment Service",
@@ -204,6 +293,13 @@ export default function ServicesMonitorPage() {
       interval: `${status.accountEnrichment.intervalHours}h`,
       details: "Auto-creates categories, updates profiles",
       variant: (status.accountEnrichment.enriching ? "default" : (status.accountEnrichment.running ? "secondary" : "destructive")) as "default" | "secondary" | "destructive",
+      testable: true,
+      testConfig: {
+        endpoint: "/api/services/account-enrichment",
+        paramName: "accountNumber",
+        paramLabel: "Account Number",
+        paramPlaceholder: "e.g., 1520000114607",
+      },
     },
     {
       name: "T24 Balance API",
@@ -213,6 +309,13 @@ export default function ServicesMonitorPage() {
       interval: "On-demand",
       details: "4 balance types: working, available, cleared, online",
       variant: "outline" as const,
+      testable: true,
+      testConfig: {
+        endpoint: "/api/services/t24-test",
+        paramName: "accountNumber",
+        paramLabel: "Account Number",
+        paramPlaceholder: "e.g., 1520000114607",
+      },
     },
     {
       name: "T24 Accounts API",
@@ -222,6 +325,13 @@ export default function ServicesMonitorPage() {
       interval: "On-demand",
       details: "Supports pagination for 100+ accounts",
       variant: "outline" as const,
+      testable: true,
+      testConfig: {
+        endpoint: "/api/services/t24-test",
+        paramName: "customerId",
+        paramLabel: "Customer ID",
+        paramPlaceholder: "e.g., 35042058",
+      },
     },
     {
       name: "T24 Account Details API",
@@ -231,6 +341,13 @@ export default function ServicesMonitorPage() {
       interval: "On-demand",
       details: "Includes holder, category, status, customer info",
       variant: "outline" as const,
+      testable: true,
+      testConfig: {
+        endpoint: "/api/services/account-details",
+        paramName: "accountNumber",
+        paramLabel: "Account Number",
+        paramPlaceholder: "e.g., 1520000114607",
+      },
     },
     {
       name: "T24 Transactions API",
@@ -240,6 +357,13 @@ export default function ServicesMonitorPage() {
       interval: "On-demand",
       details: "Handles empty results gracefully",
       variant: "outline" as const,
+      testable: true,
+      testConfig: {
+        endpoint: "/api/services/t24-transactions",
+        paramName: "accountNumber",
+        paramLabel: "Account Number",
+        paramPlaceholder: "e.g., 1520000114607",
+      },
     },
     {
       name: "Email Service",
@@ -297,28 +421,6 @@ export default function ServicesMonitorPage() {
           </p>
         </div>
       </div>
-
-      {/* Services Overview Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            Services Overview
-          </CardTitle>
-          <CardDescription>
-            All available services and their current status
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <DataTable
-            data={servicesTableData}
-            columns={serviceColumns}
-            searchableKeys={["name", "type", "description", "status"]}
-            pageSize={10}
-            searchPlaceholder="Search services..."
-          />
-        </CardContent>
-      </Card>
 
       {/* Service Status Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -430,6 +532,70 @@ export default function ServicesMonitorPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Services Overview Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            Services Overview
+          </CardTitle>
+          <CardDescription>
+            All available services and their current status
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DataTable
+            data={servicesTableData}
+            columns={serviceColumns}
+            searchableKeys={["name", "type", "description", "status"]}
+            pageSize={10}
+            searchPlaceholder="Search services..."
+          />
+        </CardContent>
+      </Card>
+
+      {/* Test Dialog */}
+      <Dialog open={testDialogOpen} onOpenChange={setTestDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Test {selectedService?.name}</DialogTitle>
+            <DialogDescription>
+              {selectedService?.description}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="testParam">
+                {selectedService?.testConfig?.paramLabel}
+              </Label>
+              <Input
+                id="testParam"
+                placeholder={selectedService?.testConfig?.paramPlaceholder}
+                value={testParam}
+                onChange={(e) => setTestParam(e.target.value)}
+                disabled={testLoading}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setTestDialogOpen(false)}
+              disabled={testLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={runTest}
+              disabled={testLoading || !testParam}
+            >
+              {testLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Run Test
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
