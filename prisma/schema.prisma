@@ -1499,3 +1499,23 @@ model FdhTransactionStatusHistory {
   @@index([toStatus, createdAt])
   @@map("fdh_transaction_status_history")
 }
+
+// SMS Notifications Model
+model SMSNotification {
+  id           Int       @id @default(autoincrement())
+  userId       Int       @default(1) @map("user_id")
+  msisdn       String    // Phone number
+  message      String    @db.Text
+  status       String    @default("ready")
+  sentAt       DateTime? @map("sent_at")
+  details      Json?     // Provider response and metadata
+  attemptCount Int       @default(0) @map("attempt_count")
+  
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  
+  @@index([status, attemptCount])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("sms_notifications")
+}

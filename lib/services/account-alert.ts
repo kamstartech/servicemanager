@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db/prisma";
 import { PushNotificationService } from "./push-notification";
+import { ESBSMSService } from "./sms";
 import { AlertType, NotificationChannel } from "@prisma/client";
 
 export class AccountAlertService {
@@ -44,6 +45,9 @@ export class AccountAlertService {
         },
       });
 
+      // Send notifications based on enabled channels
+      let notificationSent = false;
+      
       // Send push notification if PUSH is in channels
       if (channels.includes('PUSH' as NotificationChannel)) {
         try {
@@ -53,24 +57,42 @@ export class AccountAlertService {
             accountNumber,
             alertData
           );
-
-          // Update alert status
-          await prisma.accountAlert.update({
-            where: { id: alert.id },
-            data: {
-              status: 'SENT',
-              sentAt: new Date(),
-            },
-          });
+          notificationSent = true;
         } catch (error) {
           console.error('Failed to send push notification for alert:', error);
-          
-          await prisma.accountAlert.update({
-            where: { id: alert.id },
-            data: { status: 'FAILED' },
-          });
         }
       }
+
+      // Send SMS if SMS is in channels
+      if (channels.includes('SMS' as NotificationChannel)) {
+        try {
+          // Get user phone number
+          const user = await prisma.mobileUser.findUnique({
+            where: { id: userId },
+            select: { phoneNumber: true },
+          });
+
+          if (user?.phoneNumber) {
+            await ESBSMSService.sendAccountAlert(
+              user.phoneNumber,
+              alertType,
+              alertData
+            );
+            notificationSent = true;
+          }
+        } catch (error) {
+          console.error('Failed to send SMS for alert:', error);
+        }
+      }
+
+      // Update alert status
+      await prisma.accountAlert.update({
+        where: { id: alert.id },
+        data: {
+          status: notificationSent ? 'SENT' : 'FAILED',
+          sentAt: notificationSent ? new Date() : null,
+        },
+      });
 
       return alert;
     } catch (error) {
