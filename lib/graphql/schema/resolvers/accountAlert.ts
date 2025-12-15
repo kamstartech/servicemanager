@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { AccountAlertService } from "@/lib/services/account-alert";
 
 export const accountAlertResolvers = {
   Query: {
@@ -348,20 +349,15 @@ export const accountAlertResolvers = {
           throw new Error(`Account ${args.accountNumber} not found`);
         }
 
-        // Create a test alert
-        await prisma.accountAlert.create({
-          data: {
-            mobileUserId: account.mobileUserId,
-            accountNumber: args.accountNumber,
-            alertType: args.alertType as any,
-            alertData: {
-              test: true,
-              message: "This is a test alert",
-              timestamp: new Date().toISOString(),
-            },
-            status: 'SENT',
-            channelsSent: ['PUSH'],
-            sentAt: new Date(),
+        // Trigger test alert with push notification
+        await AccountAlertService.triggerAlert({
+          userId: account.mobileUserId,
+          accountNumber: args.accountNumber,
+          alertType: args.alertType as any,
+          alertData: {
+            test: true,
+            message: "This is a test alert",
+            timestamp: new Date().toISOString(),
           },
         });
 

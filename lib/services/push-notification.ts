@@ -220,6 +220,103 @@ export class PushNotificationService {
   }
 
   /**
+   * Send account alert notification
+   */
+  static async sendAccountAlert(
+    userId: number,
+    alertType: string,
+    accountNumber: string,
+    alertData: any
+  ) {
+    const alertMessages: Record<string, { title: string; body: (data: any) => string; priority: string }> = {
+      LOW_BALANCE: {
+        title: 'Low Balance Alert',
+        body: (data) => `Your account ${accountNumber} balance is ${data.balance || 'low'}`,
+        priority: 'HIGH',
+      },
+      LARGE_TRANSACTION: {
+        title: 'Large Transaction',
+        body: (data) => `Large transaction of ${data.amount} ${data.currency} detected on account ${accountNumber}`,
+        priority: 'HIGH',
+      },
+      SUSPICIOUS_ACTIVITY: {
+        title: 'Security Alert',
+        body: (data) => `Suspicious activity detected on account ${accountNumber}: ${data.reason || 'Please review'}`,
+        priority: 'URGENT',
+      },
+      PAYMENT_DUE: {
+        title: 'Payment Due',
+        body: (data) => `Payment of ${data.amount} ${data.currency} is due on ${data.dueDate}`,
+        priority: 'NORMAL',
+      },
+      ACCOUNT_LOGIN: {
+        title: 'New Login Detected',
+        body: (data) => `New login to your account from ${data.device || 'unknown device'}`,
+        priority: 'HIGH',
+      },
+    };
+
+    const alert = alertMessages[alertType] || {
+      title: 'Account Alert',
+      body: () => 'Please check your account',
+      priority: 'NORMAL',
+    };
+
+    return this.send({
+      userId,
+      type: 'ACCOUNT_ALERT',
+      priority: alert.priority,
+      title: alert.title,
+      body: alert.body(alertData),
+      actionUrl: `/accounts/${accountNumber}/alerts`,
+      actionData: { alertType, accountNumber, ...alertData },
+    });
+  }
+
+  /**
+   * Send login alert notification
+   */
+  static async sendLoginAlert(
+    userId: number,
+    deviceName: string,
+    location?: string,
+    ipAddress?: string
+  ) {
+    return this.send({
+      userId,
+      type: 'LOGIN_ALERT',
+      priority: 'HIGH',
+      title: 'New Login Detected',
+      body: location
+        ? `New login from ${deviceName} in ${location}`
+        : `New login from ${deviceName}`,
+      actionUrl: '/security/devices',
+      actionData: { deviceName, location, ipAddress },
+    });
+  }
+
+  /**
+   * Send payment due reminder
+   */
+  static async sendPaymentDueReminder(
+    userId: number,
+    amount: string,
+    currency: string,
+    dueDate: string,
+    paymentId: string
+  ) {
+    return this.send({
+      userId,
+      type: 'PAYMENT_DUE',
+      priority: 'NORMAL',
+      title: 'Payment Reminder',
+      body: `Payment of ${amount} ${currency} is due on ${dueDate}`,
+      actionUrl: `/payments/${paymentId}`,
+      actionData: { amount, currency, dueDate, paymentId },
+    });
+  }
+
+  /**
    * Remove invalid FCM tokens
    */
   private static async removeInvalidTokens(tokens: string[]) {
