@@ -1891,4 +1891,113 @@ export const typeDefs = /* GraphQL */ `
     retryTransaction(id: ID!): CreateTransactionResponse!
     reverseTransaction(id: ID!, reason: String!): CreateTransactionResponse!
   }
+  
+  # ============================================
+  # CHECKBOOK REQUESTS
+  # ============================================
+  
+  enum CheckbookRequestStatus {
+    PENDING
+    APPROVED
+    READY_FOR_COLLECTION
+    COLLECTED
+    CANCELLED
+    REJECTED
+  }
+  
+  type CheckbookRequest {
+    id: ID!
+    mobileUserId: Int!
+    accountNumber: String!
+    numberOfCheckbooks: Int!
+    collectionPoint: String!
+    
+    status: CheckbookRequestStatus!
+    requestedAt: DateTime!
+    approvedAt: DateTime
+    approvedBy: Int
+    readyAt: DateTime
+    collectedAt: DateTime
+    cancelledAt: DateTime
+    rejectedAt: DateTime
+    
+    notes: String
+    rejectionReason: String
+    
+    createdAt: DateTime!
+    updatedAt: DateTime!
+    
+    mobileUser: MobileUser!
+    approvedByUser: AdminWebUser
+  }
+  
+  type CheckbookRequestConnection {
+    requests: [CheckbookRequest!]!
+    total: Int!
+    page: Int!
+    pageSize: Int!
+    totalPages: Int!
+  }
+  
+  type CheckbookRequestStats {
+    total: Int!
+    PENDING: Int!
+    APPROVED: Int!
+    READY_FOR_COLLECTION: Int!
+    COLLECTED: Int!
+    CANCELLED: Int!
+    REJECTED: Int!
+  }
+  
+  input CreateCheckbookRequestInput {
+    accountNumber: String!
+    numberOfCheckbooks: Int
+    collectionPoint: String!
+    notes: String
+  }
+  
+  input UpdateCheckbookRequestInput {
+    status: CheckbookRequestStatus
+    numberOfCheckbooks: Int
+    collectionPoint: String
+    notes: String
+    rejectionReason: String
+  }
+  
+  input CheckbookRequestFilterInput {
+    status: CheckbookRequestStatus
+    accountNumber: String
+    mobileUserId: Int
+  }
+  
+  extend type Query {
+    # Mobile user queries - get their own requests
+    myCheckbookRequests(
+      status: CheckbookRequestStatus
+      page: Int = 1
+      pageSize: Int = 20
+    ): CheckbookRequestConnection!
+    
+    myCheckbookRequest(id: ID!): CheckbookRequest
+    
+    # Admin queries - get all requests with filters
+    checkbookRequests(
+      filter: CheckbookRequestFilterInput
+      page: Int = 1
+      pageSize: Int = 20
+    ): CheckbookRequestConnection!
+    
+    checkbookRequest(id: ID!): CheckbookRequest
+    checkbookRequestStats: CheckbookRequestStats!
+  }
+  
+  extend type Mutation {
+    # Mobile user mutations
+    createCheckbookRequest(input: CreateCheckbookRequestInput!): CheckbookRequest!
+    cancelMyCheckbookRequest(id: ID!): CheckbookRequest!
+    
+    # Admin mutations
+    updateCheckbookRequest(id: ID!, input: UpdateCheckbookRequestInput!): CheckbookRequest!
+    deleteCheckbookRequest(id: ID!): Boolean!
+  }
 `;

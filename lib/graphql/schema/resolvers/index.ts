@@ -27,6 +27,7 @@ import { workflowStepResolvers } from "./workflowStep";
 import { workflowExecutionResolvers } from "./workflowExecution";
 import { billersResolvers } from "./billers";
 import { walletTierResolvers } from "./walletTier";
+import { checkbookRequestResolvers } from "./checkbookRequest";
 import { JSONResolver, DateTimeResolver } from "graphql-scalars";
 import { GraphQLScalarType, Kind } from "graphql";
 
@@ -79,6 +80,7 @@ export const resolvers = {
     ...workflowExecutionResolvers.Query,
     ...billersResolvers.Query,
     ...walletTierResolvers.Query,
+    ...checkbookRequestResolvers.Query,
   },
   Mutation: {
     ...authResolvers.Mutation,
@@ -107,6 +109,7 @@ export const resolvers = {
     ...workflowExecutionResolvers.Mutation,
     ...billersResolvers.Mutation,
     ...walletTierResolvers.Mutation,
+    ...checkbookRequestResolvers.Mutation,
   },
   CoreBankingConnection: {
     ...coreBankingEndpointResolvers.CoreBankingConnection,
@@ -131,6 +134,9 @@ export const resolvers = {
   },
   Transaction: {
     ...transactionResolvers.Transaction,
+  },
+  CheckbookRequest: {
+    ...checkbookRequestResolvers.CheckbookRequest,
   },
   Subscription: {
     ...subscriptionResolvers.Subscription,
