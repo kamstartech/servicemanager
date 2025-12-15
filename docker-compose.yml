@@ -67,18 +67,18 @@ services:
     networks:
       - service_manager_network
 
-  # MailHog - Email Testing
-  mailhog:
-    image: mailhog/mailhog:latest
-    container_name: service_manager_mailhog
-    ports:
-      - "1025:1025"  # SMTP
-      - "8025:8025"  # Web UI
-    restart: unless-stopped
-    networks:
-      - service_manager_network
-    logging:
-      driver: "none"  # Disable logs to reduce noise
+  # MailHog - Email Testing (Optional - disable if using production SMTP)
+  # mailhog:
+  #   image: mailhog/mailhog:latest
+  #   container_name: service_manager_mailhog
+  #   ports:
+  #     - "1025:1025"  # SMTP
+  #     - "8025:8025"  # Web UI
+  #   restart: unless-stopped
+  #   networks:
+  #     - service_manager_network
+  #   logging:
+  #     driver: "none"  # Disable logs to reduce noise
 
   # Redis for PubSub & Caching
   redis:
@@ -133,11 +133,12 @@ services:
       MINIO_ACCESS_KEY: "${MINIO_ACCESS_KEY:-minioadmin}"
       MINIO_SECRET_KEY: "${MINIO_SECRET_KEY:-minioadmin}"
       MINIO_BUCKET_NAME: "${MINIO_BUCKET_NAME:-backups}"
-      SMTP_HOST: "mailhog"
-      SMTP_PORT: "1025"
-      SMTP_USER: ""
-      SMTP_PASSWORD: ""
-      SMTP_FROM: "noreply@servicemanager.local"
+      SMTP_HOST: "${SMTP_HOST:-mail.abakula.com}"
+      SMTP_PORT: "${SMTP_PORT:-465}"
+      SMTP_SECURE: "${SMTP_SECURE:-true}"
+      SMTP_USER: "${SMTP_USER:-uat@abakula.com}"
+      SMTP_PASSWORD: "${SMTP_PASSWORD}"
+      SMTP_FROM: "${SMTP_FROM:-uat@abakula.com}"
       REDIS_HOST: "redis"
       REDIS_PORT: "6379"
       REDIS_PASSWORD: "${REDIS_PASSWORD:-redis_dev_password}"
@@ -149,7 +150,7 @@ services:
       BALANCE_SYNC_INTERVAL: "${BALANCE_SYNC_INTERVAL:-300000}"
       ACCOUNT_DISCOVERY_INTERVAL: "${ACCOUNT_DISCOVERY_INTERVAL:-86400000}"
       ACCOUNT_DISCOVERY_BATCH_SIZE: "${ACCOUNT_DISCOVERY_BATCH_SIZE:-50}"
-    command: sh -c "npm install && npx prisma generate && npm run dev"
+    command: sh -c "npm install && npx prisma generate && npx prisma migrate deploy && npx ts-node prisma/seed-all.ts && npm run dev"
 
 networks:
   service_manager_network:

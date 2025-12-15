@@ -41,6 +41,13 @@ services:
       BALANCE_SYNC_INTERVAL: "${BALANCE_SYNC_INTERVAL:-300000}"
       ACCOUNT_DISCOVERY_INTERVAL: "${ACCOUNT_DISCOVERY_INTERVAL:-86400000}"
       ACCOUNT_DISCOVERY_BATCH_SIZE: "${ACCOUNT_DISCOVERY_BATCH_SIZE:-50}"
+      # Email Configuration
+      SMTP_HOST: "${SMTP_HOST:-mail.abakula.com}"
+      SMTP_PORT: "${SMTP_PORT:-465}"
+      SMTP_SECURE: "${SMTP_SECURE:-true}"
+      SMTP_USER: "${SMTP_USER:-uat@abakula.com}"
+      SMTP_PASSWORD: "${SMTP_PASSWORD}"
+      SMTP_FROM: "${SMTP_FROM:-uat@abakula.com}"
     command: sh -c "npm install && npx prisma generate && npm run dev"
     networks:
       - service_manager_network
