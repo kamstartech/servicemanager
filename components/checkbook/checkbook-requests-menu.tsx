@@ -7,7 +7,13 @@ import { BookOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-export function CheckbookRequestsMenu({ collapsed }: { collapsed: boolean }) {
+export function CheckbookRequestsMenu({
+  collapsed,
+  label,
+}: {
+  collapsed: boolean;
+  label: string;
+}) {
   const pathname = usePathname();
   const [totalCount, setTotalCount] = React.useState<number>(0);
   const [loading, setLoading] = React.useState(true);
@@ -54,7 +60,7 @@ export function CheckbookRequestsMenu({ collapsed }: { collapsed: boolean }) {
         <BookOpen className="h-4 w-4 shrink-0 text-fdh-orange" />
         {!collapsed && (
           <>
-            <span className="flex-1 truncate">Checkbook Requests</span>
+            <span className="flex-1 truncate">{label}</span>
             {!loading && totalCount > 0 && (
               <Badge variant="secondary" className="ml-auto text-xs bg-fdh-orange text-white">
                 {totalCount}

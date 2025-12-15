@@ -1,6 +1,8 @@
 "use client";
 
+import type React from "react";
 import { useMemo, useState } from "react";
+import { useI18n } from "@/components/providers/i18n-provider";
 import {
   Table,
   TableHeader,
@@ -12,9 +14,52 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
+export const COMMON_TABLE_HEADERS = {
+  index: "#",
+  order: "Order",
+  icon: "Icon",
+  name: "Name",
+  category: "Category",
+  email: "Email",
+  phoneNumber: "Phone number",
+  customerNumber: "Customer number",
+  username: "Username",
+  status: "Status",
+  active: "Active",
+  testing: "Testing",
+  created: "Created",
+  createdAt: "Created At",
+  dateTime: "Date & Time",
+  actions: "Actions",
+  accountNumber: "Account Number",
+  customerInfo: "Customer Info",
+  source: "Source",
+  sourceIp: "Source IP",
+  retries: "Retries",
+  date: "Date",
+  reference: "Reference",
+  amount: "Amount",
+  balance: "Balance",
+  schema: "Schema",
+  tableName: "Table name",
+  serviceName: "Service Name",
+  interval: "Interval",
+  deviceName: "Device Name",
+  modelOs: "Model / OS",
+  lastUsed: "Last Used",
+  device: "Device",
+  ipAddress: "IP Address",
+  failureReason: "Failure Reason",
+  bank: "Bank",
+  context: "Context",
+  description: "Description",
+  type: "Type",
+  details: "Details",
+} as const;
+
 export type DataTableColumn<T> = {
   id: string;
-  header: string;
+  header: React.ReactNode;
   accessor: (row: T) => React.ReactNode;
   sortKey?: keyof T;
   alignRight?: boolean;
@@ -30,7 +75,7 @@ export type DataTableProps<T> = {
   pageSize?: number;
   searchPlaceholder?: string;
   showRowNumbers?: boolean;
-  rowNumberHeader?: string;
+  rowNumberHeader?: React.ReactNode;
 };
 
 export function DataTable<T extends Record<string, any>>({
@@ -43,11 +88,84 @@ export function DataTable<T extends Record<string, any>>({
   showRowNumbers = false,
   rowNumberHeader = "#",
 }: DataTableProps<T>) {
+  const { translate } = useI18n();
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<keyof T | undefined>(initialSortKey);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
   const [pageSizeState, setPageSizeState] = useState(pageSize);
+
+  function normalizeHeader(value: string) {
+    return value.toLowerCase().trim().replace(/\s+/g, " ");
+  }
+
+  const commonHeaderMap: Record<string, string> = {
+    "#": "common.table.columns.index",
+    "index": "common.table.columns.index",
+    "order": "common.table.columns.order",
+    "icon": "common.table.columns.icon",
+    "name": "common.table.columns.name",
+    "description": "common.table.columns.description",
+    "category": "common.table.columns.category",
+    "type": "common.table.columns.type",
+    "label": "common.table.columns.label",
+    "workflow": "common.table.columns.workflow",
+    "version": "common.table.columns.version",
+    "status": "common.table.columns.status",
+    "active": "common.table.columns.active",
+    "testing": "common.table.columns.testing",
+    "email": "common.table.columns.email",
+    "contact email": "common.table.columns.contactEmail",
+    "phone": "common.table.columns.phone",
+    "user name": "common.table.columns.username",
+    "username": "common.table.columns.username",
+    "username/phone": "common.table.columns.usernamePhone",
+    "phone number": "common.table.columns.phoneNumber",
+    "customer number": "common.table.columns.customerNumber",
+    "account number": "common.table.columns.accountNumber",
+    "context": "common.table.columns.context",
+    "device": "common.table.columns.device",
+    "device name": "common.table.columns.deviceName",
+    "model / os": "common.table.columns.modelOs",
+    "model/os": "common.table.columns.modelOs",
+    "ip address": "common.table.columns.ipAddress",
+    "failure reason": "common.table.columns.failureReason",
+    "date": "common.table.columns.date",
+    "date & time": "common.table.columns.dateTime",
+    "date/time": "common.table.columns.dateTime",
+    "reference": "common.table.columns.reference",
+    "amount": "common.table.columns.amount",
+    "balance": "common.table.columns.balance",
+    "customer info": "common.table.columns.customerInfo",
+    "source": "common.table.columns.source",
+    "source ip": "common.table.columns.sourceIp",
+    "retries": "common.table.columns.retries",
+    "target table": "common.table.columns.targetTable",
+    "last run": "common.table.columns.lastRun",
+    "next run": "common.table.columns.nextRun",
+    "filename": "common.table.columns.filename",
+    "size": "common.table.columns.size",
+    "tokens": "common.table.columns.tokens",
+    "api calls": "common.table.columns.apiCalls",
+    "attached to": "common.table.columns.attachedTo",
+    "created": "common.table.columns.created",
+    "created at": "common.table.columns.createdAt",
+    "expires": "common.table.columns.expires",
+    "usage": "common.table.columns.usage",
+    "last used": "common.table.columns.lastUsed",
+    "actions": "common.table.columns.actions",
+    "details": "common.table.columns.details",
+    "schema": "common.table.columns.schema",
+    "table name": "common.table.columns.tableName",
+    "service name": "common.table.columns.serviceName",
+    "interval": "common.table.columns.interval",
+  };
+
+  function renderHeader(header: React.ReactNode) {
+    if (typeof header !== "string") return header;
+    const key = commonHeaderMap[normalizeHeader(header)];
+    return key ? translate(key) : header;
+  }
 
   const filteredAndSorted = useMemo(() => {
     const text = search.toLowerCase().trim();
@@ -135,7 +253,7 @@ export function DataTable<T extends Record<string, any>>({
             <TableRow>
               {showRowNumbers && (
                 <TableHead className="whitespace-nowrap text-center">
-                  {rowNumberHeader}
+                  {renderHeader(rowNumberHeader)}
                 </TableHead>
               )}
               {columns.map((column) => (
@@ -153,7 +271,7 @@ export function DataTable<T extends Record<string, any>>({
                   }
                   onClick={() => toggleSort(column.sortKey)}
                 >
-                  {column.header}
+                  {renderHeader(column.header)}
                 </TableHead>
               ))}
             </TableRow>

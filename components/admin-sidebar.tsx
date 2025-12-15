@@ -3,35 +3,17 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Smartphone,
-  Wallet,
-  Users,
-  ChevronDown,
-  PanelLeft,
-  Database,
-  ArrowLeftRight,
-  Save,
-  ShieldAlert,
-  Tag,
-  FileText,
-  Activity,
-  Landmark,
-  UserPlus,
-  Workflow,
-  Receipt,
-  UserCog,
-  Settings,
-  Shield,
-  Wrench,
-  LayoutDashboard,
-  Key,
-  Layers,
-} from "lucide-react";
+import { ChevronDown, PanelLeft, type LucideIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { CheckbookRequestsMenu } from "@/components/checkbook/checkbook-requests-menu";
+import {
+  SIDEBAR_DASHBOARD,
+  SIDEBAR_PROFILE,
+  SIDEBAR_SECTIONS,
+  type SidebarSectionId,
+} from "@/lib/navigation/admin-sidebar-nav";
 import {
   Tooltip,
   TooltipContent,
@@ -46,7 +28,7 @@ function NavItem({
   collapsed = false,
 }: {
   href: string;
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  icon: LucideIcon;
   label: string;
   collapsed?: boolean;
 }) {
@@ -96,7 +78,7 @@ function SectionHeader({
   isOpen,
   onToggle,
 }: {
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  icon: LucideIcon;
   label: string;
   collapsed: boolean;
   isOpen: boolean;
@@ -145,42 +127,90 @@ export function AdminSidebar() {
   const { locale, translate, setLocale } = useI18n();
   const pathname = usePathname();
 
-  const isMobileSectionActive = pathname?.startsWith("/mobile-banking");
-  const isWalletSectionActive = pathname?.startsWith("/wallet");
-  const isConfigSectionActive =
-    pathname?.startsWith("/system/forms") ||
-    pathname?.startsWith("/system/workflows") ||
-    pathname?.startsWith("/system/app-screens");
-  const isSystemSectionActive =
-    pathname?.startsWith("/system/databases") ||
-    pathname?.startsWith("/system/core-banking") ||
-    pathname?.startsWith("/system/migrations") ||
-    pathname?.startsWith("/system/backups");
-  const isAdminSectionActive =
-    pathname?.startsWith("/admin-users") ||
-    pathname?.startsWith("/system/login-attempts") ||
-    pathname?.startsWith("/services");
+  const activeSectionById = React.useMemo(() => {
+    const result = {} as Record<SidebarSectionId, boolean>;
+    for (const section of SIDEBAR_SECTIONS) {
+      result[section.id] = section.activePrefixes.some((prefix) =>
+        pathname?.startsWith(prefix)
+      );
+    }
+    return result;
+  }, [pathname]);
 
   const [collapsed, setCollapsed] = React.useState(false);
-  const [mobileOpen, setMobileOpen] = React.useState(isMobileSectionActive);
-  const [walletOpen, setWalletOpen] = React.useState(isWalletSectionActive);
-  const [configOpen, setConfigOpen] = React.useState(isConfigSectionActive);
-  const [systemOpen, setSystemOpen] = React.useState(isSystemSectionActive);
-  const [adminOpen, setAdminOpen] = React.useState(isAdminSectionActive);
+
+  const [openSections, setOpenSections] = React.useState<
+    Record<SidebarSectionId, boolean>
+  >(() => {
+    const initial = {} as Record<SidebarSectionId, boolean>;
+    for (const section of SIDEBAR_SECTIONS) {
+      initial[section.id] = section.activePrefixes.some((prefix) =>
+        pathname?.startsWith(prefix)
+      );
+    }
+    return initial;
+  });
 
   React.useEffect(() => {
-    if (isMobileSectionActive) setMobileOpen(true);
-    if (isWalletSectionActive) setWalletOpen(true);
-    if (isConfigSectionActive) setConfigOpen(true);
-    if (isSystemSectionActive) setSystemOpen(true);
-    if (isAdminSectionActive) setAdminOpen(true);
-  }, [
-    isMobileSectionActive,
-    isWalletSectionActive,
-    isConfigSectionActive,
-    isSystemSectionActive,
-    isAdminSectionActive,
-  ]);
+    setOpenSections((prev) => {
+      const next = { ...prev };
+      for (const section of SIDEBAR_SECTIONS) {
+        if (activeSectionById[section.id]) {
+          next[section.id] = true;
+        }
+      }
+      return next;
+    });
+  }, [activeSectionById]);
+
+  function toggleSection(id: SidebarSectionId) {
+    setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
+  }
+
+  function renderSection(id: SidebarSectionId) {
+    const section = SIDEBAR_SECTIONS.find((s) => s.id === id);
+    if (!section) return null;
+
+    const isActive = activeSectionById[id];
+    const isOpen = openSections[id];
+
+    return (
+      <div className="space-y-1">
+        <SectionHeader
+          icon={section.icon}
+          label={translate(section.labelKey)}
+          collapsed={collapsed}
+          isOpen={isOpen}
+          onToggle={() => toggleSection(id)}
+        />
+        {!collapsed && (isOpen || isActive) && (
+          <div className="space-y-0.5 pl-3">
+            {section.items.map((item) => {
+              if (item.kind === "checkbookRequests") {
+                return (
+                  <CheckbookRequestsMenu
+                    key={item.kind}
+                    collapsed={collapsed}
+                    label={translate(item.labelKey)}
+                  />
+                );
+              }
+
+              return (
+                <NavItem
+                  key={item.href}
+                  href={item.href}
+                  icon={item.icon}
+                  label={translate(item.labelKey)}
+                  collapsed={collapsed}
+                />
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <aside
@@ -194,7 +224,7 @@ export function AdminSidebar() {
           <>
             <img 
               src="/images/logo/whitelogo.svg" 
-              alt="FDH Logo" 
+              alt={translate("sidebar.logoAlt")}
               className="w-3/4 max-w-[150px] mb-6" 
             />
             <div className="w-full h-0.5 bg-fdh-orange mb-4"></div>
@@ -203,7 +233,7 @@ export function AdminSidebar() {
           <div className="mb-4">
             <img 
               src="/images/logo/whitelogo.svg" 
-              alt="FDH Logo" 
+              alt={translate("sidebar.logoAlt")}
               className="w-8 h-8 object-contain" 
             />
           </div>
@@ -214,7 +244,11 @@ export function AdminSidebar() {
           size="icon"
           className="shrink-0 text-white hover:bg-fdh-light-blue"
           onClick={() => setCollapsed((prev) => !prev)}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={
+            collapsed
+              ? translate("sidebar.actions.expand")
+              : translate("sidebar.actions.collapse")
+          }
         >
           <PanelLeft className="h-4 w-4" />
         </Button>
@@ -257,196 +291,27 @@ export function AdminSidebar() {
         {/* Dashboard Link */}
         <div className="mb-2">
           <NavItem
-            href="/"
-            icon={LayoutDashboard}
-            label="Dashboard"
+            href={SIDEBAR_DASHBOARD.href}
+            icon={SIDEBAR_DASHBOARD.icon}
+            label={translate(SIDEBAR_DASHBOARD.labelKey)}
             collapsed={collapsed}
           />
         </div>
 
         {/* Mobile Banking Section */}
-        <div className="space-y-1">
-          <SectionHeader
-            icon={Smartphone}
-            label={translate("sidebar.mobileBanking")}
-            collapsed={collapsed}
-            isOpen={mobileOpen}
-            onToggle={() => setMobileOpen((prev) => !prev)}
-          />
-          {!collapsed && (mobileOpen || isMobileSectionActive) && (
-            <div className="space-y-0.5 pl-3">
-              <NavItem
-                href="/mobile-banking/users"
-                icon={Users}
-                label={translate("sidebar.users")}
-                collapsed={collapsed}
-              />
-              <NavItem
-                href="/mobile-banking/accounts"
-                icon={Landmark}
-                label={translate("sidebar.accounts")}
-                collapsed={collapsed}
-              />
-              <NavItem
-                href="/mobile-banking/account-categories"
-                icon={Tag}
-                label={translate("sidebar.accountCategories")}
-                collapsed={collapsed}
-              />
-              <NavItem
-                href="/mobile-banking/registration-requests"
-                icon={UserPlus}
-                label={translate("sidebar.registrationRequests")}
-                collapsed={collapsed}
-              />
-              <CheckbookRequestsMenu collapsed={collapsed} />
-              <NavItem
-                href="/mobile-banking/billers"
-                icon={Receipt}
-                label="Billers"
-                collapsed={collapsed}
-              />
-            </div>
-          )}
-        </div>
+        {renderSection("mobileBanking")}
 
         {/* Wallet Section */}
-        <div className="space-y-1">
-          <SectionHeader
-            icon={Wallet}
-            label={translate("sidebar.wallet")}
-            collapsed={collapsed}
-            isOpen={walletOpen}
-            onToggle={() => setWalletOpen((prev) => !prev)}
-          />
-          {!collapsed && (walletOpen || isWalletSectionActive) && (
-            <div className="space-y-0.5 pl-3">
-              <NavItem
-                href="/wallet/users"
-                icon={Users}
-                label={translate("sidebar.users")}
-                collapsed={collapsed}
-              />
-              <NavItem
-                href="/wallet/tiers"
-                icon={Layers}
-                label="Tiers"
-                collapsed={collapsed}
-              />
-            </div>
-          )}
-        </div>
+        {renderSection("wallet")}
 
         {/* Configuration Section - NEW */}
-        <div className="space-y-1">
-          <SectionHeader
-            icon={Settings}
-            label="Configuration"
-            collapsed={collapsed}
-            isOpen={configOpen}
-            onToggle={() => setConfigOpen((prev) => !prev)}
-          />
-          {!collapsed && (configOpen || isConfigSectionActive) && (
-            <div className="space-y-0.5 pl-3">
-              <NavItem
-                href="/system/forms"
-                icon={FileText}
-                label="Forms"
-                collapsed={collapsed}
-              />
-              <NavItem
-                href="/system/workflows"
-                icon={Workflow}
-                label="Workflows"
-                collapsed={collapsed}
-              />
-              <NavItem
-                href="/system/app-screens"
-                icon={Smartphone}
-                label="App Screens"
-                collapsed={collapsed}
-              />
-            </div>
-          )}
-        </div>
+        {renderSection("configuration")}
 
         {/* System Section - REFINED */}
-        <div className="space-y-1">
-          <SectionHeader
-            icon={Wrench}
-            label="System"
-            collapsed={collapsed}
-            isOpen={systemOpen}
-            onToggle={() => setSystemOpen((prev) => !prev)}
-          />
-          {!collapsed && (systemOpen || isSystemSectionActive) && (
-            <div className="space-y-0.5 pl-3">
-              <NavItem
-                href="/system/databases"
-                icon={Database}
-                label={translate("sidebar.databaseManagement")}
-                collapsed={collapsed}
-              />
-              <NavItem
-                href="/system/core-banking"
-                icon={Database}
-                label={translate("sidebar.coreBanking")}
-                collapsed={collapsed}
-              />
-              <NavItem
-                href="/system/migrations"
-                icon={ArrowLeftRight}
-                label={translate("sidebar.migrations")}
-                collapsed={collapsed}
-              />
-              <NavItem
-                href="/system/backups"
-                icon={Save}
-                label="Backups"
-                collapsed={collapsed}
-              />
-            </div>
-          )}
-        </div>
+        {renderSection("system")}
 
         {/* Administration Section - NEW */}
-        <div className="space-y-1">
-          <SectionHeader
-            icon={Shield}
-            label="Administration"
-            collapsed={collapsed}
-            isOpen={adminOpen}
-            onToggle={() => setAdminOpen((prev) => !prev)}
-          />
-          {!collapsed && (adminOpen || isAdminSectionActive) && (
-            <div className="space-y-0.5 pl-3">
-              <NavItem
-                href="/admin-users"
-                icon={Users}
-                label="Admin Users"
-                collapsed={collapsed}
-              />
-              <NavItem
-                href="/system/login-attempts"
-                icon={ShieldAlert}
-                label="Login Attempts"
-                collapsed={collapsed}
-              />
-              <NavItem
-                href="/system/third-party"
-                icon={Key}
-                label="Third-Party API"
-                collapsed={collapsed}
-              />
-              <NavItem
-                href="/services"
-                icon={Activity}
-                label="Services Monitor"
-                collapsed={collapsed}
-              />
-            </div>
-          )}
-        </div>
+        {renderSection("administration")}
       </nav>
 
       {/* Profile - Sticky Bottom */}
@@ -459,9 +324,11 @@ export function AdminSidebar() {
             collapsed ? "justify-center px-2" : "justify-start gap-2"
           }`}
         >
-          <Link href="/profile">
-            <UserCog className="h-4 w-4 shrink-0 text-fdh-orange" />
-            {!collapsed && <span className="truncate">Profile</span>}
+          <Link href={SIDEBAR_PROFILE.href}>
+            <SIDEBAR_PROFILE.icon className="h-4 w-4 shrink-0 text-fdh-orange" />
+            {!collapsed && (
+              <span className="truncate">{translate(SIDEBAR_PROFILE.labelKey)}</span>
+            )}
           </Link>
         </Button>
       </div>
