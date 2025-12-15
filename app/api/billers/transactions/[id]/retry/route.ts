@@ -5,10 +5,11 @@ const transactionService = new BillerTransactionService();
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const result = await transactionService.retryTransaction(params.id);
+    const { id } = await params;
+    const result = await transactionService.retryTransaction(id);
 
     if (result.success) {
       return NextResponse.json({

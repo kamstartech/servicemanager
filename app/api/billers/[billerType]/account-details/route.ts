@@ -6,9 +6,10 @@ const transactionService = new BillerTransactionService();
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { billerType: string } }
+  { params }: { params: Promise<{ billerType: string }> }
 ) {
   try {
+    const { billerType } = await params;
     const body = await request.json();
     const { account_number, accountNumber, account_type, accountType } = body;
 
@@ -26,10 +27,10 @@ export async function POST(
     }
 
     // Convert biller type to enum
-    const billerType = params.billerType.toUpperCase() as BillerType;
+    const billerTypeEnum = billerType.toUpperCase() as BillerType;
 
     // Validate biller type
-    if (!Object.values(BillerType).includes(billerType)) {
+    if (!Object.values(BillerType).includes(billerTypeEnum)) {
       return NextResponse.json(
         {
           success: false,
@@ -40,7 +41,7 @@ export async function POST(
     }
 
     const result = await transactionService.processAccountLookup(
-      billerType,
+      billerTypeEnum,
       finalAccountNumber,
       finalAccountType
     );

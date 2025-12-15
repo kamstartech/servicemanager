@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 export const POST = withAuth(async (request: NextRequest, user: any) => {
   try {
