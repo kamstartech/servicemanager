@@ -1,40 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { withAuth } from "@/lib/auth/middleware";
-import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { emailService } from "@/lib/services/email";
 import path from "path";
 
-// Generate a secure random password
-function generatePassword(length = 16): string {
-  const charset =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-  let password = "";
-  const randomBytes = crypto.randomBytes(length);
-
-  for (let i = 0; i < length; i++) {
-    password += charset[randomBytes[i] % charset.length];
-  }
-
-  return password;
+// Generate a secure random token
+function generateSetupToken(): string {
+  return crypto.randomBytes(32).toString("hex");
 }
 
-// Send welcome email with credentials
-async function sendWelcomeEmail(email: string, name: string, password: string) {
+// Send welcome email with setup link
+async function sendWelcomeEmail(email: string, name: string, token: string) {
+  const setupUrl = `https://mobile-banking-v2.abakula.com/setup-password?token=${token}`;
+
   await emailService.sendEmail({
     to: email,
-    subject: "Your FDH Bank Admin Panel Access",
+    subject: "Welcome to FDH Bank Admin Panel",
     text: `
 Hello ${name},
 
-Your admin account for the FDH Bank Admin Panel has been created.
+Welcome to the FDH Bank Admin Panel! Your admin account has been created.
 
-Login URL: ${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/login
-Email: ${email}
-Password: ${password}
+To get started, please set up your password by clicking the link below:
+${setupUrl}
 
-Please login and change your password immediately for security reasons.
+This link will expire in 48 hours.
+
+If you did not expect this invitation, please contact support immediately.
 
 Best regards,
 FDH Bank Admin Team
@@ -50,51 +43,40 @@ FDH Bank Admin Team
         <div style="background-color: #f8f9fa; padding: 30px; border-radius: 10px;">
           <h2 style="color: #154E9E; margin-top: 0;">Welcome to FDH Bank Admin Panel</h2>
           <p style="color: #333; line-height: 1.6;">
-            Your admin account has been created successfully. Below are your login credentials:
+            Hello <strong>${name}</strong>,
+          </p>
+          <p style="color: #333; line-height: 1.6;">
+            Your admin account has been created successfully. To get started, please set up your password by clicking the button below.
           </p>
           
-          <div style="background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0;">
-            <table style="width: 100%;">
-              <tr>
-                <td style="padding: 8px 0;"><strong>Login URL:</strong></td>
-                <td style="padding: 8px 0;">
-                  <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/login" 
-                     style="color: #154E9E; text-decoration: none;">
-                    ${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/login
-                  </a>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0;"><strong>Email:</strong></td>
-                <td style="padding: 8px 0;">${email}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0;"><strong>Password:</strong></td>
-                <td style="padding: 8px 0; font-family: monospace; background-color: #f0f0f0; padding: 5px; border-radius: 3px;">
-                  ${password}
-                </td>
-              </tr>
-            </table>
-          </div>
-          
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/login" 
+            <a href="${setupUrl}" 
                style="display: inline-block; 
-                      padding: 14px 32px; 
+                      padding: 16px 40px; 
                       background-color: #f59e0b; 
                       color: white; 
                       text-decoration: none; 
-                      border-radius: 9999px; 
+                      border-radius: 50px; 
                       font-weight: 600;
-                      font-size: 16px;">
-              Login Now
+                      font-size: 16px;
+                      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+              Set Up Password
             </a>
+          </div>
+          
+          <div style="background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0;">
+            <p style="color: #666; font-size: 14px; margin: 0; line-height: 1.6;">
+              Or copy and paste this link into your browser:
+            </p>
+            <p style="color: #154E9E; font-size: 12px; word-break: break-all; margin: 10px 0 0 0;">
+              ${setupUrl}
+            </p>
           </div>
           
           <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
             <p style="color: #d97706; font-size: 13px; line-height: 1.6;">
-              <strong>⚠️ Important Security Notice:</strong><br>
-              Please login and change your password immediately. Keep your credentials secure and do not share them with anyone.
+              <strong>⚠️ Important:</strong><br>
+              This link will expire in 48 hours. If you did not expect this invitation, please contact support immediately.
             </p>
           </div>
         </div>
@@ -108,7 +90,14 @@ FDH Bank Admin Team
     attachments: [
       {
         filename: "fdh-logo.png",
-        path: path.join(process.cwd(), "public", "images", "logo", "BLUE PNG", "FDH LOGO-06.png"),
+        path: path.join(
+          process.cwd(),
+          "public",
+          "images",
+          "logo",
+          "BLUE PNG",
+          "FDH LOGO-06.png"
+        ),
         cid: "logo",
       },
     ],
@@ -160,51 +149,58 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       );
     }
 
-    // Generate a random secure password
-    const generatedPassword = generatePassword(16);
-
-    // Hash the password
-    const passwordHash = await bcrypt.hash(generatedPassword, 10);
-
-    // Create the admin user
+    // Create the admin user without password (will be set via token link)
     const newUser = await prisma.adminWebUser.create({
       data: {
         email: email.toLowerCase(),
         name,
-        passwordHash,
-        isActive: true,
+        passwordHash: "", // Empty password hash - user will set it via token
+        isActive: false, // Inactive until password is set
       },
     });
 
-    // Send welcome email with credentials
+    // Generate setup token (48 hours expiry for new users)
+    const token = generateSetupToken();
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 48);
+
+    // Save the token to database
+    await prisma.adminWebPasswordResetToken.create({
+      data: {
+        token,
+        userId: newUser.id,
+        expiresAt,
+      },
+    });
+
+    // Send welcome email with setup link
     try {
-      await sendWelcomeEmail(email, name, generatedPassword);
+      await sendWelcomeEmail(email, name, token);
     } catch (emailError) {
       console.error("Failed to send welcome email:", emailError);
-      // User is created, but email failed - return partial success
+      
+      // Delete the user and token since email failed
+      await prisma.adminWebPasswordResetToken.delete({
+        where: { token },
+      });
+      await prisma.adminWebUser.delete({
+        where: { id: newUser.id },
+      });
+
       return NextResponse.json(
         {
-          success: true,
-          message: "User created but email failed to send",
-          user: {
-            id: newUser.id,
-            email: newUser.email,
-            name: newUser.name,
-          },
-          credentials: {
-            email: newUser.email,
-            password: generatedPassword,
-          },
+          success: false,
+          message: "Failed to send setup email. Please try again.",
           emailSent: false,
         },
-        { status: 201 }
+        { status: 500 }
       );
     }
 
     return NextResponse.json(
       {
         success: true,
-        message: "Admin user created successfully. Credentials sent via email.",
+        message: "Admin user created successfully. Setup link sent via email.",
         user: {
           id: newUser.id,
           email: newUser.email,

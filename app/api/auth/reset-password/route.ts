@@ -60,11 +60,14 @@ export async function POST(request: NextRequest) {
     // Hash the new password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Update the user's password and mark token as used
+    // Update the user's password, activate account, and mark token as used
     await prisma.$transaction([
       prisma.adminWebUser.update({
         where: { id: resetToken.userId },
-        data: { passwordHash },
+        data: { 
+          passwordHash,
+          isActive: true, // Activate user when password is set
+        },
       }),
       prisma.adminWebPasswordResetToken.update({
         where: { id: resetToken.id },
@@ -73,7 +76,7 @@ export async function POST(request: NextRequest) {
     ]);
 
     return NextResponse.json({
-      message: "Password reset successfully",
+      message: "Password set successfully. Your account is now active.",
     });
   } catch (error) {
     console.error("Reset password error:", error);

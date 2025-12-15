@@ -73,8 +73,8 @@ export default function AdminUsersPage() {
       if (response.ok) {
         toast.success(data.message || "Admin user created successfully!", {
           description: data.emailSent 
-            ? "Credentials have been sent to the user's email"
-            : "Please check the console for credentials",
+            ? "Setup link has been sent to the user's email"
+            : "Please check the console for details",
         });
         setEmail("");
         setName("");
@@ -238,7 +238,7 @@ export default function AdminUsersPage() {
                 Add Admin User
               </h2>
               <p className="text-gray-600 mb-6">
-                A random password will be generated and sent to the user via email.
+                A secure setup link will be sent to the user's email. They will set their own password.
               </p>
 
               <form onSubmit={handleAddUser} className="space-y-4">
@@ -282,8 +282,7 @@ export default function AdminUsersPage() {
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <p className="text-sm text-blue-800">
-                    <strong>Note:</strong> A secure 16-character password will be
-                    generated and sent to this email address.
+                    <strong>Note:</strong> The user will receive a setup link via email to create their own password. The link expires in 48 hours.
                   </p>
                 </div>
 
