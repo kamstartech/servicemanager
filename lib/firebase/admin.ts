@@ -21,8 +21,7 @@ if (!admin.apps.length) {
       const serviceAccountPath = path.join(process.cwd(), 'config', 'firebase-service-account.json');
       
       if (fs.existsSync(serviceAccountPath)) {
-        const serviceAccountContent = fs.readFileSync(serviceAccountPath, 'utf8');
-        const serviceAccount = JSON.parse(serviceAccountContent);
+        const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
         
         admin.initializeApp({
           credential: admin.credential.cert(serviceAccount),
@@ -30,22 +29,15 @@ if (!admin.apps.length) {
         
         console.log('Firebase Admin SDK initialized from service account file');
       } else {
-        console.warn('Firebase credentials not found. Push notifications will not work.');
-        console.warn('Configure FIREBASE_PROJECT_ID, FIREBASE_PRIVATE_KEY, and FIREBASE_CLIENT_EMAIL environment variables.');
+        console.warn('Firebase credentials not configured - push notifications will not work');
       }
     }
   } catch (error) {
     console.error('Failed to initialize Firebase Admin SDK:', error);
-    console.warn('Push notifications will not be available.');
+    console.warn('Firebase credentials not configured - push notifications will not work');
   }
 }
 
-// Export messaging getter to avoid initialization errors
-export const getMessaging = () => {
-  if (!admin.apps.length) {
-    throw new Error('Firebase Admin SDK not initialized');
-  }
-  return admin.messaging();
-};
-
+// Export messaging only if Firebase is initialized
+export const messaging = admin.apps.length > 0 ? admin.messaging() : null;
 export default admin;

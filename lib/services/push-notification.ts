@@ -31,6 +31,12 @@ export class PushNotificationService {
     } = params;
 
     try {
+      // Check if Firebase messaging is available
+      if (!messaging) {
+        console.warn('Firebase messaging not initialized - skipping push notification');
+        return null;
+      }
+
       // Get user devices with FCM tokens
       const devices = await prisma.mobileDevice.findMany({
         where: {

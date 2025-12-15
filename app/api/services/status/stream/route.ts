@@ -45,9 +45,12 @@ export async function GET(request: Request) {
             [ServiceChannel.ALL_SERVICES],
             (channel, message) => {
               try {
-                controller.enqueue(
-                  encoder.encode(`data: ${JSON.stringify(message)}\n\n`)
-                );
+                // Check if controller is still active before enqueueing
+                if (controller.desiredSize !== null) {
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify(message)}\n\n`)
+                  );
+                }
               } catch (error) {
                 console.error("Failed to send SSE:", error);
               }
@@ -60,7 +63,12 @@ export async function GET(request: Request) {
         // Keep connection alive with heartbeat
         const heartbeat = setInterval(() => {
           try {
-            controller.enqueue(encoder.encode(": heartbeat\n\n"));
+            // Check if controller is still active before sending heartbeat
+            if (controller.desiredSize !== null) {
+              controller.enqueue(encoder.encode(": heartbeat\n\n"));
+            } else {
+              clearInterval(heartbeat);
+            }
           } catch (error) {
             clearInterval(heartbeat);
           }
@@ -69,7 +77,11 @@ export async function GET(request: Request) {
         // Cleanup on connection close
         request.signal.addEventListener("abort", () => {
           clearInterval(heartbeat);
-          controller.close();
+          try {
+            controller.close();
+          } catch (error) {
+            // Controller might already be closed
+          }
           console.log("✅ SSE Client disconnected");
         });
       } catch (error) {
