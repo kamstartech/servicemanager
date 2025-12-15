@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { t24AccountsService } from "@/lib/services/t24/accounts";
 import { servicePubSub, ServiceChannel } from "@/lib/redis/pubsub";
+import { logsPubSub } from "@/lib/redis/logs-pubsub";
 
 /**
  * Account Discovery Service
@@ -74,12 +75,25 @@ export class AccountDiscoveryService {
   start(): void {
     if (this.discoveryInterval) {
       console.log("⚠️ Account discovery service already running");
+      void logsPubSub.publishLog({
+        service: "account-discovery",
+        level: "warn",
+        message: "Start called but service already running",
+        timestamp: Date.now(),
+      });
       return;
     }
 
     console.log("🚀 Starting account discovery service...");
     console.log(`   Discovery interval: ${DISCOVERY_INTERVAL / 1000 / 60 / 60}h`);
     console.log(`   Batch size: ${DISCOVERY_BATCH_SIZE} users`);
+
+    void logsPubSub.publishLog({
+      service: "account-discovery",
+      level: "info",
+      message: `Service starting (interval=${DISCOVERY_INTERVAL}ms, batchSize=${DISCOVERY_BATCH_SIZE})`,
+      timestamp: Date.now(),
+    });
 
     // Start periodic discovery
     this.discoveryInterval = setInterval(() => {
@@ -97,6 +111,12 @@ export class AccountDiscoveryService {
     }, 30000);
 
     console.log("✅ Account discovery service started");
+    void logsPubSub.publishLog({
+      service: "account-discovery",
+      level: "info",
+      message: "Service started",
+      timestamp: Date.now(),
+    });
   }
 
   /**
@@ -112,6 +132,12 @@ export class AccountDiscoveryService {
       this.paginationInterval = null;
     }
     console.log("✅ Account discovery service stopped");
+    void logsPubSub.publishLog({
+      service: "account-discovery",
+      level: "info",
+      message: "Service stopped",
+      timestamp: Date.now(),
+    });
   }
 
   /**
@@ -120,6 +146,12 @@ export class AccountDiscoveryService {
   private async discoverNewAccounts(): Promise<void> {
     if (this.isRunning) {
       console.log("⚠️ Account discovery already running, skipping...");
+      void logsPubSub.publishLog({
+        service: "account-discovery",
+        level: "warn",
+        message: "Discovery already running, skipping",
+        timestamp: Date.now(),
+      });
       return;
     }
 
@@ -134,6 +166,12 @@ export class AccountDiscoveryService {
 
     try {
       console.log("🔍 Starting account discovery...");
+      void logsPubSub.publishLog({
+        service: "account-discovery",
+        level: "info",
+        message: "Discovery run started",
+        timestamp: Date.now(),
+      });
 
       const stats = {
         usersChecked: 0,
@@ -158,6 +196,12 @@ export class AccountDiscoveryService {
       });
 
       console.log(`   Found ${users.length} users to check`);
+      void logsPubSub.publishLog({
+        service: "account-discovery",
+        level: "info",
+        message: `Users fetched for discovery: ${users.length}`,
+        timestamp: Date.now(),
+      });
 
       for (const user of users) {
         try {
@@ -167,6 +211,12 @@ export class AccountDiscoveryService {
           stats.accountsDeactivated += result.deactivated;
         } catch (error) {
           console.error(`❌ Failed to discover accounts for user ${user.id}:`, error);
+          void logsPubSub.publishLog({
+            service: "account-discovery",
+            level: "error",
+            message: `Failed to discover accounts for user ${user.id}: ${error instanceof Error ? error.message : "Unknown error"}`,
+            timestamp: Date.now(),
+          });
           stats.errors++;
         }
       }
@@ -176,8 +226,20 @@ export class AccountDiscoveryService {
       console.log(`   New accounts added: ${stats.accountsAdded}`);
       console.log(`   Accounts deactivated: ${stats.accountsDeactivated}`);
       console.log(`   Errors: ${stats.errors}`);
+      void logsPubSub.publishLog({
+        service: "account-discovery",
+        level: stats.errors > 0 ? "warn" : "info",
+        message: `Discovery complete (users=${stats.usersChecked}, added=${stats.accountsAdded}, errors=${stats.errors})`,
+        timestamp: Date.now(),
+      });
     } catch (error) {
       console.error("❌ Account discovery failed:", error);
+      void logsPubSub.publishLog({
+        service: "account-discovery",
+        level: "error",
+        message: `Discovery run failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        timestamp: Date.now(),
+      });
     } finally {
       this.isRunning = false;
 
@@ -241,12 +303,24 @@ export class AccountDiscoveryService {
 
     try {
       console.log(`📄 Processing pagination for user ${job.userId} (queue: ${this.paginationQueue.getCount()} jobs)`);
+      void logsPubSub.publishLog({
+        service: "account-discovery",
+        level: "debug",
+        message: `Processing pagination for user ${job.userId} (queue=${this.paginationQueue.getCount()})`,
+        timestamp: Date.now(),
+      });
 
       // Fetch next page
       const data = await t24AccountsService.getCustomerAccounts(job.customerNumber, job.pageToken);
 
       if (!data) {
         console.error(`❌ Failed to fetch page for user ${job.userId}`);
+        void logsPubSub.publishLog({
+          service: "account-discovery",
+          level: "error",
+          message: `Failed to fetch pagination page for user ${job.userId}`,
+          timestamp: Date.now(),
+        });
         return;
       }
 
@@ -270,6 +344,12 @@ export class AccountDiscoveryService {
       }
     } catch (error) {
       console.error(`❌ Failed to process pagination for user ${job.userId}:`, error);
+      void logsPubSub.publishLog({
+        service: "account-discovery",
+        level: "error",
+        message: `Failed to process pagination for user ${job.userId}: ${error instanceof Error ? error.message : "Unknown error"}`,
+        timestamp: Date.now(),
+      });
     }
   }
 
@@ -313,10 +393,22 @@ export class AccountDiscoveryService {
             },
           });
           console.log(`   ✅ Added account ${accountNumber} for user ${userId}`);
+          void logsPubSub.publishLog({
+            service: "account-discovery",
+            level: "info",
+            message: `Added account ${accountNumber} for user ${userId}`,
+            timestamp: Date.now(),
+          });
           added++;
         }
       } catch (error) {
         console.error(`   ❌ Failed to add account ${accountNumber}:`, error);
+        void logsPubSub.publishLog({
+          service: "account-discovery",
+          level: "error",
+          message: `Failed to add account ${accountNumber} for user ${userId}: ${error instanceof Error ? error.message : "Unknown error"}`,
+          timestamp: Date.now(),
+        });
       }
     }
 

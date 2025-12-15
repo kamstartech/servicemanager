@@ -44,6 +44,7 @@ interface SMSStats {
 }
 
 interface ServiceTableRow {
+  serviceKey?: string;
   name: string;
   type: string;
   description: string;
@@ -195,7 +196,10 @@ export default function ServicesMonitorPage() {
     setLogsDialogOpen(true);
     
     // Create SSE connection for logs
-    const logsEventSource = new EventSource("/api/services/logs/stream");
+    const key = service.serviceKey || "all";
+    const logsEventSource = new EventSource(
+      `/api/services/logs/stream?service=${encodeURIComponent(key)}`
+    );
     logsEventSourceRef.current = logsEventSource;
 
     logsEventSource.onopen = () => {
@@ -348,6 +352,7 @@ export default function ServicesMonitorPage() {
 
   const servicesTableData: ServiceTableRow[] = status ? [
     {
+      serviceKey: "balance-sync",
       name: "Balance Sync Service",
       type: "Background Service",
       description: "Syncs account balances from T24 every 5 minutes",
@@ -364,6 +369,7 @@ export default function ServicesMonitorPage() {
       },
     },
     {
+      serviceKey: "account-discovery",
       name: "Account Discovery Service",
       type: "Background Service",
       description: "Discovers new accounts from T24 every 24 hours",
@@ -380,6 +386,7 @@ export default function ServicesMonitorPage() {
       },
     },
     {
+      serviceKey: "account-enrichment",
       name: "Account Enrichment Service",
       type: "Background Service",
       description: "Enriches account records with T24 details every 12 hours",
@@ -469,6 +476,7 @@ export default function ServicesMonitorPage() {
       variant: "outline" as const,
     },
     {
+      serviceKey: "sms",
       name: "SMS Notification Service",
       type: "Core Service",
       description: "Sends SMS via ESB Gateway",

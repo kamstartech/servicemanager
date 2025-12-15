@@ -1,11 +1,20 @@
 import { SMSResponse } from './types';
 import { SMSLogger } from './sms-logger';
+import { logsPubSub } from '@/lib/redis/logs-pubsub';
 
 export class ESBSMSService {
-  private static readonly ESB_URL = process.env.ESB_SMS_URL || 'https://fdh-esb.ngrok.dev/esb/sent-messages/v1/sent-messages';
-  private static readonly ESB_USERNAME = process.env.ESB_USERNAME || 'admin';
-  private static readonly ESB_PASSWORD = process.env.ESB_PASSWORD || 'admin';
-  private static readonly CLIENT_ID = process.env.ESB_CLIENT_ID || 'd79b32b5-b9a8-41de-b215-b038a913f619';
+  private static readonly ESB_URL =
+    process.env.ESB_SMS_URL ||
+    process.env.INTERNAL_SMS_URL ||
+    'https://fdh-esb.ngrok.dev/esb/sent-messages/v1/sent-messages';
+  private static readonly ESB_USERNAME =
+    process.env.ESB_USERNAME || process.env.INTERNAL_SMS_USERNAME || 'admin';
+  private static readonly ESB_PASSWORD =
+    process.env.ESB_PASSWORD || process.env.INTERNAL_SMS_PASSWORD || 'admin';
+  private static readonly CLIENT_ID =
+    process.env.ESB_CLIENT_ID ||
+    process.env.INTERNAL_SMS_CLIENT_ID ||
+    'd79b32b5-b9a8-41de-b215-b038a913f619';
 
   /**
    * Send SMS via ESB Gateway
@@ -16,6 +25,8 @@ export class ESBSMSService {
     userId: number = 1,
     type: string = 'generic'
   ): Promise<SMSResponse> {
+    const masked = phoneNumber ? phoneNumber.replace(/(\d{3})\d+(\d{3})/, "$1****$2") : "";
+
     // Log SMS to database
     const smsId = await SMSLogger.log({
       userId,
@@ -23,6 +34,14 @@ export class ESBSMSService {
       message,
       type,
       status: 'ready',
+    });
+
+    void logsPubSub.publishLog({
+      service: "sms",
+      level: "info",
+      message: `Queued SMS (${type}) to ${masked}`,
+      timestamp: Date.now(),
+      meta: { smsId, userId, type },
     });
 
     try {
@@ -52,6 +71,14 @@ export class ESBSMSService {
           await SMSLogger.updateStatus(smsId, 'sent', data);
         }
 
+        void logsPubSub.publishLog({
+          service: "sms",
+          level: "info",
+          message: `Sent SMS (${type}) to ${masked}`,
+          timestamp: Date.now(),
+          meta: { smsId, userId, type, messageId: data?.messageId || data?.id },
+        });
+
         return {
           success: true,
           status: 'sent',
@@ -69,6 +96,14 @@ export class ESBSMSService {
         });
       }
 
+      void logsPubSub.publishLog({
+        service: "sms",
+        level: "error",
+        message: `Failed to send SMS (${type}) to ${masked}: ${data?.message || "Failed to send SMS"}`,
+        timestamp: Date.now(),
+        meta: { smsId, userId, type },
+      });
+
       return {
         success: false,
         status: 'failed',
@@ -85,6 +120,14 @@ export class ESBSMSService {
           error: error.message || 'Unknown error occurred',
         });
       }
+
+      void logsPubSub.publishLog({
+        service: "sms",
+        level: "error",
+        message: `ESB SMS Error (${type}) to ${masked}: ${error?.message || "Unknown error occurred"}`,
+        timestamp: Date.now(),
+        meta: { smsId, userId, type },
+      });
 
       return {
         success: false,

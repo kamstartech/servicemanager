@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { t24BalanceService } from "@/lib/services/t24/balance";
 import { servicePubSub, ServiceChannel } from "@/lib/redis/pubsub";
+import { logsPubSub } from "@/lib/redis/logs-pubsub";
 
 /**
  * Account Balance Sync Service
@@ -91,12 +92,25 @@ export class AccountBalanceSyncService {
   start(): void {
     if (this.syncInterval) {
       console.log("⚠️ Balance sync service already running");
+      void logsPubSub.publishLog({
+        service: "balance-sync",
+        level: "warn",
+        message: "Start called but service already running",
+        timestamp: Date.now(),
+      });
       return;
     }
 
     console.log("🚀 Starting account balance sync service...");
     console.log(`   Sync interval: ${SYNC_INTERVAL / 1000}s`);
     console.log(`   Auth timeout: ${AUTH_SYNC_TIMEOUT}ms`);
+
+    void logsPubSub.publishLog({
+      service: "balance-sync",
+      level: "info",
+      message: `Service starting (interval=${SYNC_INTERVAL}ms)` ,
+      timestamp: Date.now(),
+    });
 
     // Start periodic sync of pending users
     this.syncInterval = setInterval(() => {
@@ -114,6 +128,12 @@ export class AccountBalanceSyncService {
     }, 5000);
 
     console.log("✅ Balance sync service started");
+    void logsPubSub.publishLog({
+      service: "balance-sync",
+      level: "info",
+      message: "Service started",
+      timestamp: Date.now(),
+    });
   }
 
   /**
@@ -129,6 +149,12 @@ export class AccountBalanceSyncService {
       this.queueInterval = null;
     }
     console.log("✅ Balance sync service stopped");
+    void logsPubSub.publishLog({
+      service: "balance-sync",
+      level: "info",
+      message: "Service stopped",
+      timestamp: Date.now(),
+    });
   }
 
   /**
@@ -151,7 +177,7 @@ export class AccountBalanceSyncService {
       this.syncUserBalance(userId)
         .then((balance) => {
           clearTimeout(timeoutId);
-          resolve({ ok: true, balance });
+          resolve({ ok: true, balance: balance ?? undefined });
         })
         .catch(() => {
           clearTimeout(timeoutId);
@@ -210,6 +236,12 @@ export class AccountBalanceSyncService {
   private async syncPendingUsers(): Promise<void> {
     try {
       console.log("🔄 Starting periodic balance sync...");
+      void logsPubSub.publishLog({
+        service: "balance-sync",
+        level: "info",
+        message: "Periodic sync: scanning users",
+        timestamp: Date.now(),
+      });
 
       // Sync only MOBILE_BANKING users (not WALLET users)
       const users = await prisma.mobileUser.findMany({
@@ -235,8 +267,20 @@ export class AccountBalanceSyncService {
 
       console.log(`   Queued ${accountCount} accounts for sync`);
       console.log("✅ Periodic sync queued");
+      void logsPubSub.publishLog({
+        service: "balance-sync",
+        level: "info",
+        message: `Periodic sync queued (users=${users.length}, accounts=${accountCount})`,
+        timestamp: Date.now(),
+      });
     } catch (error) {
       console.error("❌ Error in periodic sync:", error);
+      void logsPubSub.publishLog({
+        service: "balance-sync",
+        level: "error",
+        message: `Periodic sync error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        timestamp: Date.now(),
+      });
     }
   }
 
@@ -254,12 +298,24 @@ export class AccountBalanceSyncService {
 
       if (!user) {
         console.error(`User ${userId} not found`);
+        void logsPubSub.publishLog({
+          service: "balance-sync",
+          level: "warn",
+          message: `User ${userId} not found`,
+          timestamp: Date.now(),
+        });
         return null;
       }
 
       // Only sync MOBILE_BANKING users
       if (user.context !== "MOBILE_BANKING") {
         console.log(`User ${userId} is ${user.context}, skipping sync`);
+        void logsPubSub.publishLog({
+          service: "balance-sync",
+          level: "debug",
+          message: `Skipping user ${userId} (context=${user.context})`,
+          timestamp: Date.now(),
+        });
         return null;
       }
 
@@ -268,6 +324,12 @@ export class AccountBalanceSyncService {
 
       if (!primaryAccount) {
         console.log(`No accounts found for user ${userId}`);
+        void logsPubSub.publishLog({
+          service: "balance-sync",
+          level: "warn",
+          message: `No accounts found for user ${userId}`,
+          timestamp: Date.now(),
+        });
         return null;
       }
 
@@ -278,6 +340,13 @@ export class AccountBalanceSyncService {
 
       if (!balanceResult.ok) {
         console.error(`❌ T24 fetch failed: ${balanceResult.error}`);
+        void logsPubSub.publishLog({
+          service: "balance-sync",
+          level: "error",
+          message: `T24 fetch failed for user ${userId}: ${balanceResult.error}`,
+          timestamp: Date.now(),
+          meta: { accountNumber: primaryAccount.accountNumber },
+        });
         return null;
       }
 
@@ -297,9 +366,22 @@ export class AccountBalanceSyncService {
       });
 
       console.log(`✅ Synced balance for user ${userId} (${user.username || user.phoneNumber}): ${balance}`);
+      void logsPubSub.publishLog({
+        service: "balance-sync",
+        level: "info",
+        message: `Synced balance for user ${userId}: ${balance}`,
+        timestamp: Date.now(),
+        meta: { accountNumber: primaryAccount.accountNumber },
+      });
       return balance;
     } catch (error) {
       console.error(`❌ Failed to sync user ${userId}:`, error);
+      void logsPubSub.publishLog({
+        service: "balance-sync",
+        level: "error",
+        message: `Failed to sync user ${userId}: ${error instanceof Error ? error.message : "Unknown error"}`,
+        timestamp: Date.now(),
+      });
       return null;
     }
   }

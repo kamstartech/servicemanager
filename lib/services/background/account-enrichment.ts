@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { t24AccountDetailsService } from "@/lib/services/t24/account-details";
 import { servicePubSub, ServiceChannel } from "@/lib/redis/pubsub";
+import { logsPubSub } from "@/lib/redis/logs-pubsub";
 
 /**
  * Account Enrichment Service
@@ -31,12 +32,25 @@ export class AccountEnrichmentService {
   start(): void {
     if (this.enrichmentInterval) {
       console.log("⚠️ Account enrichment service already running");
+      void logsPubSub.publishLog({
+        service: "account-enrichment",
+        level: "warn",
+        message: "Start called but service already running",
+        timestamp: Date.now(),
+      });
       return;
     }
 
     console.log("🚀 Starting account enrichment service...");
     console.log(`   Enrichment interval: ${ENRICHMENT_INTERVAL / 1000 / 60 / 60}h`);
     console.log(`   Batch size: ${ENRICHMENT_BATCH_SIZE} accounts`);
+
+    void logsPubSub.publishLog({
+      service: "account-enrichment",
+      level: "info",
+      message: `Service starting (interval=${ENRICHMENT_INTERVAL}ms, batchSize=${ENRICHMENT_BATCH_SIZE})`,
+      timestamp: Date.now(),
+    });
 
     // Start periodic enrichment
     this.enrichmentInterval = setInterval(() => {
@@ -49,6 +63,12 @@ export class AccountEnrichmentService {
     }, 60000);
 
     console.log("✅ Account enrichment service started");
+    void logsPubSub.publishLog({
+      service: "account-enrichment",
+      level: "info",
+      message: "Service started",
+      timestamp: Date.now(),
+    });
   }
 
   /**
@@ -60,6 +80,12 @@ export class AccountEnrichmentService {
       this.enrichmentInterval = null;
     }
     console.log("✅ Account enrichment service stopped");
+    void logsPubSub.publishLog({
+      service: "account-enrichment",
+      level: "info",
+      message: "Service stopped",
+      timestamp: Date.now(),
+    });
   }
 
   /**
@@ -68,6 +94,12 @@ export class AccountEnrichmentService {
   private async enrichAccounts(): Promise<void> {
     if (this.isRunning) {
       console.log("⚠️ Account enrichment already running, skipping...");
+      void logsPubSub.publishLog({
+        service: "account-enrichment",
+        level: "warn",
+        message: "Enrichment already running, skipping",
+        timestamp: Date.now(),
+      });
       return;
     }
 
@@ -82,6 +114,12 @@ export class AccountEnrichmentService {
 
     try {
       console.log("🔍 Starting account enrichment...");
+      void logsPubSub.publishLog({
+        service: "account-enrichment",
+        level: "info",
+        message: "Enrichment run started",
+        timestamp: Date.now(),
+      });
 
       const stats = {
         accountsChecked: 0,
@@ -109,6 +147,12 @@ export class AccountEnrichmentService {
       });
 
       console.log(`   Found ${accountsToEnrich.length} accounts to enrich`);
+      void logsPubSub.publishLog({
+        service: "account-enrichment",
+        level: "info",
+        message: `Accounts fetched for enrichment: ${accountsToEnrich.length}`,
+        timestamp: Date.now(),
+      });
 
       for (const account of accountsToEnrich) {
         try {
@@ -128,6 +172,12 @@ export class AccountEnrichmentService {
           await new Promise((resolve) => setTimeout(resolve, ENRICHMENT_DELAY));
         } catch (error) {
           console.error(`❌ Failed to enrich account ${account.accountNumber}:`, error);
+          void logsPubSub.publishLog({
+            service: "account-enrichment",
+            level: "error",
+            message: `Failed to enrich account ${account.accountNumber}: ${error instanceof Error ? error.message : "Unknown error"}`,
+            timestamp: Date.now(),
+          });
           stats.errors++;
         }
       }
@@ -138,8 +188,20 @@ export class AccountEnrichmentService {
       console.log(`   Profiles updated: ${stats.profilesUpdated}`);
       console.log(`   Categories created: ${stats.categoriesCreated}`);
       console.log(`   Errors: ${stats.errors}`);
+      void logsPubSub.publishLog({
+        service: "account-enrichment",
+        level: stats.errors > 0 ? "warn" : "info",
+        message: `Enrichment complete (checked=${stats.accountsChecked}, enriched=${stats.accountsEnriched}, errors=${stats.errors})`,
+        timestamp: Date.now(),
+      });
     } catch (error) {
       console.error("❌ Account enrichment failed:", error);
+      void logsPubSub.publishLog({
+        service: "account-enrichment",
+        level: "error",
+        message: `Enrichment run failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        timestamp: Date.now(),
+      });
     } finally {
       this.isRunning = false;
 
@@ -164,12 +226,24 @@ export class AccountEnrichmentService {
   ): Promise<{ enriched: boolean; profileUpdated: boolean; categoryCreated: boolean }> {
     try {
       console.log(`   🔄 Enriching account ${accountNumber}...`);
+      void logsPubSub.publishLog({
+        service: "account-enrichment",
+        level: "debug",
+        message: `Enriching account ${accountNumber}`,
+        timestamp: Date.now(),
+      });
 
       // Fetch account details from T24
       const result = await t24AccountDetailsService.getAccountDetailsFormatted(accountNumber);
 
       if (!result.ok || !result.data) {
         console.log(`   ⚠️ No details found for account ${accountNumber}`);
+        void logsPubSub.publishLog({
+          service: "account-enrichment",
+          level: "warn",
+          message: `No details found for account ${accountNumber}`,
+          timestamp: Date.now(),
+        });
         return { enriched: false, profileUpdated: false, categoryCreated: false };
       }
 
@@ -189,6 +263,12 @@ export class AccountEnrichmentService {
 
       if (!account) {
         console.log(`   ⚠️ Account ${accountNumber} not found in database`);
+        void logsPubSub.publishLog({
+          service: "account-enrichment",
+          level: "warn",
+          message: `Account ${accountNumber} not found in database`,
+          timestamp: Date.now(),
+        });
         return { enriched: false, profileUpdated: false, categoryCreated: false };
       }
 
@@ -231,6 +311,12 @@ export class AccountEnrichmentService {
         if (wasJustCreated) {
           categoryCreated = true;
           console.log(`   📋 Created new category: ${data.categoryId} - ${data.categoryName}`);
+          void logsPubSub.publishLog({
+            service: "account-enrichment",
+            level: "info",
+            message: `Created new category: ${data.categoryId} - ${data.categoryName}`,
+            timestamp: Date.now(),
+          });
         }
       }
 
@@ -245,6 +331,12 @@ export class AccountEnrichmentService {
 
         if (needsUpdate) {
           console.log(`   📝 Updating user profile for user ${account.mobileUserId}...`);
+          void logsPubSub.publishLog({
+            service: "account-enrichment",
+            level: "info",
+            message: `Updating user profile for user ${account.mobileUserId}`,
+            timestamp: Date.now(),
+          });
 
           if (profile) {
             // Update existing profile
@@ -261,6 +353,12 @@ export class AccountEnrichmentService {
               },
             });
             console.log(`   ✅ Updated profile for user ${account.mobileUserId}`);
+            void logsPubSub.publishLog({
+              service: "account-enrichment",
+              level: "info",
+              message: `Updated profile for user ${account.mobileUserId}`,
+              timestamp: Date.now(),
+            });
           } else {
             // Create new profile
             await prisma.mobileUserProfile.create({
@@ -275,15 +373,33 @@ export class AccountEnrichmentService {
               },
             });
             console.log(`   ✅ Created profile for user ${account.mobileUserId}`);
+            void logsPubSub.publishLog({
+              service: "account-enrichment",
+              level: "info",
+              message: `Created profile for user ${account.mobileUserId}`,
+              timestamp: Date.now(),
+            });
           }
           profileUpdated = true;
         }
       }
 
       console.log(`   ✅ Enriched account ${accountNumber}: ${data.categoryName}`);
+      void logsPubSub.publishLog({
+        service: "account-enrichment",
+        level: "info",
+        message: `Enriched account ${accountNumber}: ${data.categoryName}`,
+        timestamp: Date.now(),
+      });
       return { enriched: true, profileUpdated, categoryCreated };
     } catch (error) {
       console.error(`   ❌ Error enriching account ${accountNumber}:`, error);
+      void logsPubSub.publishLog({
+        service: "account-enrichment",
+        level: "error",
+        message: `Error enriching account ${accountNumber}: ${error instanceof Error ? error.message : "Unknown error"}`,
+        timestamp: Date.now(),
+      });
       return { enriched: false, profileUpdated: false, categoryCreated: false };
     }
   }
