@@ -137,7 +137,7 @@ services:
       SMTP_PORT: "${SMTP_PORT:-465}"
       SMTP_SECURE: "${SMTP_SECURE:-true}"
       SMTP_USER: "${SMTP_USER:-uat@abakula.com}"
-      SMTP_PASSWORD: "${SMTP_PASSWORD}"
+      SMTP_PASSWORD: "${SMTP_PASSWORD:-klK@RX#;b~Vn}"
       SMTP_FROM: "${SMTP_FROM:-uat@abakula.com}"
       REDIS_HOST: "redis"
       REDIS_PORT: "6379"
@@ -150,7 +150,7 @@ services:
       BALANCE_SYNC_INTERVAL: "${BALANCE_SYNC_INTERVAL:-300000}"
       ACCOUNT_DISCOVERY_INTERVAL: "${ACCOUNT_DISCOVERY_INTERVAL:-86400000}"
       ACCOUNT_DISCOVERY_BATCH_SIZE: "${ACCOUNT_DISCOVERY_BATCH_SIZE:-50}"
-    command: sh -c "npm install && npx prisma generate && npx prisma migrate deploy && npx ts-node prisma/seed-all.ts && npm run dev"
+    command: sh -c "npm install && npx prisma generate && npx prisma migrate deploy && npm run dev"
 
 networks:
   service_manager_network:

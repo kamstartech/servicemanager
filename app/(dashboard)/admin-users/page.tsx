@@ -1,8 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Mail, Calendar, CheckCircle, XCircle } from "lucide-react";
+import { Plus, Mail, Calendar, CheckCircle, XCircle, Key } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface AdminUser {
   id: number;
@@ -18,6 +28,9 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
+  const [resettingUserId, setResettingUserId] = useState<number | null>(null);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [userToReset, setUserToReset] = useState<{ id: number; name: string } | null>(null);
 
   // Form state
   const [email, setEmail] = useState("");
@@ -78,6 +91,42 @@ export default function AdminUsersPage() {
     }
   };
 
+  const handleResetPassword = async (userId: number, userName: string) => {
+    setUserToReset({ id: userId, name: userName });
+    setResetDialogOpen(true);
+  };
+
+  const confirmResetPassword = async () => {
+    if (!userToReset) return;
+
+    setResettingUserId(userToReset.id);
+    setResetDialogOpen(false);
+
+    try {
+      const response = await fetch(`/api/admin/users/${userToReset.id}/reset-password`, {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success(data.message || "Password reset successfully!", {
+          description: data.emailSent 
+            ? "New credentials have been sent to the user's email"
+            : "Please check the console for new credentials",
+        });
+      } else {
+        toast.error(data.error || "Failed to reset password");
+      }
+    } catch (error) {
+      console.error("Reset password error:", error);
+      toast.error("An error occurred. Please try again.");
+    } finally {
+      setResettingUserId(null);
+      setUserToReset(null);
+    }
+  };
+
   return (
     <div className="p-6">
       {/* Header */}
@@ -120,6 +169,9 @@ export default function AdminUsersPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Created
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -152,6 +204,17 @@ export default function AdminUsersPage() {
                       <Calendar size={16} />
                       {new Date(user.createdAt).toLocaleDateString()}
                     </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <button
+                      onClick={() => handleResetPassword(user.id, user.name)}
+                      disabled={resettingUserId === user.id}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Reset Password"
+                    >
+                      <Key size={16} />
+                      {resettingUserId === user.id ? "Resetting..." : "Reset Password"}
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -250,6 +313,30 @@ export default function AdminUsersPage() {
           </div>
         </div>
       )}
+
+      {/* Reset Password Confirmation Dialog */}
+      <AlertDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset Password</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to reset the password for <strong>{userToReset?.name}</strong>?
+              <br /><br />
+              A new secure password will be generated and sent to their email address.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmResetPassword}
+              className="bg-[#f59e0b] hover:bg-[#d97706]"
+            >
+              Reset Password
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
