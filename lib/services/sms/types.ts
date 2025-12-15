@@ -4,4 +4,5 @@ export interface SMSResponse {
   status: 'sent' | 'failed' | 'pending';
   error?: string;
   details?: any;
+  smsId?: number; // Database ID for tracking
 }

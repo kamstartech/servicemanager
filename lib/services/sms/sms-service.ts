@@ -1,4 +1,5 @@
 import { SMSResponse } from './types';
+import { SMSLogger } from './sms-logger';
 
 export class ESBSMSService {
   private static readonly ESB_URL = process.env.ESB_SMS_URL || 'https://fdh-esb.ngrok.dev/esb/sent-messages/v1/sent-messages';
@@ -9,7 +10,21 @@ export class ESBSMSService {
   /**
    * Send SMS via ESB Gateway
    */
-  static async sendSMS(phoneNumber: string, message: string): Promise<SMSResponse> {
+  static async sendSMS(
+    phoneNumber: string,
+    message: string,
+    userId: number = 1,
+    type: string = 'generic'
+  ): Promise<SMSResponse> {
+    // Log SMS to database
+    const smsId = await SMSLogger.log({
+      userId,
+      phoneNumber,
+      message,
+      type,
+      status: 'ready',
+    });
+
     try {
       const authString = `${this.ESB_USERNAME}:${this.ESB_PASSWORD}`;
       const base64Auth = Buffer.from(authString).toString('base64');
@@ -32,12 +47,26 @@ export class ESBSMSService {
       const data = await response.json();
 
       if (response.ok) {
+        // Update status to sent
+        if (smsId > 0) {
+          await SMSLogger.updateStatus(smsId, 'sent', data);
+        }
+
         return {
           success: true,
           status: 'sent',
           messageId: data?.messageId || data?.id,
           details: data,
+          smsId,
         };
+      }
+
+      // Update status to failed
+      if (smsId > 0) {
+        await SMSLogger.updateStatus(smsId, 'failed', {
+          error: data?.message || 'Failed to send SMS',
+          response: data,
+        });
       }
 
       return {
@@ -45,13 +74,23 @@ export class ESBSMSService {
         status: 'failed',
         error: data?.message || 'Failed to send SMS',
         details: data,
+        smsId,
       };
     } catch (error: any) {
       console.error('ESB SMS Error:', error);
+
+      // Update status to failed
+      if (smsId > 0) {
+        await SMSLogger.updateStatus(smsId, 'failed', {
+          error: error.message || 'Unknown error occurred',
+        });
+      }
+
       return {
         success: false,
         status: 'failed',
         error: error.message || 'Unknown error occurred',
+        smsId,
       };
     }
   }
@@ -59,9 +98,9 @@ export class ESBSMSService {
   /**
    * Send OTP via SMS
    */
-  static async sendOTP(phoneNumber: string, otp: string): Promise<SMSResponse> {
+  static async sendOTP(phoneNumber: string, otp: string, userId: number = 1): Promise<SMSResponse> {
     const message = `Your verification code is: ${otp}. This code will expire in 10 minutes. Do not share this code with anyone.`;
-    return this.sendSMS(phoneNumber, message);
+    return this.sendSMS(phoneNumber, message, userId, 'otp');
   }
 
   /**
@@ -70,7 +109,8 @@ export class ESBSMSService {
   static async sendAccountAlert(
     phoneNumber: string,
     alertType: string,
-    alertData: any
+    alertData: any,
+    userId: number = 1
   ): Promise<SMSResponse> {
     let message = '';
 
@@ -95,7 +135,7 @@ export class ESBSMSService {
         message = `Account Alert: ${alertType}`;
     }
 
-    return this.sendSMS(phoneNumber, message);
+    return this.sendSMS(phoneNumber, message, userId, 'alert');
   }
 
   /**
@@ -106,7 +146,8 @@ export class ESBSMSService {
     amount: string,
     currency: string,
     type: 'DEBIT' | 'CREDIT',
-    balance?: string
+    balance?: string,
+    userId: number = 1
   ): Promise<SMSResponse> {
     const action = type === 'DEBIT' ? 'debited from' : 'credited to';
     let message = `Transaction: ${amount} ${currency} ${action} your account.`;
@@ -115,22 +156,22 @@ export class ESBSMSService {
       message += ` New balance: ${balance} ${currency}`;
     }
 
-    return this.sendSMS(phoneNumber, message);
+    return this.sendSMS(phoneNumber, message, userId, 'transaction');
   }
 
   /**
    * Send password reset code via SMS
    */
-  static async sendPasswordReset(phoneNumber: string, resetCode: string): Promise<SMSResponse> {
+  static async sendPasswordReset(phoneNumber: string, resetCode: string, userId: number = 1): Promise<SMSResponse> {
     const message = `Your password reset code is: ${resetCode}. This code will expire in 30 minutes. Do not share this code.`;
-    return this.sendSMS(phoneNumber, message);
+    return this.sendSMS(phoneNumber, message, userId, 'password_reset');
   }
 
   /**
    * Send welcome message
    */
-  static async sendWelcome(phoneNumber: string, firstName: string): Promise<SMSResponse> {
+  static async sendWelcome(phoneNumber: string, firstName: string, userId: number = 1): Promise<SMSResponse> {
     const message = `Welcome ${firstName}! Your account has been successfully created. Thank you for choosing our service.`;
-    return this.sendSMS(phoneNumber, message);
+    return this.sendSMS(phoneNumber, message, userId, 'welcome');
   }
 }
