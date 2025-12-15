@@ -25,7 +25,10 @@ export const mobileUserAccountResolvers = {
           accountType: account.accountType,
           currency: account.currency,
           categoryName: account.categoryName,
+          nickName: account.nickName,
           balance: account.balance?.toString() || null,
+          frozen: account.frozen,
+          isHidden: account.isHidden,
           isPrimary: account.isPrimary,
           isActive: account.isActive,
           createdAt: account.createdAt.toISOString(),
@@ -56,8 +59,11 @@ export const mobileUserAccountResolvers = {
           categoryName: account.categoryName,
           accountStatus: account.accountStatus,
           holderName: account.holderName,
+          nickName: account.nickName,
           balance: account.balance?.toString() || null,
           workingBalance: account.workingBalance?.toString() || null,
+          frozen: account.frozen,
+          isHidden: account.isHidden,
           isPrimary: account.isPrimary,
           isActive: account.isActive,
           mobileUserId: account.mobileUserId.toString(),
@@ -90,8 +96,11 @@ export const mobileUserAccountResolvers = {
           categoryName: account.categoryName,
           accountStatus: account.accountStatus,
           holderName: account.holderName,
+          nickName: account.nickName,
           balance: account.balance?.toString() || null,
           workingBalance: account.workingBalance?.toString() || null,
+          frozen: account.frozen,
+          isHidden: account.isHidden,
           isPrimary: account.isPrimary,
           isActive: account.isActive,
           mobileUserId: account.mobileUserId.toString(),
@@ -148,7 +157,10 @@ export const mobileUserAccountResolvers = {
         accountName: account.accountName,
         accountType: account.accountType,
         currency: account.currency,
+        nickName: account.nickName,
         balance: account.balance?.toString() || null,
+        frozen: account.frozen,
+        isHidden: account.isHidden,
         isPrimary: account.isPrimary,
         isActive: account.isActive,
         createdAt: account.createdAt.toISOString(),
@@ -252,11 +264,222 @@ export const mobileUserAccountResolvers = {
         accountName: account.accountName,
         accountType: account.accountType,
         currency: account.currency,
+        nickName: account.nickName,
         balance: account.balance?.toString() || null,
+        frozen: account.frozen,
+        isHidden: account.isHidden,
         isPrimary: account.isPrimary,
         isActive: account.isActive,
         createdAt: account.createdAt.toISOString(),
         updatedAt: account.updatedAt.toISOString(),
+      };
+    },
+
+    async setAccountNickname(
+      _parent: unknown,
+      args: {
+        accountId: string;
+        nickName: string;
+      },
+      context: any
+    ) {
+      const accountId = parseInt(args.accountId);
+
+      // If context has userId (mobile user), verify account ownership
+      if (context.userId) {
+        const account = await prisma.mobileUserAccount.findUnique({
+          where: { id: accountId }
+        });
+
+        if (!account || account.mobileUserId !== context.userId) {
+          throw new Error("Account not found or does not belong to you");
+        }
+      }
+
+      const updatedAccount = await prisma.mobileUserAccount.update({
+        where: { id: accountId },
+        data: { nickName: args.nickName }
+      });
+
+      return {
+        id: updatedAccount.id.toString(),
+        accountNumber: updatedAccount.accountNumber,
+        accountName: updatedAccount.accountName,
+        accountType: updatedAccount.accountType,
+        currency: updatedAccount.currency,
+        nickName: updatedAccount.nickName,
+        balance: updatedAccount.balance?.toString() || null,
+        frozen: updatedAccount.frozen,
+        isHidden: updatedAccount.isHidden,
+        isPrimary: updatedAccount.isPrimary,
+        isActive: updatedAccount.isActive,
+        createdAt: updatedAccount.createdAt.toISOString(),
+        updatedAt: updatedAccount.updatedAt.toISOString(),
+      };
+    },
+
+    async freezeAccount(
+      _parent: unknown,
+      args: { accountId: string },
+      context: any
+    ) {
+      const accountId = parseInt(args.accountId);
+
+      // If context has userId (mobile user), verify account ownership
+      if (context.userId) {
+        const account = await prisma.mobileUserAccount.findUnique({
+          where: { id: accountId }
+        });
+
+        if (!account || account.mobileUserId !== context.userId) {
+          throw new Error("Account not found or does not belong to you");
+        }
+      }
+
+      const updatedAccount = await prisma.mobileUserAccount.update({
+        where: { id: accountId },
+        data: { frozen: true }
+      });
+
+      return {
+        id: updatedAccount.id.toString(),
+        accountNumber: updatedAccount.accountNumber,
+        accountName: updatedAccount.accountName,
+        accountType: updatedAccount.accountType,
+        currency: updatedAccount.currency,
+        nickName: updatedAccount.nickName,
+        balance: updatedAccount.balance?.toString() || null,
+        frozen: updatedAccount.frozen,
+        isHidden: updatedAccount.isHidden,
+        isPrimary: updatedAccount.isPrimary,
+        isActive: updatedAccount.isActive,
+        createdAt: updatedAccount.createdAt.toISOString(),
+        updatedAt: updatedAccount.updatedAt.toISOString(),
+      };
+    },
+
+    async unfreezeAccount(
+      _parent: unknown,
+      args: { accountId: string },
+      context: any
+    ) {
+      const accountId = parseInt(args.accountId);
+
+      // If context has userId (mobile user), verify account ownership
+      if (context.userId) {
+        const account = await prisma.mobileUserAccount.findUnique({
+          where: { id: accountId }
+        });
+
+        if (!account || account.mobileUserId !== context.userId) {
+          throw new Error("Account not found or does not belong to you");
+        }
+      }
+
+      const updatedAccount = await prisma.mobileUserAccount.update({
+        where: { id: accountId },
+        data: { frozen: false }
+      });
+
+      return {
+        id: updatedAccount.id.toString(),
+        accountNumber: updatedAccount.accountNumber,
+        accountName: updatedAccount.accountName,
+        accountType: updatedAccount.accountType,
+        currency: updatedAccount.currency,
+        nickName: updatedAccount.nickName,
+        balance: updatedAccount.balance?.toString() || null,
+        frozen: updatedAccount.frozen,
+        isHidden: updatedAccount.isHidden,
+        isPrimary: updatedAccount.isPrimary,
+        isActive: updatedAccount.isActive,
+        createdAt: updatedAccount.createdAt.toISOString(),
+        updatedAt: updatedAccount.updatedAt.toISOString(),
+      };
+    },
+
+    async hideAccount(
+      _parent: unknown,
+      args: { accountId: string },
+      context: any
+    ) {
+      const accountId = parseInt(args.accountId);
+
+      // If context has userId (mobile user), verify account ownership
+      if (context.userId) {
+        const account = await prisma.mobileUserAccount.findUnique({
+          where: { id: accountId }
+        });
+
+        if (!account || account.mobileUserId !== context.userId) {
+          throw new Error("Account not found or does not belong to you");
+        }
+
+        // Cannot hide primary account
+        if (account.isPrimary) {
+          throw new Error("Cannot hide primary account");
+        }
+      }
+
+      const updatedAccount = await prisma.mobileUserAccount.update({
+        where: { id: accountId },
+        data: { isHidden: true }
+      });
+
+      return {
+        id: updatedAccount.id.toString(),
+        accountNumber: updatedAccount.accountNumber,
+        accountName: updatedAccount.accountName,
+        accountType: updatedAccount.accountType,
+        currency: updatedAccount.currency,
+        nickName: updatedAccount.nickName,
+        balance: updatedAccount.balance?.toString() || null,
+        frozen: updatedAccount.frozen,
+        isHidden: updatedAccount.isHidden,
+        isPrimary: updatedAccount.isPrimary,
+        isActive: updatedAccount.isActive,
+        createdAt: updatedAccount.createdAt.toISOString(),
+        updatedAt: updatedAccount.updatedAt.toISOString(),
+      };
+    },
+
+    async unhideAccount(
+      _parent: unknown,
+      args: { accountId: string },
+      context: any
+    ) {
+      const accountId = parseInt(args.accountId);
+
+      // If context has userId (mobile user), verify account ownership
+      if (context.userId) {
+        const account = await prisma.mobileUserAccount.findUnique({
+          where: { id: accountId }
+        });
+
+        if (!account || account.mobileUserId !== context.userId) {
+          throw new Error("Account not found or does not belong to you");
+        }
+      }
+
+      const updatedAccount = await prisma.mobileUserAccount.update({
+        where: { id: accountId },
+        data: { isHidden: false }
+      });
+
+      return {
+        id: updatedAccount.id.toString(),
+        accountNumber: updatedAccount.accountNumber,
+        accountName: updatedAccount.accountName,
+        accountType: updatedAccount.accountType,
+        currency: updatedAccount.currency,
+        nickName: updatedAccount.nickName,
+        balance: updatedAccount.balance?.toString() || null,
+        frozen: updatedAccount.frozen,
+        isHidden: updatedAccount.isHidden,
+        isPrimary: updatedAccount.isPrimary,
+        isActive: updatedAccount.isActive,
+        createdAt: updatedAccount.createdAt.toISOString(),
+        updatedAt: updatedAccount.updatedAt.toISOString(),
       };
     }
   }

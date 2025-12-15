@@ -148,8 +148,11 @@ export const typeDefs = /* GraphQL */ `
     categoryName: String
     accountStatus: String
     holderName: String
+    nickName: String
     balance: String
     workingBalance: String
+    frozen: Boolean!
+    isHidden: Boolean!
     isPrimary: Boolean!
     isActive: Boolean!
     mobileUserId: String!
@@ -629,6 +632,13 @@ export const typeDefs = /* GraphQL */ `
     unlinkAccountFromUser(userId: ID!, accountId: ID!): Boolean!
     setPrimaryAccount(userId: ID!, accountId: ID!): Boolean!
     updateAccount(accountId: ID!, accountName: String, accountType: String): Account!
+    
+    # Account management for mobile users
+    setAccountNickname(accountId: ID!, nickName: String!): Account!
+    freezeAccount(accountId: ID!): Account!
+    unfreezeAccount(accountId: ID!): Account!
+    hideAccount(accountId: ID!): Account!
+    unhideAccount(accountId: ID!): Account!
     
     # Device OTP Verification
     verifyDeviceOtp(verificationToken: String!, otpCode: String!): VerifyDeviceOtpResult!
