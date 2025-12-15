@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { RefreshCw, CheckCircle, Clock, Activity, TestTube, Loader2 } from "lucide-react";
+import { RefreshCw, CheckCircle, Clock, Activity, TestTube, Loader2, FileText, X } from "lucide-react";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { toast } from "sonner";
 
@@ -56,9 +56,14 @@ export default function ServicesMonitorPage() {
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
   const [testDialogOpen, setTestDialogOpen] = useState(false);
+  const [logsDialogOpen, setLogsDialogOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<ServiceTableRow | null>(null);
   const [testParam, setTestParam] = useState("");
   const [testLoading, setTestLoading] = useState(false);
+  const [logs, setLogs] = useState<string[]>([]);
+  const [logsConnected, setLogsConnected] = useState(false);
+  const logsEventSourceRef = useRef<EventSource | null>(null);
+  const logsEndRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
@@ -146,6 +151,54 @@ export default function ServicesMonitorPage() {
     setTestParam("");
     setTestDialogOpen(true);
   };
+
+  const handleViewLogs = (service: ServiceTableRow) => {
+    setSelectedService(service);
+    setLogs([]);
+    setLogsDialogOpen(true);
+    
+    // Create SSE connection for logs
+    const logsEventSource = new EventSource("/api/services/logs/stream");
+    logsEventSourceRef.current = logsEventSource;
+
+    logsEventSource.onopen = () => {
+      console.log("✅ Logs SSE Connected");
+      setLogsConnected(true);
+    };
+
+    logsEventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.log) {
+          setLogs((prev) => [...prev, data.log]);
+        }
+      } catch (error) {
+        console.error("Failed to parse log data:", error);
+      }
+    };
+
+    logsEventSource.onerror = () => {
+      setLogsConnected(false);
+      logsEventSource.close();
+    };
+  };
+
+  const closeLogsDialog = () => {
+    if (logsEventSourceRef.current) {
+      logsEventSourceRef.current.close();
+      logsEventSourceRef.current = null;
+    }
+    setLogsDialogOpen(false);
+    setLogs([]);
+    setLogsConnected(false);
+  };
+
+  // Auto-scroll logs to bottom
+  useEffect(() => {
+    if (logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [logs]);
 
   const runTest = async () => {
     if (!selectedService || !testParam) return;
@@ -237,17 +290,28 @@ export default function ServicesMonitorPage() {
       id: "actions",
       header: "Actions",
       accessor: (row) => (
-        row.testable ? (
+        <div className="flex gap-2">
           <Button
             size="sm"
             variant="outline"
-            onClick={() => handleTestService(row)}
+            onClick={() => handleViewLogs(row)}
             className="h-7 text-xs"
           >
-            <TestTube className="h-3 w-3 mr-1" />
-            Test
+            <FileText className="h-3 w-3 mr-1" />
+            Logs
           </Button>
-        ) : null
+          {row.testable && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleTestService(row)}
+              className="h-7 text-xs"
+            >
+              <TestTube className="h-3 w-3 mr-1" />
+              Test
+            </Button>
+          )}
+        </div>
       ),
     },
   ];
@@ -592,6 +656,74 @@ export default function ServicesMonitorPage() {
             >
               {testLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Run Test
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Logs Dialog */}
+      <Dialog open={logsDialogOpen} onOpenChange={closeLogsDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  {selectedService?.name} - Realtime Logs
+                </DialogTitle>
+                <DialogDescription>
+                  Live streaming logs from the service
+                  {logsConnected && (
+                    <span className="ml-2 inline-flex items-center gap-1 text-green-600">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                      </span>
+                      Connected
+                    </span>
+                  )}
+                </DialogDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={closeLogsDialog}
+                className="h-8 w-8"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden">
+            <div className="bg-slate-950 text-green-400 p-4 rounded-lg h-[500px] overflow-y-auto font-mono text-sm">
+              {logs.length === 0 ? (
+                <div className="flex items-center justify-center h-full text-slate-500">
+                  <div className="text-center">
+                    <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                    <p>Waiting for logs...</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {logs.map((log, index) => (
+                    <div key={index} className="whitespace-pre-wrap break-words">
+                      {log}
+                    </div>
+                  ))}
+                  <div ref={logsEndRef} />
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setLogs([])}
+            >
+              Clear Logs
+            </Button>
+            <Button onClick={closeLogsDialog}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
