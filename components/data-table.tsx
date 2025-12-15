@@ -18,6 +18,7 @@ export type DataTableColumn<T> = {
   accessor: (row: T) => React.ReactNode;
   sortKey?: keyof T;
   alignRight?: boolean;
+  alignCenter?: boolean;
   width?: string | number;
 };
 
@@ -28,6 +29,8 @@ export type DataTableProps<T> = {
   initialSortKey?: keyof T;
   pageSize?: number;
   searchPlaceholder?: string;
+  showRowNumbers?: boolean;
+  rowNumberHeader?: string;
 };
 
 export function DataTable<T extends Record<string, any>>({
@@ -37,6 +40,8 @@ export function DataTable<T extends Record<string, any>>({
   initialSortKey,
   pageSize = 10,
   searchPlaceholder = "Search",
+  showRowNumbers = false,
+  rowNumberHeader = "#",
 }: DataTableProps<T>) {
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<keyof T | undefined>(initialSortKey);
@@ -125,15 +130,24 @@ export function DataTable<T extends Record<string, any>>({
       </div>
 
       <div className="rounded-md border overflow-x-auto">
-        <Table className="min-w-max table-auto">
-          <TableHeader>
+        <Table className="min-w-max table-auto bg-white">
+          <TableHeader className="bg-gray-50">
             <TableRow>
+              {showRowNumbers && (
+                <TableHead className="whitespace-nowrap text-center">
+                  {rowNumberHeader}
+                </TableHead>
+              )}
               {columns.map((column) => (
                 <TableHead
                   key={column.id}
                   className={
                     (column.sortKey ? "cursor-pointer select-none " : "") +
-                    "whitespace-nowrap"
+                    (column.alignRight
+                      ? "whitespace-nowrap text-right"
+                      : column.alignCenter
+                        ? "whitespace-nowrap text-center"
+                        : "whitespace-nowrap")
                   }
                   onClick={() => toggleSort(column.sortKey)}
                 >
@@ -142,16 +156,23 @@ export function DataTable<T extends Record<string, any>>({
               ))}
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className="bg-white divide-y divide-gray-200">
             {pageItems.map((row, index) => (
-              <TableRow key={index}>
+              <TableRow key={index} className="hover:bg-gray-50">
+                {showRowNumbers && (
+                  <TableCell className="text-center whitespace-nowrap">
+                    {startIndex + index + 1}
+                  </TableCell>
+                )}
                 {columns.map((column) => (
                   <TableCell
                     key={column.id}
                     className={
                       column.alignRight
                         ? "text-right whitespace-normal break-words"
-                        : "whitespace-normal break-words"
+                        : column.alignCenter
+                          ? "text-center whitespace-normal break-words"
+                          : "whitespace-normal break-words"
                     }
                   >
                     {column.accessor(row)}

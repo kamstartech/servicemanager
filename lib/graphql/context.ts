@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { prisma } from "@/lib/db/prisma";
+import { extractTokenFromHeader, verifyToken, type JWTPayload } from "@/lib/auth/jwt";
 
 const JWT_SECRET = process.env.JWT_SECRET || "change-this-secret";
 const INACTIVITY_TIMEOUT_MS = 5.5 * 60 * 1000; // 5.5 minutes
@@ -10,19 +11,46 @@ export interface GraphQLContext {
   deviceId?: string;
   sessionId?: string;
   token?: string;
+  auth?: JWTPayload;
 }
 
 export async function createGraphQLContext({
   req,
 }: any): Promise<GraphQLContext> {
-  const authHeader = req?.headers?.authorization;
+  const getHeader = (name: string): string | undefined => {
+    const headers = req?.headers;
+    if (!headers) return undefined;
 
-  // No auth header = unauthenticated context
-  if (!authHeader?.startsWith("Bearer ")) {
+    // Fetch API Headers instance (GraphQL Yoga)
+    if (typeof headers.get === "function") {
+      return headers.get(name) ?? undefined;
+    }
+
+    // Node/Next style object
+    return headers[name] ?? headers[name.toLowerCase()] ?? undefined;
+  };
+
+  const authHeader = getHeader("authorization");
+
+  const cookieHeader: string | undefined = getHeader("cookie");
+  const adminToken = cookieHeader
+    ?.split(";")
+    .map((c: string) => c.trim())
+    .find((c: string) => c.startsWith("admin_token="))
+    ?.split("=")[1];
+
+  const tokenFromHeader = extractTokenFromHeader(authHeader);
+  const token = adminToken || tokenFromHeader;
+
+  // No token = unauthenticated context
+  if (!token) {
     return {};
   }
 
-  const token = authHeader.replace("Bearer ", "");
+  const decoded = verifyToken(token);
+  if (decoded) {
+    return { auth: decoded, token };
+  }
 
   try {
     // 1. Verify JWT signature and decode
@@ -83,6 +111,7 @@ export async function createGraphQLContext({
       deviceId: decoded.deviceId,
       sessionId: decoded.sessionId,
       token,
+      auth: decoded,
     };
   } catch (err: any) {
     console.error("Auth validation error:", err.message);

@@ -1,8 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus, Mail, Calendar, CheckCircle, XCircle, Key } from "lucide-react";
 import { toast } from "sonner";
+import { gql, useMutation, useQuery } from "@apollo/client";
+import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,6 +18,47 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+const ADMIN_WEB_USERS_QUERY = gql`
+  query AdminWebUsers {
+    adminWebUsers {
+      id
+      email
+      name
+      isActive
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+const ADMIN_WEB_CREATE_USER_MUTATION = gql`
+  mutation AdminWebCreateUser($input: AdminWebCreateUserInput!) {
+    adminWebCreateUser(input: $input) {
+      success
+      message
+      emailSent
+      user {
+        id
+        email
+        name
+        isActive
+        createdAt
+        updatedAt
+      }
+    }
+  }
+`;
+
+const ADMIN_WEB_SEND_PASSWORD_RESET_LINK_MUTATION = gql`
+  mutation AdminWebSendPasswordResetLink($userId: ID!) {
+    adminWebSendPasswordResetLink(userId: $userId) {
+      success
+      message
+      emailSent
+    }
+  }
+`;
+
 interface AdminUser {
   id: number;
   email: string;
@@ -24,10 +69,7 @@ interface AdminUser {
 }
 
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [addLoading, setAddLoading] = useState(false);
   const [resettingUserId, setResettingUserId] = useState<number | null>(null);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [userToReset, setUserToReset] = useState<{ id: number; name: string } | null>(null);
@@ -36,59 +78,73 @@ export default function AdminUsersPage() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  const {
+    data,
+    loading,
+    error,
+    refetch: refetchUsers,
+  } = useQuery(ADMIN_WEB_USERS_QUERY);
 
-  const fetchUsers = async () => {
-    try {
-      const response = await fetch("/api/admin/users");
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data.users);
-      }
-    } catch (error) {
-      console.error("Failed to fetch users:", error);
-      toast.error("Failed to load admin users");
-    } finally {
-      setLoading(false);
+  const users: AdminUser[] = (data?.adminWebUsers ?? []) as AdminUser[];
+
+  const [createUser, { loading: addLoading }] = useMutation(
+    ADMIN_WEB_CREATE_USER_MUTATION,
+    {
+      onCompleted: async (result) => {
+        const payload = result?.adminWebCreateUser;
+        if (payload?.success) {
+          toast.success(payload.message || "Admin user created successfully!", {
+            description: payload.emailSent
+              ? "Setup link has been sent to the user's email"
+              : "Please check the console for details",
+          });
+          setEmail("");
+          setName("");
+          setShowAddModal(false);
+          await refetchUsers();
+        } else {
+          toast.error(payload?.message || "Failed to create user");
+        }
+      },
+      onError: (err) => {
+        console.error("Create user error:", err);
+        toast.error(err.message || "An error occurred. Please try again.");
+      },
     }
-  };
+  );
+
+  const [sendResetLink] = useMutation(
+    ADMIN_WEB_SEND_PASSWORD_RESET_LINK_MUTATION,
+    {
+      onCompleted: (result) => {
+        const payload = result?.adminWebSendPasswordResetLink;
+        if (payload?.success) {
+          toast.success(payload.message || "Password reset link sent successfully!", {
+            description: payload.emailSent
+              ? "The user will receive an email with reset instructions"
+              : "Please check the console for details",
+          });
+        } else {
+          toast.error(payload?.message || "Failed to send reset link");
+        }
+      },
+      onError: (err) => {
+        console.error("Reset password error:", err);
+        toast.error(err.message || "An error occurred. Please try again.");
+      },
+    }
+  );
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    setAddLoading(true);
-
-    try {
-      const response = await fetch("/api/admin/users", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+    await createUser({
+      variables: {
+        input: {
+          email,
+          name,
         },
-        body: JSON.stringify({ email, name }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        toast.success(data.message || "Admin user created successfully!", {
-          description: data.emailSent 
-            ? "Setup link has been sent to the user's email"
-            : "Please check the console for details",
-        });
-        setEmail("");
-        setName("");
-        setShowAddModal(false);
-        fetchUsers(); // Refresh the list
-      } else {
-        toast.error(data.error || "Failed to create user");
-      }
-    } catch (error) {
-      console.error("Create user error:", error);
-      toast.error("An error occurred. Please try again.");
-    } finally {
-      setAddLoading(false);
-    }
+      },
+    });
   };
 
   const handleResetPassword = async (userId: number, userName: string) => {
@@ -103,131 +159,128 @@ export default function AdminUsersPage() {
     setResetDialogOpen(false);
 
     try {
-      const response = await fetch(`/api/admin/users/${userToReset.id}/reset-password`, {
-        method: "POST",
+      await sendResetLink({
+        variables: {
+          userId: String(userToReset.id),
+        },
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        toast.success(data.message || "Password reset link sent successfully!", {
-          description: data.emailSent 
-            ? "The user will receive an email with reset instructions"
-            : "Please check the console for details",
-        });
-      } else {
-        toast.error(data.error || "Failed to send reset link");
-      }
-    } catch (error) {
-      console.error("Reset password error:", error);
-      toast.error("An error occurred. Please try again.");
     } finally {
       setResettingUserId(null);
       setUserToReset(null);
     }
   };
 
+  const columns: DataTableColumn<AdminUser>[] = [
+    {
+      id: "name",
+      header: "Name",
+      accessor: (user) => (
+        <div className="text-sm font-medium text-gray-900">{user.name}</div>
+      ),
+      sortKey: "name",
+    },
+    {
+      id: "email",
+      header: "Email",
+      accessor: (user) => (
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <Mail size={16} />
+          {user.email}
+        </div>
+      ),
+      sortKey: "email",
+    },
+    {
+      id: "status",
+      header: "Status",
+      accessor: (user) =>
+        user.isActive ? (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            <CheckCircle size={14} />
+            Active
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+            <XCircle size={14} />
+            Inactive
+          </span>
+        ),
+      sortKey: "isActive",
+    },
+    {
+      id: "createdAt",
+      header: "Created",
+      accessor: (user) => (
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <Calendar size={16} />
+          {new Date(user.createdAt).toLocaleDateString()}
+        </div>
+      ),
+      sortKey: "createdAt",
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      accessor: (user) => (
+        <div className="flex justify-center">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => handleResetPassword(user.id, user.name)}
+            disabled={resettingUserId === user.id}
+            title="Reset Password"
+            className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Key className="mr-2 h-4 w-4" />
+            {resettingUserId === user.id ? "Resetting..." : "Reset Password"}
+          </Button>
+        </div>
+      ),
+      alignCenter: true,
+    },
+  ];
+
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Admin Users</h1>
-          <p className="text-gray-600 mt-1">
-            Manage administrator accounts for the FDH Bank Admin Panel
-          </p>
-        </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 bg-[#f59e0b] text-white px-4 py-2 rounded-lg hover:bg-[#d97706] transition"
-        >
-          <Plus size={20} />
-          Add Admin User
-        </button>
-      </div>
-
-      {/* Users Table */}
-      {loading ? (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#154E9E]"></div>
-          <p className="mt-2 text-gray-600">Loading users...</p>
-        </div>
-      ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Email
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Created
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {users.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Mail size={16} />
-                      {user.email}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {user.isActive ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        <CheckCircle size={14} />
-                        Active
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                        <XCircle size={14} />
-                        Inactive
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Calendar size={16} />
-                      {new Date(user.createdAt).toLocaleDateString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <button
-                      onClick={() => handleResetPassword(user.id, user.name)}
-                      disabled={resettingUserId === user.id}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Reset Password"
-                    >
-                      <Key size={16} />
-                      {resettingUserId === user.id ? "Resetting..." : "Reset Password"}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {users.length === 0 && (
-            <div className="text-center py-12 text-gray-500">
-              No admin users found. Add your first admin user to get started.
-            </div>
+    <div className="min-h-screen bg-background px-4 py-6">
+      <Card className="w-full">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Admin Users</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Manage administrator accounts for the FDH Bank Admin Panel
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => setShowAddModal(true)}
+            className="bg-[#f59e0b] text-white hover:bg-[#d97706]"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Admin User
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {/* Users Table */}
+          {loading ? (
+            <p className="text-sm text-muted-foreground">Loading users...</p>
+          ) : error ? (
+            <p className="text-sm text-red-600">Failed to load admin users: {error.message}</p>
+          ) : (
+            <DataTable<AdminUser>
+              data={users}
+              columns={columns}
+              searchableKeys={["name", "email"]}
+              initialSortKey="createdAt"
+              pageSize={10}
+              searchPlaceholder="Search admin users..."
+              showRowNumbers
+              rowNumberHeader="#"
+            />
           )}
-        </div>
-      )}
+        </CardContent>
+      </Card>
 
       {/* Add User Modal */}
       {showAddModal && (

@@ -97,6 +97,24 @@ export const typeDefs = /* GraphQL */ `
     updatedAt: String!
   }
 
+  input AdminWebCreateUserInput {
+    email: String!
+    name: String!
+  }
+
+  type AdminWebCreateUserResult {
+    success: Boolean!
+    message: String
+    emailSent: Boolean
+    user: AdminWebUser
+  }
+
+  type AdminWebPasswordLinkResult {
+    success: Boolean!
+    message: String
+    emailSent: Boolean
+  }
+
   input AdminWebLoginInput {
     email: String!
     password: String!
@@ -565,6 +583,8 @@ export const typeDefs = /* GraphQL */ `
   type Mutation {
     login(input: LoginInput!): LoginResult!
     adminWebLogin(input: AdminWebLoginInput!): AdminWebLoginResult!
+    adminWebCreateUser(input: AdminWebCreateUserInput!): AdminWebCreateUserResult!
+    adminWebSendPasswordResetLink(userId: ID!): AdminWebPasswordLinkResult!
     adminWebRequestPasswordReset(
       input: AdminWebPasswordResetRequestInput!
     ): Boolean!
