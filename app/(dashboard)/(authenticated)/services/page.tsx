@@ -34,6 +34,15 @@ interface ServiceStatus {
   };
 }
 
+interface SMSStats {
+  total: number;
+  sent: number;
+  failed: number;
+  pending: number;
+  retrying: number;
+  successRate: number;
+}
+
 interface ServiceTableRow {
   name: string;
   type: string;
@@ -53,6 +62,7 @@ interface ServiceTableRow {
 
 export default function ServicesMonitorPage() {
   const [status, setStatus] = useState<ServiceStatus | null>(null);
+  const [smsStats, setSmsStats] = useState<SMSStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
   const [testDialogOpen, setTestDialogOpen] = useState(false);
@@ -65,6 +75,26 @@ export default function ServicesMonitorPage() {
   const logsEventSourceRef = useRef<EventSource | null>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
+
+  // Fetch SMS stats
+  useEffect(() => {
+    const fetchSMSStats = async () => {
+      try {
+        const response = await fetch('/api/sms/stats?hours=24');
+        const data = await response.json();
+        if (data.success) {
+          setSmsStats(data.stats);
+        }
+      } catch (error) {
+        console.error('Failed to fetch SMS stats:', error);
+      }
+    };
+
+    fetchSMSStats();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchSMSStats, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     // Create SSE connection
@@ -439,6 +469,26 @@ export default function ServicesMonitorPage() {
       variant: "outline" as const,
     },
     {
+      name: "SMS Notification Service",
+      type: "Core Service",
+      description: "Sends SMS via ESB Gateway",
+      status: smsStats ? (smsStats.successRate >= 90 ? "Healthy" : "Degraded") : "Unknown",
+      interval: "On-demand",
+      details: smsStats 
+        ? `Last 24h: ${smsStats.sent}/${smsStats.total} sent (${smsStats.successRate.toFixed(1)}%)`
+        : "Loading stats...",
+      variant: smsStats 
+        ? (smsStats.successRate >= 90 ? "outline" as const : "destructive" as const)
+        : "outline" as const,
+      testable: true,
+      testConfig: {
+        endpoint: "/api/sms/send",
+        paramName: "phoneNumber",
+        paramLabel: "Phone Number",
+        paramPlaceholder: "e.g., +265999123456",
+      },
+    },
+    {
       name: "Backup Service",
       type: "Core Service",
       description: "Database backup and restore with MinIO storage",
@@ -487,7 +537,7 @@ export default function ServicesMonitorPage() {
       </div>
 
       {/* Service Status Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -592,6 +642,42 @@ export default function ServicesMonitorPage() {
               <span className="text-sm text-muted-foreground">
                 {status?.accountEnrichment.intervalHours} hours
               </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {smsStats && smsStats.successRate >= 90 ? (
+                <CheckCircle className="h-5 w-5 text-green-500" />
+              ) : (
+                <Activity className="h-5 w-5 text-orange-500" />
+              )}
+              SMS Notifications
+            </CardTitle>
+            <CardDescription>ESB Gateway SMS delivery</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Success Rate:</span>
+              <Badge variant={smsStats && smsStats.successRate >= 90 ? "default" : "destructive"}>
+                {smsStats ? `${smsStats.successRate.toFixed(1)}%` : "Loading..."}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Sent (24h):</span>
+              <Badge variant="outline">{smsStats?.sent || 0}</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Failed (24h):</span>
+              <Badge variant={smsStats && smsStats.failed > 0 ? "destructive" : "outline"}>
+                {smsStats?.failed || 0}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Pending:</span>
+              <Badge variant="secondary">{smsStats?.pending || 0}</Badge>
             </div>
           </CardContent>
         </Card>
