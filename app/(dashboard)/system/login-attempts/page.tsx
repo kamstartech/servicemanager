@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CheckCircle, Clock, XCircle } from "lucide-react";
+import { Calendar, CheckCircle, Clock, XCircle } from "lucide-react";
 
 const GET_LOGIN_ATTEMPTS = gql`
   query GetLoginAttempts(
@@ -164,15 +164,24 @@ export default function LoginAttemptsPage() {
           const date = new Date(row.attemptedAt);
           if (isNaN(date.getTime())) return row.attemptedAt;
           return (
-            <span className="font-mono text-xs">
-              {date.toLocaleString()}
-            </span>
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+              <Calendar size={16} />
+              {date.toLocaleString(undefined, {
+                year: "numeric",
+                month: "short",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+              })}
+            </div>
           );
         } catch {
           return row.attemptedAt;
         }
       },
       sortKey: "attemptedAt",
+      alignCenter: true,
     },
     {
       id: "username",

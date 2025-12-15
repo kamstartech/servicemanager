@@ -33,7 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Edit, Plus, Trash2, GripVertical } from "lucide-react";
+import { ArrowLeft, Calendar, Edit, Plus, Trash2, GripVertical } from "lucide-react";
 import Link from "next/link";
 import {
   DndContext,
@@ -726,11 +726,31 @@ export default function WorkflowDetailPage() {
             </div>
             <div>
               <span className="text-muted-foreground">Created:</span>{" "}
-              {new Date(workflow.createdAt).toLocaleDateString()}
+              <span className="inline-flex items-center gap-2 text-sm text-gray-600">
+                <Calendar size={16} />
+                {new Date(workflow.createdAt).toLocaleString(undefined, {
+                  year: "numeric",
+                  month: "short",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                })}
+              </span>
             </div>
             <div>
               <span className="text-muted-foreground">Updated:</span>{" "}
-              {new Date(workflow.updatedAt).toLocaleDateString()}
+              <span className="inline-flex items-center gap-2 text-sm text-gray-600">
+                <Calendar size={16} />
+                {new Date(workflow.updatedAt).toLocaleString(undefined, {
+                  year: "numeric",
+                  month: "short",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                })}
+              </span>
             </div>
           </div>
         </CardContent>

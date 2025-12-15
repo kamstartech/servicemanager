@@ -9,7 +9,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
-import { Plus, ExternalLink, Link2Off, Star, CheckCircle, Clock, XCircle } from "lucide-react";
+import { Calendar, Plus, ExternalLink, Link2Off, Star, CheckCircle, Clock, XCircle } from "lucide-react";
 
 const USER_DETAILS_QUERY = gql`
   query UserDetails($context: MobileUserContext!) {
@@ -443,11 +443,24 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
       id: "lastUsed",
       header: "Last Used",
       accessor: (row) => (
-        <span className="text-sm">
-          {row.lastUsedAt ? new Date(row.lastUsedAt).toLocaleDateString() : "Never"}
-        </span>
+        row.lastUsedAt ? (
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+            <Calendar size={16} />
+            {new Date(row.lastUsedAt).toLocaleString(undefined, {
+              year: "numeric",
+              month: "short",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            })}
+          </div>
+        ) : (
+          <span className="text-sm text-muted-foreground">Never</span>
+        )
       ),
       sortKey: "lastUsedAt",
+      alignCenter: true,
     },
     {
       id: "status",

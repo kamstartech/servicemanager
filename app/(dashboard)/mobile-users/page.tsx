@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { Calendar } from "lucide-react";
 
 const MOBILE_USERS_QUERY = gql`
   query MobileUsers($context: MobileUserContext) {
@@ -56,9 +57,22 @@ export default function MobileUsersPage() {
     },
     {
       id: "createdAt",
-      header: translate("mobileUsers.columns.createdAt"),
-      accessor: (row) => new Date(row.createdAt).toLocaleString(),
+      header: "Created",
+      accessor: (row) => (
+        <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+          <Calendar size={16} />
+          {new Date(row.createdAt).toLocaleString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })}
+        </div>
+      ),
       sortKey: "createdAt",
+      alignCenter: true,
     },
   ];
 

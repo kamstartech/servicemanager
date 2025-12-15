@@ -212,12 +212,20 @@ export default function AdminUsersPage() {
       id: "createdAt",
       header: "Created",
       accessor: (user) => (
-        <div className="flex items-center gap-2 text-sm text-gray-600">
+        <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
           <Calendar size={16} />
-          {new Date(user.createdAt).toLocaleDateString()}
+          {new Date(user.createdAt).toLocaleString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })}
         </div>
       ),
       sortKey: "createdAt",
+      alignCenter: true,
     },
     {
       id: "actions",

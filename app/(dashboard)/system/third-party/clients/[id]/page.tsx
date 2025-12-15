@@ -37,6 +37,7 @@ import {
   AlertTriangle,
   Clock,
   Activity,
+  Calendar,
 } from "lucide-react";
 import { CheckCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -377,12 +378,22 @@ export default function ClientDetailPage({
                     </select>
                     <p className="text-xs text-muted-foreground mt-1">
                       Token will expire on{" "}
-                      {new Date(
-                        Date.now() +
-                          (tokenForm.expiresIn.endsWith("d")
-                            ? parseInt(tokenForm.expiresIn) * 24 * 60 * 60 * 1000
-                            : parseInt(tokenForm.expiresIn) * 365 * 24 * 60 * 60 * 1000)
-                      ).toLocaleDateString()}
+                      <span className="inline-flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {new Date(
+                          Date.now() +
+                            (tokenForm.expiresIn.endsWith("d")
+                              ? parseInt(tokenForm.expiresIn) * 24 * 60 * 60 * 1000
+                              : parseInt(tokenForm.expiresIn) * 365 * 24 * 60 * 60 * 1000)
+                        ).toLocaleString(undefined, {
+                          year: "numeric",
+                          month: "short",
+                          day: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                        })}
+                      </span>
                     </p>
                   </div>
                 </div>
@@ -436,7 +447,17 @@ export default function ClientDetailPage({
                         {token.expiresAt ? (
                           <div>
                             <p className="text-sm">
-                              {new Date(token.expiresAt).toLocaleDateString()}
+                              <span className="inline-flex items-center gap-2 text-sm text-gray-600">
+                                <Calendar size={16} />
+                                {new Date(token.expiresAt).toLocaleString(undefined, {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "2-digit",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  second: "2-digit",
+                                })}
+                              </span>
                             </p>
                             {token.daysUntilExpiry !== null && (
                               <p

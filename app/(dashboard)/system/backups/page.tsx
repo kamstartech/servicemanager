@@ -2,7 +2,7 @@
 
 import { gql, useMutation, useQuery } from "@apollo/client";
 import { toast } from "sonner";
-import { Download, Plus, RefreshCw, Trash2, RotateCcw, Upload } from "lucide-react";
+import { Calendar, Download, Plus, RefreshCw, Trash2, RotateCcw, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
 
@@ -189,10 +189,23 @@ export default function BackupsPage() {
             sortKey: "sizeBytes",
         },
         {
-            id: "created",
-            header: "Created At",
-            accessor: (row) => new Date(row.createdAt).toLocaleString(),
+            id: "createdAt",
+            header: "Created",
+            accessor: (row) => (
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+                    <Calendar size={16} />
+                    {new Date(row.createdAt).toLocaleString(undefined, {
+                        year: "numeric",
+                        month: "short",
+                        day: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                    })}
+                </div>
+            ),
             sortKey: "createdAt",
+            alignCenter: true,
         },
         {
             id: "actions",

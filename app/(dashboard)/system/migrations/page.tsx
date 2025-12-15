@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { gql, useMutation, useQuery } from "@apollo/client";
 import { toast } from "sonner";
-import { Clock, Repeat, Eye, Edit, Trash2, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { Calendar, Clock, Repeat, Eye, Edit, Trash2, CheckCircle, XCircle, Loader2 } from "lucide-react";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -164,13 +164,34 @@ export default function MigrationsPage() {
       id: "lastRun",
       header: "Last Run",
       accessor: (row) => {
-        if (!row.lastRunAt) return "Never";
-        const when = new Date(row.lastRunAt).toLocaleString();
-        const result = row.lastRunSuccess ? "✓" : "✗";
-        const rows = row.lastRunRowsAffected ?? 0;
-        return `${result} ${when} (${rows} rows)`;
+        if (!row.lastRunAt) {
+          return <span className="text-sm text-muted-foreground">Never</span>;
+        }
+
+        const rowsAffected = row.lastRunRowsAffected ?? 0;
+
+        return (
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+            {row.lastRunSuccess ? (
+              <CheckCircle size={16} className="text-green-600" />
+            ) : (
+              <XCircle size={16} className="text-red-600" />
+            )}
+            <Calendar size={16} />
+            {new Date(row.lastRunAt).toLocaleString(undefined, {
+              year: "numeric",
+              month: "short",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            })}
+            <span className="text-muted-foreground">({rowsAffected} rows)</span>
+          </div>
+        );
       },
       sortKey: "lastRunAt",
+      alignCenter: true,
     },
     {
       id: "nextRun",
@@ -178,13 +199,21 @@ export default function MigrationsPage() {
       accessor: (row) => {
         if (!row.isRecurring || !row.nextRunAt) return "";
         return (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            {new Date(row.nextRunAt).toLocaleString()}
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+            <Calendar size={16} />
+            {new Date(row.nextRunAt).toLocaleString(undefined, {
+              year: "numeric",
+              month: "short",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            })}
           </div>
-        )
+        );
       },
       sortKey: "nextRunAt",
+      alignCenter: true,
     },
     {
       id: "actions",

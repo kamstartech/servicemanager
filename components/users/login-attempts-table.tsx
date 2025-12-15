@@ -4,7 +4,7 @@ import { gql, useQuery } from "@apollo/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Clock, XCircle } from "lucide-react";
+import { Calendar, CheckCircle, Clock, XCircle } from "lucide-react";
 
 const LOGIN_ATTEMPTS_QUERY = gql`
   query LoginAttempts($limit: Int, $offset: Int, $status: String, $username: String) {
@@ -152,8 +152,21 @@ export function LoginAttemptsTable({
     {
       id: "attemptedAt",
       header: "Date & Time",
-      accessor: (row) => new Date(row.attemptedAt).toLocaleString(),
+      accessor: (row) => (
+        <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+          <Calendar size={16} />
+          {new Date(row.attemptedAt).toLocaleString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })}
+        </div>
+      ),
       sortKey: "attemptedAt",
+      alignCenter: true,
     },
     {
       id: "username",

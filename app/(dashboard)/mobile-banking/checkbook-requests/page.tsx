@@ -13,6 +13,7 @@ import {
   RefreshCw, 
   CheckCircle, 
   XCircle, 
+  Calendar,
   Clock, 
   Package,
   MapPin,
@@ -221,7 +222,20 @@ export default function CheckbookRequestsPage() {
     {
       id: "requestedAt",
       header: "Requested",
-      accessor: (request) => new Date(request.requestedAt).toLocaleDateString(),
+      accessor: (request) => (
+        <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+          <Calendar size={16} />
+          {new Date(request.requestedAt).toLocaleString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })}
+        </div>
+      ),
+      alignCenter: true,
     },
     {
       id: "actions",

@@ -14,6 +14,7 @@ import {
   RefreshCw, 
   CheckCircle, 
   XCircle, 
+  Calendar,
   Clock, 
   Copy,
   Eye,
@@ -232,11 +233,20 @@ export default function RegistrationRequestsPage() {
       id: "created",
       header: "Created",
       accessor: (row) => (
-        <div className="text-xs text-muted-foreground">
-          {new Date(row.createdAt).toLocaleString()}
+        <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+          <Calendar size={16} />
+          {new Date(row.createdAt).toLocaleString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })}
         </div>
       ),
       sortKey: "createdAt",
+      alignCenter: true,
     },
     {
       id: "actions",

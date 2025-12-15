@@ -18,6 +18,7 @@ import {
   Edit,
   Trash2,
   Eye,
+  Calendar,
   CheckCircle,
   XCircle,
 } from "lucide-react";
@@ -137,11 +138,20 @@ export default function FormsPage() {
       id: "createdAt",
       header: "Created",
       accessor: (row) => (
-        <span className="text-sm text-muted-foreground">
-          {new Date(row.createdAt).toLocaleDateString()}
-        </span>
+        <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+          <Calendar size={16} />
+          {new Date(row.createdAt).toLocaleString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })}
+        </div>
       ),
       sortKey: "createdAt",
+      alignCenter: true,
     },
     {
       id: "actions",

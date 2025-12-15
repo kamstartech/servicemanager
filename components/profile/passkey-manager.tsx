@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Key, Laptop, Smartphone, Trash2, Plus } from "lucide-react";
+import { Calendar, Key, Laptop, Smartphone, Trash2, Plus } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -118,9 +118,34 @@ export function PasskeyManager() {
                   <div>
                     <p className="font-medium">{passkey.deviceName || "Unnamed Device"}</p>
                     <p className="text-xs text-muted-foreground">
-                      Added {new Date(passkey.createdAt).toLocaleDateString()}
+                      <span className="inline-flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        Added{" "}
+                        {new Date(passkey.createdAt).toLocaleString(undefined, {
+                          year: "numeric",
+                          month: "short",
+                          day: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                        })}
+                      </span>
                       {passkey.lastUsedAt && (
-                        <> • Last used {new Date(passkey.lastUsedAt).toLocaleDateString()}</>
+                        <>
+                          {" "}•{" "}
+                          <span className="inline-flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            Last used{" "}
+                            {new Date(passkey.lastUsedAt).toLocaleString(undefined, {
+                              year: "numeric",
+                              month: "short",
+                              day: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              second: "2-digit",
+                            })}
+                          </span>
+                        </>
                       )}
                     </p>
                   </div>

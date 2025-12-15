@@ -142,7 +142,14 @@ export default function ViewFormPage() {
                   Created
                 </p>
                 <p className="font-medium">
-                  {new Date(form.createdAt).toLocaleDateString()}
+                  {new Date(form.createdAt).toLocaleString(undefined, {
+                    year: "numeric",
+                    month: "short",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                  })}
                 </p>
               </div>
               <div>
@@ -151,7 +158,14 @@ export default function ViewFormPage() {
                   Last Updated
                 </p>
                 <p className="font-medium">
-                  {new Date(form.updatedAt).toLocaleDateString()}
+                  {new Date(form.updatedAt).toLocaleString(undefined, {
+                    year: "numeric",
+                    month: "short",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                  })}
                 </p>
               </div>
             </div>

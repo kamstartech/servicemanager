@@ -17,7 +17,7 @@ import {
   type CoreBankingConnection,
   type CoreBankingConnectionDialogMode,
 } from "@/components/core-banking/core-banking-connection-dialog";
-import { CheckCircle, Eye, FlaskConical, Pencil, XCircle } from "lucide-react";
+import { Calendar, CheckCircle, Eye, FlaskConical, Pencil, XCircle } from "lucide-react";
 
 const CORE_BANKING_CONNECTIONS_QUERY = gql`
   query CoreBankingConnections {
@@ -141,9 +141,22 @@ export default function CoreBankingConnectionsPage() {
     },
     {
       id: "createdAt",
-      header: translate("coreBanking.connections.columns.createdAt"),
-      accessor: (row) => new Date(row.createdAt).toLocaleString(),
+      header: "Created",
+      accessor: (row) => (
+        <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+          <Calendar size={16} />
+          {new Date(row.createdAt).toLocaleString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })}
+        </div>
+      ),
       sortKey: "createdAt",
+      alignCenter: true,
     },
     {
       id: "actions",

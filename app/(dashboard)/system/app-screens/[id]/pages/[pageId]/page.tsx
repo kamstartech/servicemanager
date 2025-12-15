@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Calendar } from "lucide-react";
 import Link from "next/link";
 import { PageWorkflowsManager } from "@/components/workflows/page-workflows-manager";
 
@@ -117,11 +117,31 @@ export default function AppScreenPageDetailPage() {
             </div>
             <div>
               <span className="text-muted-foreground">Created:</span>{" "}
-              {new Date(page.createdAt).toLocaleDateString()}
+              <span className="inline-flex items-center gap-2 text-sm text-gray-600">
+                <Calendar size={16} />
+                {new Date(page.createdAt).toLocaleString(undefined, {
+                  year: "numeric",
+                  month: "short",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                })}
+              </span>
             </div>
             <div>
               <span className="text-muted-foreground">Updated:</span>{" "}
-              {new Date(page.updatedAt).toLocaleDateString()}
+              <span className="inline-flex items-center gap-2 text-sm text-gray-600">
+                <Calendar size={16} />
+                {new Date(page.updatedAt).toLocaleString(undefined, {
+                  year: "numeric",
+                  month: "short",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                })}
+              </span>
             </div>
           </div>
         </CardContent>

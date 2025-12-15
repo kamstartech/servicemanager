@@ -5,7 +5,7 @@ import { gql, useQuery } from "@apollo/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
-import { CheckCircle, Eye, XCircle } from "lucide-react";
+import { Calendar, CheckCircle, Eye, XCircle } from "lucide-react";
 
 const USERS_QUERY = gql`
   query Users($context: MobileUserContext!) {
@@ -102,9 +102,22 @@ export function UsersTable({ context, title, searchPlaceholder }: UsersTableProp
     },
     {
       id: "createdAt",
-      header: "Created at",
-      accessor: (row) => new Date(row.createdAt).toLocaleString(),
+      header: "Created",
+      accessor: (row) => (
+        <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+          <Calendar size={16} />
+          {new Date(row.createdAt).toLocaleString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })}
+        </div>
+      ),
       sortKey: "createdAt",
+      alignCenter: true,
     },
     {
       id: "actions",

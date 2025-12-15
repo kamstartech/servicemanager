@@ -10,6 +10,7 @@ import {
   Plus,
   RefreshCw,
   Eye,
+  Calendar,
   CheckCircle,
   XCircle,
   Users,
@@ -104,9 +105,17 @@ export default function ThirdPartyClientsPage() {
       id: "createdAt",
       header: "Created",
       accessor: (client) => (
-        <span className="text-sm text-muted-foreground">
-          {new Date(client.createdAt).toLocaleDateString()}
-        </span>
+        <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+          <Calendar size={16} />
+          {new Date(client.createdAt).toLocaleString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })}
+        </div>
       ),
       sortKey: "createdAt",
       alignCenter: true,

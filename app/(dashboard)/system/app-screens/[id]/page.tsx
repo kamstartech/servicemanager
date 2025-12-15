@@ -32,7 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Edit, Trash2, GripVertical, Workflow as WorkflowIcon,
+import { ArrowLeft, Calendar, Plus, Edit, Trash2, GripVertical, Workflow as WorkflowIcon,
   Home, Send, CreditCard, LayoutDashboard, User, Settings,
   Smartphone, Briefcase, TrendingUp, Bell, Target, Wallet,
   FileText, Lock, Phone, MapPin, Store, File, Lightbulb, Search
@@ -449,11 +449,31 @@ export default function AppScreenDetailsPage() {
             </div>
             <div>
               <span className="text-muted-foreground">Created:</span>{" "}
-              {new Date(screen.createdAt).toLocaleDateString()}
+              <span className="inline-flex items-center gap-2 text-sm text-gray-600">
+                <Calendar size={16} />
+                {new Date(screen.createdAt).toLocaleString(undefined, {
+                  year: "numeric",
+                  month: "short",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                })}
+              </span>
             </div>
             <div>
               <span className="text-muted-foreground">Updated:</span>{" "}
-              {new Date(screen.updatedAt).toLocaleDateString()}
+              <span className="inline-flex items-center gap-2 text-sm text-gray-600">
+                <Calendar size={16} />
+                {new Date(screen.updatedAt).toLocaleString(undefined, {
+                  year: "numeric",
+                  month: "short",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                })}
+              </span>
             </div>
           </div>
         </CardContent>
