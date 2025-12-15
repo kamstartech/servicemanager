@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Docker volumes and data directories
+postgres_data/
+minio_data/
+redis_data/
+mssql_data/
+backups/
+*.log
