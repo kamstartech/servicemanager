@@ -1,0 +1,36 @@
+# Git
+.git
+.gitignore
+
+# Dependencies
+node_modules
+npm-debug.log
+
+# Next.js
+.next
+out
+*.tsbuildinfo
+
+# Environment
+.env
+.env.*
+
+# Docker volumes - don't copy into build context
+postgres_data
+minio_data
+redis_data
+mssql_data
+backups
+
+# Logs
+*.log
+
+# IDE
+.vscode
+.idea
+
+# Testing
+coverage
+
+# Misc
+.DS_Store
