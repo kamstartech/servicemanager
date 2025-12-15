@@ -110,13 +110,13 @@ export default function AdminUsersPage() {
       const data = await response.json();
 
       if (response.ok) {
-        toast.success(data.message || "Password reset successfully!", {
+        toast.success(data.message || "Password reset link sent successfully!", {
           description: data.emailSent 
-            ? "New credentials have been sent to the user's email"
-            : "Please check the console for new credentials",
+            ? "The user will receive an email with reset instructions"
+            : "Please check the console for details",
         });
       } else {
-        toast.error(data.error || "Failed to reset password");
+        toast.error(data.error || "Failed to send reset link");
       }
     } catch (error) {
       console.error("Reset password error:", error);
@@ -322,8 +322,7 @@ export default function AdminUsersPage() {
             <AlertDialogDescription>
               Are you sure you want to reset the password for <strong>{userToReset?.name}</strong>?
               <br /><br />
-              A new secure password will be generated and sent to their email address.
-              This action cannot be undone.
+              A secure reset link will be sent to their email address. The link will expire in 24 hours.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
