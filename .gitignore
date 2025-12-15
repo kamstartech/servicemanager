@@ -47,3 +47,4 @@ redis_data/
 mssql_data/
 backups/
 *.log
+config/firebase-service-account.json

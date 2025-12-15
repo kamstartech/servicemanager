@@ -313,6 +313,11 @@ model MobileDevice {
   verificationIp       String? @map("verification_ip")
   verificationLocation String? @map("verification_location")
 
+  // Push Notification (FCM)
+  fcmToken          String?   @map("fcm_token") @db.Text
+  fcmTokenUpdatedAt DateTime? @map("fcm_token_updated_at")
+  pushEnabled       Boolean   @default(true) @map("push_enabled")
+
   // Status
   isActive    Boolean   @default(true) @map("is_active")
   lastUsedAt  DateTime? @map("last_used_at")
@@ -324,6 +329,7 @@ model MobileDevice {
 
   @@unique([mobileUserId, deviceId])
   @@index([mobileUserId])
+  @@index([fcmToken])
   @@map("mobile_devices")
 }
 

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { PushNotificationService } from "@/lib/services/push-notification";
 
 export const mobileUserAccountResolvers = {
   Query: {
@@ -356,6 +357,19 @@ export const mobileUserAccountResolvers = {
         createdAt: updatedAccount.createdAt.toISOString(),
         updatedAt: updatedAccount.updatedAt.toISOString(),
       };
+      
+      // Send push notification
+      try {
+        await PushNotificationService.sendAccountFrozenAlert(
+          updatedAccount.mobileUserId,
+          updatedAccount.accountNumber,
+          true
+        );
+      } catch (error) {
+        console.error("Failed to send freeze notification:", error);
+      }
+      
+      return result;
     },
 
     async unfreezeAccount(
@@ -381,7 +395,7 @@ export const mobileUserAccountResolvers = {
         data: { frozen: false }
       });
 
-      return {
+      const result = {
         id: updatedAccount.id.toString(),
         accountNumber: updatedAccount.accountNumber,
         accountName: updatedAccount.accountName,
@@ -396,6 +410,19 @@ export const mobileUserAccountResolvers = {
         createdAt: updatedAccount.createdAt.toISOString(),
         updatedAt: updatedAccount.updatedAt.toISOString(),
       };
+      
+      // Send push notification
+      try {
+        await PushNotificationService.sendAccountFrozenAlert(
+          updatedAccount.mobileUserId,
+          updatedAccount.accountNumber,
+          false
+        );
+      } catch (error) {
+        console.error("Failed to send unfreeze notification:", error);
+      }
+      
+      return result;
     },
 
     async hideAccount(

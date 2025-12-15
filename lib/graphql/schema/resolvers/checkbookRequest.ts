@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { GraphQLContext } from "../context";
 import { CheckbookRequestStatus } from "@prisma/client";
+import { PushNotificationService } from "@/lib/services/push-notification";
 
 export const checkbookRequestResolvers = {
   CheckbookRequest: {
@@ -421,6 +422,28 @@ export const checkbookRequestResolvers = {
         where: { id: parseInt(args.id) },
         data: updateData,
       });
+
+      // Send push notification on status change
+      if (args.input.status) {
+        const statusesToNotify = [
+          CheckbookRequestStatus.APPROVED,
+          CheckbookRequestStatus.READY_FOR_COLLECTION,
+          CheckbookRequestStatus.REJECTED,
+        ];
+
+        if (statusesToNotify.includes(args.input.status as CheckbookRequestStatus)) {
+          try {
+            await PushNotificationService.sendCheckbookStatusUpdate(
+              updated.mobileUserId,
+              args.input.status,
+              updated.id.toString()
+            );
+          } catch (error) {
+            console.error("Failed to send push notification:", error);
+            // Don't fail the mutation if notification fails
+          }
+        }
+      }
 
       return {
         ...updated,

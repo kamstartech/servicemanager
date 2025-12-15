@@ -28,6 +28,7 @@ import { workflowExecutionResolvers } from "./workflowExecution";
 import { billersResolvers } from "./billers";
 import { walletTierResolvers } from "./walletTier";
 import { checkbookRequestResolvers } from "./checkbookRequest";
+import { pushNotificationResolvers } from "./pushNotification";
 import { JSONResolver, DateTimeResolver } from "graphql-scalars";
 import { GraphQLScalarType, Kind } from "graphql";
 
@@ -110,6 +111,7 @@ export const resolvers = {
     ...billersResolvers.Mutation,
     ...walletTierResolvers.Mutation,
     ...checkbookRequestResolvers.Mutation,
+    ...pushNotificationResolvers.Mutation,
   },
   CoreBankingConnection: {
     ...coreBankingEndpointResolvers.CoreBankingConnection,

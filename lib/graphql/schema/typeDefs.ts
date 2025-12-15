@@ -2006,6 +2006,11 @@ export const typeDefs = /* GraphQL */ `
     createCheckbookRequest(input: CreateCheckbookRequestInput!): CheckbookRequest!
     cancelMyCheckbookRequest(id: ID!): CheckbookRequest!
     
+    # Push Notification mutations
+    registerDeviceForPush(fcmToken: String!, deviceId: String!): Boolean!
+    unregisterDeviceFromPush(deviceId: String!): Boolean!
+    testPushNotification(deviceId: String): Boolean!
+    
     # Admin mutations
     updateCheckbookRequest(id: ID!, input: UpdateCheckbookRequestInput!): CheckbookRequest!
     deleteCheckbookRequest(id: ID!): Boolean!
