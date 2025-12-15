@@ -2,16 +2,9 @@
 
 import { gql, useQuery } from "@apollo/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/providers/i18n-provider";
+import { DataTable, type DataTableColumn } from "@/components/data-table";
 
 const MOBILE_USERS_QUERY = gql`
   query MobileUsers($context: MobileUserContext) {
@@ -29,6 +22,45 @@ const MOBILE_USERS_QUERY = gql`
 export default function MobileUsersPage() {
   const { data, loading, error, refetch } = useQuery(MOBILE_USERS_QUERY);
   const { translate } = useI18n();
+
+  const rows = (data?.mobileUsers ?? []) as any[];
+
+  const columns: DataTableColumn<any>[] = [
+    {
+      id: "context",
+      header: translate("mobileUsers.columns.context"),
+      accessor: (row) => row.context,
+      sortKey: "context",
+    },
+    {
+      id: "username",
+      header: translate("mobileUsers.columns.username"),
+      accessor: (row) => row.username ?? "-",
+      sortKey: "username",
+    },
+    {
+      id: "phoneNumber",
+      header: translate("mobileUsers.columns.phone"),
+      accessor: (row) => row.phoneNumber ?? "-",
+      sortKey: "phoneNumber",
+    },
+    {
+      id: "status",
+      header: translate("mobileUsers.columns.status"),
+      accessor: (row) =>
+        row.isActive
+          ? translate("common.status.active")
+          : translate("common.status.inactive"),
+      sortKey: "isActive",
+      alignCenter: true,
+    },
+    {
+      id: "createdAt",
+      header: translate("mobileUsers.columns.createdAt"),
+      accessor: (row) => new Date(row.createdAt).toLocaleString(),
+      sortKey: "createdAt",
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-background px-4 py-6">
@@ -51,36 +83,16 @@ export default function MobileUsersPage() {
             </p>
           )}
           {!loading && !error && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{translate("mobileUsers.columns.identifier")}</TableHead>
-                  <TableHead>{translate("mobileUsers.columns.context")}</TableHead>
-                  <TableHead>{translate("mobileUsers.columns.username")}</TableHead>
-                  <TableHead>{translate("mobileUsers.columns.phone")}</TableHead>
-                  <TableHead>{translate("mobileUsers.columns.status")}</TableHead>
-                  <TableHead>{translate("mobileUsers.columns.createdAt")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data?.mobileUsers?.map((mobileUser: any) => (
-                  <TableRow key={mobileUser.id}>
-                    <TableCell>{mobileUser.id}</TableCell>
-                    <TableCell>{mobileUser.context}</TableCell>
-                    <TableCell>{mobileUser.username ?? "-"}</TableCell>
-                    <TableCell>{mobileUser.phoneNumber ?? "-"}</TableCell>
-                    <TableCell>
-                      {mobileUser.isActive
-                        ? translate("common.status.active")
-                        : translate("common.status.inactive")}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(mobileUser.createdAt).toLocaleString()}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <DataTable<any>
+              data={rows}
+              columns={columns}
+              searchableKeys={["context", "username", "phoneNumber"]}
+              initialSortKey="createdAt"
+              pageSize={10}
+              searchPlaceholder={translate("common.actions.search") || "Search mobile users..."}
+              showRowNumbers
+              rowNumberHeader="#"
+            />
           )}
         </CardContent>
       </Card>

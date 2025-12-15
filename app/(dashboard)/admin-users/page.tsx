@@ -206,6 +206,7 @@ export default function AdminUsersPage() {
           </span>
         ),
       sortKey: "isActive",
+      alignCenter: true,
     },
     {
       id: "createdAt",

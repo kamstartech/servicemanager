@@ -198,19 +198,33 @@ export default function BackupsPage() {
             id: "actions",
             header: "Actions",
             accessor: (row) => (
-                <div className="flex justify-end gap-2">
+                <div className="flex flex-wrap justify-center gap-2">
                     {/* Download */}
-                    <Button asChild variant="outline" size="sm" title="Download">
+                    <Button
+                        asChild
+                        variant="outline"
+                        size="sm"
+                        className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
+                        title="Download"
+                    >
                         <a href={`/api/backups/${row.id}/download`} target="_blank" rel="noopener noreferrer">
-                            <Download className="h-4 w-4" />
+                            <Download className="h-4 w-4 mr-2" />
+                            Download
                         </a>
                     </Button>
 
                     {/* Restore Dialog */}
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm" title="Restore" disabled={restoring}>
-                                <RotateCcw className="h-4 w-4" />
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 border-amber-200"
+                                title="Restore"
+                                disabled={restoring}
+                            >
+                                <RotateCcw className="h-4 w-4 mr-2" />
+                                Restore
                             </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
@@ -234,8 +248,15 @@ export default function BackupsPage() {
                     {/* Delete Dialog */}
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm" title="Delete" disabled={deleting}>
-                                <Trash2 className="h-4 w-4" />
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-red-700 bg-red-50 hover:bg-red-100 hover:text-red-800 border-red-200"
+                                title="Delete"
+                                disabled={deleting}
+                            >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
                             </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
@@ -303,6 +324,8 @@ export default function BackupsPage() {
                         initialSortKey="createdAt"
                         pageSize={10}
                         searchPlaceholder="Search backups..."
+                        showRowNumbers
+                        rowNumberHeader="#"
                     />
                 </CardContent>
             </Card>

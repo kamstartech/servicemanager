@@ -29,13 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Plus, MoreVertical, Trash2, ExternalLink, GripVertical } from "lucide-react";
+import { Plus, Trash2, ExternalLink, GripVertical } from "lucide-react";
 import Link from "next/link";
 import {
   DndContext,
@@ -108,7 +102,7 @@ const REORDER_WORKFLOWS = gql`
   }
 `;
 
-function SortableWorkflowRow({ pageWorkflow, onDetach }: any) {
+function SortableWorkflowRow({ pageWorkflow, onDetach, rowIndex }: any) {
   const {
     attributes,
     listeners,
@@ -125,7 +119,10 @@ function SortableWorkflowRow({ pageWorkflow, onDetach }: any) {
   };
 
   return (
-    <TableRow ref={setNodeRef} style={style}>
+    <TableRow ref={setNodeRef} style={style} className="hover:bg-gray-50">
+      <TableCell className="text-center whitespace-nowrap">
+        {rowIndex + 1}
+      </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
           <div {...attributes} {...listeners} className="cursor-move">
@@ -155,23 +152,19 @@ function SortableWorkflowRow({ pageWorkflow, onDetach }: any) {
       <TableCell>
         <Badge variant="outline">v{pageWorkflow.workflow.version}</Badge>
       </TableCell>
-      <TableCell className="text-right">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={() => onDetach(pageWorkflow.id, pageWorkflow.workflow.name)}
-              className="text-destructive"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Detach
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+      <TableCell className="text-center">
+        <div className="flex justify-center">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="text-red-700 bg-red-50 hover:bg-red-100 hover:text-red-800 border-red-200"
+            onClick={() => onDetach(pageWorkflow.id, pageWorkflow.workflow.name)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Detach
+          </Button>
+        </div>
       </TableCell>
     </TableRow>
   );
@@ -320,25 +313,27 @@ export function PageWorkflowsManager({ pageId }: { pageId: string }) {
               collisionDetection={closestCenter}
               onDragEnd={handleDragEnd}
             >
-              <Table>
-                <TableHeader>
+              <Table className="bg-white">
+                <TableHeader className="bg-gray-50">
                   <TableRow>
+                    <TableHead className="w-12 text-center">#</TableHead>
                     <TableHead className="w-16">Order</TableHead>
                     <TableHead>Workflow</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Version</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
+                <TableBody className="bg-white divide-y divide-gray-200">
                   <SortableContext
                     items={pageWorkflows.map((pw: any) => pw.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    {pageWorkflows.map((pageWorkflow: any) => (
+                    {pageWorkflows.map((pageWorkflow: any, index: number) => (
                       <SortableWorkflowRow
                         key={pageWorkflow.id}
                         pageWorkflow={pageWorkflow}
+                        rowIndex={index}
                         onDetach={handleDetach}
                       />
                     ))}

@@ -82,9 +82,10 @@ export default function NewBeneficiaryPage() {
   return (
     <div className="p-8">
       <div className="mb-6 flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
+        <Button variant="outline" size="sm" asChild>
           <Link href={`/wallet/users/${userId}/beneficiaries`}>
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
           </Link>
         </Button>
         <div>

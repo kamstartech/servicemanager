@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/providers/i18n-provider";
+import { CheckCircle, Clock, Eye, FlaskConical, XCircle } from "lucide-react";
 import { DatabaseConnectionDialog } from "@/components/database-connection-dialog";
 import {
   DataTable,
@@ -125,29 +126,51 @@ export default function DatabaseConnectionsPage() {
           ? new Date(row.lastTestedAt as string).toLocaleString()
           : null;
 
-        const colorClass = !hasTest
-          ? "bg-muted"
-          : row.lastTestOk
-          ? "bg-emerald-500"
-          : "bg-red-500";
-
         const tooltip = !hasTest
           ? "Not tested yet"
           : row.lastTestOk
           ? `Last test successful at ${when}`
           : `Last test failed at ${when}`;
 
+        if (!hasTest) {
+          return (
+            <span
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"
+              title={tooltip}
+              aria-label={tooltip}
+            >
+              <Clock size={14} />
+              Not tested
+            </span>
+          );
+        }
+
+        if (row.lastTestOk) {
+          return (
+            <span
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+              title={tooltip}
+              aria-label={tooltip}
+            >
+              <CheckCircle size={14} />
+              OK
+            </span>
+          );
+        }
+
         return (
           <span
-            className="inline-flex h-2.5 w-2.5 items-center justify-center rounded-full"
+            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"
             title={tooltip}
             aria-label={tooltip}
           >
-            <span className={`h-2.5 w-2.5 rounded-full ${colorClass}`} />
+            <XCircle size={14} />
+            Failed
           </span>
         );
       },
       sortKey: "lastTestedAt",
+      alignCenter: true,
     },
     {
       id: "mode",
@@ -162,14 +185,23 @@ export default function DatabaseConnectionsPage() {
       id: "actions",
       header: translate("databaseConnections.actions"),
       accessor: (row) => (
-        <div className="flex justify-end gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/system/databases/${row.id}`}>Details</Link>
+        <div className="flex flex-wrap justify-center gap-2">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
+          >
+            <Link href={`/system/databases/${row.id}`}>
+              <Eye className="h-4 w-4 mr-2" />
+              Details
+            </Link>
           </Button>
           <Button
             type="button"
             variant="outline"
             size="sm"
+            className="text-emerald-700 bg-emerald-50 hover:bg-emerald-100 hover:text-emerald-800 border-emerald-200"
             disabled={testing}
             onClick={async () => {
               try {
@@ -210,11 +242,12 @@ export default function DatabaseConnectionsPage() {
               }
             }}
           >
-            {testing ? "Testing connection..." : "Test connection"}
+            <FlaskConical className="h-4 w-4 mr-2" />
+            {translate("databaseConnections.test")}
           </Button>
         </div>
       ),
-      alignRight: true,
+      alignRight: false,
     },
   ];
 
@@ -250,6 +283,8 @@ export default function DatabaseConnectionsPage() {
               initialSortKey="name"
               pageSize={10}
               searchPlaceholder="Search connections"
+              showRowNumbers
+              rowNumberHeader="#"
             />
           )}
 

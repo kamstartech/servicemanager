@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { DataTable, type DataTableColumn } from "@/components/data-table";
 import {
   Dialog,
   DialogContent,
@@ -18,20 +19,21 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, Plus, MoreVertical, Edit, Trash2, Eye, Copy } from "lucide-react";
+import {
+  Plus,
+  MoreVertical,
+  Edit,
+  Trash2,
+  Eye,
+  Copy,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -91,7 +93,6 @@ const UPDATE_WORKFLOW = gql`
 
 export default function WorkflowsPage() {
   const router = useRouter();
-  const [searchTerm, setSearchTerm] = useState("");
   const [filterActive, setFilterActive] = useState<boolean | undefined>(undefined);
   
   // Dialog state
@@ -137,9 +138,114 @@ export default function WorkflowsPage() {
   const workflows = data?.workflows?.workflows || [];
   const total = data?.workflows?.total || 0;
 
-  const filteredWorkflows = workflows.filter((workflow: any) =>
-    workflow.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const rows = workflows as any[];
+
+  const columns: DataTableColumn<any>[] = [
+    {
+      id: "name",
+      header: "Name",
+      accessor: (row) => <p className="font-medium">{row.name}</p>,
+      sortKey: "name",
+    },
+    {
+      id: "description",
+      header: "Description",
+      accessor: (row) => (
+        <p className="text-sm text-muted-foreground truncate max-w-xs">
+          {row.description || "—"}
+        </p>
+      ),
+    },
+    {
+      id: "status",
+      header: "Status",
+      accessor: (row) =>
+        row.isActive ? (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            <CheckCircle size={14} />
+            Active
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+            <XCircle size={14} />
+            Inactive
+          </span>
+        ),
+      sortKey: "isActive",
+      alignCenter: true,
+    },
+    {
+      id: "version",
+      header: "Version",
+      accessor: (row) => <Badge variant="outline">v{row.version}</Badge>,
+      sortKey: "version",
+    },
+    {
+      id: "attachedTo",
+      header: "Attached To",
+      accessor: (row) =>
+        row.screenPages?.length > 0 ? (
+          <div className="flex flex-col gap-1">
+            {row.screenPages.slice(0, 2).map((sp: any) => (
+              <Badge key={sp.id} variant="outline" className="text-xs">
+                {sp.page.screen.name} / {sp.page.name}
+              </Badge>
+            ))}
+            {row.screenPages.length > 2 && (
+              <span className="text-xs text-muted-foreground">
+                +{row.screenPages.length - 2} more
+              </span>
+            )}
+          </div>
+        ) : (
+          <span className="text-sm text-muted-foreground">Not attached</span>
+        ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      accessor: (row) => (
+        <div className="flex justify-center">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
+              >
+                <MoreVertical className="h-4 w-4 mr-2" />
+                Actions
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link href={`/system/workflows/${row.id}`}>
+                  <Eye className="h-4 w-4 mr-2" />
+                  View Details
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleOpenDialog(row)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => alert("Clone functionality coming soon")}>
+                <Copy className="h-4 w-4 mr-2" />
+                Clone
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleDelete(row.id, row.name)}
+                className="text-destructive"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      ),
+      alignCenter: true,
+    },
+  ];
 
   const handleOpenDialog = (workflow?: any) => {
     if (workflow) {
@@ -220,18 +326,8 @@ export default function WorkflowsPage() {
           </Button>
         </CardHeader>
         <CardContent>
-          {/* Search and Filters */}
-          <div className="flex gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search workflows by name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="flex gap-2">
+          {/* Filters */}
+          <div className="flex gap-2 mb-6">
               <Button
                 variant={filterActive === undefined ? "default" : "outline"}
                 size="sm"
@@ -253,7 +349,6 @@ export default function WorkflowsPage() {
               >
                 Inactive
               </Button>
-            </div>
           </div>
 
           {/* Loading State */}
@@ -271,127 +366,37 @@ export default function WorkflowsPage() {
           )}
 
           {/* Empty State */}
-          {!loading && !error && filteredWorkflows.length === 0 && (
+          {!loading && !error && rows.length === 0 && (
             <div className="text-center py-12">
               <div className="text-6xl mb-4">🔄</div>
               <div className="text-muted-foreground mb-4">
-                {searchTerm
-                  ? "No workflows found matching your search"
-                  : "No workflows created yet"}
+                No workflows created yet
               </div>
-              {!searchTerm && (
-                <Button onClick={() => handleOpenDialog()}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create First Workflow
-                </Button>
-              )}
+              <Button onClick={() => handleOpenDialog()}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create First Workflow
+              </Button>
             </div>
           )}
 
           {/* Workflows Table */}
-          {!loading && !error && filteredWorkflows.length > 0 && (
-            <div className="border rounded-lg">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Version</TableHead>
-                    <TableHead>Attached To</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredWorkflows.map((workflow: any) => (
-                    <TableRow key={workflow.id}>
-                      <TableCell>
-                        <p className="font-medium">{workflow.name}</p>
-                      </TableCell>
-                      <TableCell>
-                        <p className="text-sm text-muted-foreground truncate max-w-xs">
-                          {workflow.description || "—"}
-                        </p>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={workflow.isActive ? "default" : "secondary"}
-                        >
-                          {workflow.isActive ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">v{workflow.version}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        {workflow.screenPages.length > 0 ? (
-                          <div className="flex flex-col gap-1">
-                            {workflow.screenPages.slice(0, 2).map((sp: any) => (
-                              <Badge key={sp.id} variant="outline" className="text-xs">
-                                {sp.page.screen.name} / {sp.page.name}
-                              </Badge>
-                            ))}
-                            {workflow.screenPages.length > 2 && (
-                              <span className="text-xs text-muted-foreground">
-                                +{workflow.screenPages.length - 2} more
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">
-                            Not attached
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem asChild>
-                              <Link href={`/system/workflows/${workflow.id}`}>
-                                <Eye className="h-4 w-4 mr-2" />
-                                View Details
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleOpenDialog(workflow)}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                alert("Clone functionality coming soon")
-                              }
-                            >
-                              <Copy className="h-4 w-4 mr-2" />
-                              Clone
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleDelete(workflow.id, workflow.name)
-                              }
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+          {!loading && !error && rows.length > 0 && (
+            <DataTable<any>
+              data={rows}
+              columns={columns}
+              searchableKeys={["name", "description"]}
+              initialSortKey="name"
+              pageSize={10}
+              searchPlaceholder="Search workflows..."
+              showRowNumbers
+              rowNumberHeader="#"
+            />
           )}
 
           {/* Results Summary */}
-          {!loading && !error && filteredWorkflows.length > 0 && (
+          {!loading && !error && rows.length > 0 && (
             <div className="mt-4 text-sm text-muted-foreground">
-              Showing {filteredWorkflows.length} of {total} workflows
+              Showing {rows.length} of {total} workflows
             </div>
           )}
         </CardContent>
@@ -419,7 +424,9 @@ export default function WorkflowsPage() {
                 id="name"
                 placeholder="e.g., Money Transfer Workflow"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setName(e.target.value)
+                }
               />
             </div>
 

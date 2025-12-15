@@ -3,16 +3,9 @@
 import { gql, useQuery } from "@apollo/client";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/providers/i18n-provider";
+import { DataTable, type DataTableColumn } from "@/components/data-table";
 
 const ADMIN_WEB_USERS_QUERY = gql`
   query AdminWebUsers {
@@ -29,6 +22,39 @@ const ADMIN_WEB_USERS_QUERY = gql`
 export default function AdminWebUsersPage() {
   const { data, loading, error, refetch } = useQuery(ADMIN_WEB_USERS_QUERY);
   const { translate } = useI18n();
+
+  const rows = (data?.adminWebUsers ?? []) as any[];
+
+  const columns: DataTableColumn<any>[] = [
+    {
+      id: "email",
+      header: translate("adminUsers.columns.email"),
+      accessor: (row) => row.email,
+      sortKey: "email",
+    },
+    {
+      id: "name",
+      header: translate("adminUsers.columns.name"),
+      accessor: (row) => row.name ?? "-",
+      sortKey: "name",
+    },
+    {
+      id: "status",
+      header: translate("adminUsers.columns.status"),
+      accessor: (row) =>
+        row.isActive
+          ? translate("common.status.active")
+          : translate("common.status.inactive"),
+      sortKey: "isActive",
+      alignCenter: true,
+    },
+    {
+      id: "createdAt",
+      header: translate("adminUsers.columns.createdAt"),
+      accessor: (row) => new Date(row.createdAt).toLocaleString(),
+      sortKey: "createdAt",
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-background px-4 py-6">
@@ -51,34 +77,16 @@ export default function AdminWebUsersPage() {
             </p>
           )}
           {!loading && !error && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{translate("adminUsers.columns.identifier")}</TableHead>
-                  <TableHead>{translate("adminUsers.columns.email")}</TableHead>
-                  <TableHead>{translate("adminUsers.columns.name")}</TableHead>
-                  <TableHead>{translate("adminUsers.columns.status")}</TableHead>
-                  <TableHead>{translate("adminUsers.columns.createdAt")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data?.adminWebUsers?.map((user: any) => (
-                  <TableRow key={user.id}>
-                    <TableCell>{user.id}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.name ?? "-"}</TableCell>
-                    <TableCell>
-                      {user.isActive
-                        ? translate("common.status.active")
-                        : translate("common.status.inactive")}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(user.createdAt).toLocaleString()}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <DataTable<any>
+              data={rows}
+              columns={columns}
+              searchableKeys={["email", "name"]}
+              initialSortKey="createdAt"
+              pageSize={10}
+              searchPlaceholder={translate("common.actions.search") || "Search admin users..."}
+              showRowNumbers
+              rowNumberHeader="#"
+            />
           )}
         </CardContent>
       </Card>

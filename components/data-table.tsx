@@ -143,11 +143,13 @@ export function DataTable<T extends Record<string, any>>({
                   key={column.id}
                   className={
                     (column.sortKey ? "cursor-pointer select-none " : "") +
-                    (column.alignRight
-                      ? "whitespace-nowrap text-right"
-                      : column.alignCenter
-                        ? "whitespace-nowrap text-center"
-                        : "whitespace-nowrap")
+                    (column.id === "actions"
+                      ? "whitespace-nowrap text-center"
+                      : column.alignRight
+                        ? "whitespace-nowrap text-right"
+                        : column.alignCenter
+                          ? "whitespace-nowrap text-center"
+                          : "whitespace-nowrap")
                   }
                   onClick={() => toggleSort(column.sortKey)}
                 >
@@ -168,14 +170,20 @@ export function DataTable<T extends Record<string, any>>({
                   <TableCell
                     key={column.id}
                     className={
-                      column.alignRight
-                        ? "text-right whitespace-normal break-words"
-                        : column.alignCenter
-                          ? "text-center whitespace-normal break-words"
-                          : "whitespace-normal break-words"
+                      column.id === "actions"
+                        ? "text-center whitespace-normal break-words"
+                        : column.alignRight
+                          ? "text-right whitespace-normal break-words"
+                          : column.alignCenter
+                            ? "text-center whitespace-normal break-words"
+                            : "whitespace-normal break-words"
                     }
                   >
-                    {column.accessor(row)}
+                    {column.id === "actions" ? (
+                      <div className="flex justify-center">{column.accessor(row)}</div>
+                    ) : (
+                      column.accessor(row)
+                    )}
                   </TableCell>
                 ))}
               </TableRow>
@@ -183,7 +191,7 @@ export function DataTable<T extends Record<string, any>>({
             {pageItems.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={columns.length}
+                  colSpan={showRowNumbers ? columns.length + 1 : columns.length}
                   className="text-center text-sm text-muted-foreground"
                 >
                   No records to display.

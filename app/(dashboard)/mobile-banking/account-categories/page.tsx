@@ -227,24 +227,29 @@ export default function AccountCategoriesPage() {
       id: "actions",
       header: translate("accountCategories.columns.actions"),
       accessor: (row) => (
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap justify-center gap-2">
           <Button
-            variant="ghost"
-            size="icon"
+            type="button"
+            variant="outline"
+            size="sm"
+            className="text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 border-amber-200"
             onClick={() => openEditDialog(row)}
           >
-            <Pencil className="h-4 w-4" />
+            <Pencil className="h-4 w-4 mr-2" />
+            Edit
           </Button>
           <Button
-            variant="ghost"
-            size="icon"
+            type="button"
+            variant="outline"
+            size="sm"
+            className="text-red-700 bg-red-50 hover:bg-red-100 hover:text-red-800 border-red-200"
             onClick={() => openDeleteDialog(row)}
           >
-            <Trash2 className="h-4 w-4 text-destructive" />
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete
           </Button>
         </div>
       ),
-      alignRight: true,
     },
   ];
 
@@ -283,6 +288,8 @@ export default function AccountCategoriesPage() {
               initialSortKey="category"
               pageSize={10}
               searchPlaceholder="Search categories"
+              showRowNumbers
+              rowNumberHeader="#"
             />
           )}
         </CardContent>

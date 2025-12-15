@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { gql, useMutation, useQuery } from "@apollo/client";
 import { toast } from "sonner";
-import { Clock, Repeat } from "lucide-react";
+import { Clock, Repeat, Eye, Edit, Trash2, CheckCircle, XCircle, Loader2 } from "lucide-react";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -121,19 +121,44 @@ export default function MigrationsPage() {
       id: "status",
       header: "Status",
       accessor: (row) => {
-        const statusColors: Record<string, string> = {
-          PENDING: "text-gray-600",
-          RUNNING: "text-blue-600",
-          COMPLETED: "text-green-600",
-          FAILED: "text-red-600",
-        };
+        const label = row.status?.replace(/_/g, " ") || "Unknown";
+
+        if (row.status === "COMPLETED") {
+          return (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              <CheckCircle size={14} />
+              {label}
+            </span>
+          );
+        }
+
+        if (row.status === "FAILED") {
+          return (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+              <XCircle size={14} />
+              {label}
+            </span>
+          );
+        }
+
+        if (row.status === "RUNNING") {
+          return (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              <Loader2 size={14} className="animate-spin" />
+              {label}
+            </span>
+          );
+        }
+
         return (
-          <span className={statusColors[row.status] || ""}>
-            {row.status}
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+            <Clock size={14} />
+            {label}
           </span>
         );
       },
       sortKey: "status",
+      alignCenter: true,
     },
     {
       id: "lastRun",
@@ -165,12 +190,28 @@ export default function MigrationsPage() {
       id: "actions",
       header: "Actions",
       accessor: (row) => (
-        <div className="flex justify-end gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/system/migrations/${row.id}`}>Details</Link>
+        <div className="flex flex-wrap justify-center gap-2">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
+          >
+            <Link href={`/system/migrations/${row.id}`}>
+              <Eye className="h-4 w-4 mr-2" />
+              Details
+            </Link>
           </Button>
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/system/migrations/${row.id}/edit`}>Edit</Link>
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 border-amber-200"
+          >
+            <Link href={`/system/migrations/${row.id}/edit`}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
+            </Link>
           </Button>
           <RunMigrationDialog
             id={row.id}
@@ -182,10 +223,12 @@ export default function MigrationsPage() {
             <AlertDialogTrigger asChild>
               <Button
                 type="button"
-                variant="destructive"
+                variant="outline"
                 size="sm"
+                className="text-red-700 bg-red-50 hover:bg-red-100 hover:text-red-800 border-red-200"
                 disabled={deleting || row.status === "RUNNING"}
               >
+                <Trash2 className="h-4 w-4 mr-2" />
                 Delete
               </Button>
             </AlertDialogTrigger>
@@ -225,7 +268,6 @@ export default function MigrationsPage() {
           </AlertDialog>
         </div>
       ),
-      alignRight: true,
     },
   ];
 
@@ -266,6 +308,8 @@ export default function MigrationsPage() {
               initialSortKey="name"
               pageSize={10}
               searchPlaceholder="Search migrations"
+              showRowNumbers
+              rowNumberHeader="#"
             />
           )}
         </CardContent>

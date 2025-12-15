@@ -177,13 +177,14 @@ export default function WalletTiersPage() {
       id: 'actions',
       header: 'Actions',
       accessor: (row) => (
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap justify-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => router.push(`/wallet/tiers/${row.id}`)}
+            className="text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 border-amber-200"
           >
-            <Edit className="h-3 w-3 mr-1" />
+            <Edit className="h-4 w-4 mr-2" />
             Edit
           </Button>
           {!row.isDefault && row.walletUsersCount === 0 && (
@@ -191,14 +192,14 @@ export default function WalletTiersPage() {
               variant="outline"
               size="sm"
               onClick={() => setDeleteId(row.id)}
-              className="text-destructive"
+              className="text-red-700 bg-red-50 hover:bg-red-100 hover:text-red-800 border-red-200"
             >
-              <Trash2 className="h-3 w-3" />
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
             </Button>
           )}
         </div>
       ),
-      alignRight: true,
     },
   ];
 
@@ -243,6 +244,8 @@ export default function WalletTiersPage() {
               initialSortKey="position"
               pageSize={20}
               searchPlaceholder="Search by name or description..."
+              showRowNumbers
+              rowNumberHeader="#"
             />
           )}
         </CardContent>

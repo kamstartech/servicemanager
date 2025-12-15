@@ -148,9 +148,10 @@ export default function BeneficiariesPage() {
     <div className="p-8">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
+          <Button variant="outline" size="sm" asChild>
             <Link href={`/wallet/users/${userId}`}>
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
             </Link>
           </Button>
           <div>
@@ -215,29 +216,38 @@ export default function BeneficiariesPage() {
                         </Badge>
                       </td>
                       <td className="p-3">
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap justify-center gap-2">
                           <Button
                             size="sm"
                             variant="outline"
                             asChild
+                            className="text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 border-amber-200"
                           >
                             <Link
                               href={`/wallet/users/${userId}/beneficiaries/${beneficiary.id}/edit`}
                             >
-                              <Edit className="h-3 w-3" />
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
                             </Link>
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => handleToggleStatus(beneficiary.id)}
+                            className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
                           >
-                            <Power className="h-3 w-3" />
+                            <Power className="h-4 w-4 mr-2" />
+                            Toggle
                           </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button size="sm" variant="outline">
-                                <Trash2 className="h-3 w-3 text-red-500" />
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-red-700 bg-red-50 hover:bg-red-100 hover:text-red-800 border-red-200"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
                               </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>

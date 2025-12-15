@@ -109,6 +109,8 @@ export default function DatabaseTableShowPage() {
               initialSortKey={tableData?.columns[0]?.name}
               pageSize={25}
               searchPlaceholder="Search rows"
+              showRowNumbers
+              rowNumberHeader="#"
             />
           )}
         </CardContent>

@@ -20,6 +20,7 @@ import {
   RadioGroupItem,
 } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
+import { Play } from "lucide-react";
 
 const RUN_MIGRATION = gql`
   mutation RunMigration($id: ID!, $duplicateStrategy: DuplicateStrategy) {
@@ -62,8 +63,10 @@ export function RunMigrationDialog({
           type="button"
           variant="outline"
           size="sm"
+          className="text-emerald-700 bg-emerald-50 hover:bg-emerald-100 hover:text-emerald-800 border-emerald-200"
           disabled={disabled}
         >
+          <Play className="h-4 w-4 mr-2" />
           {disabled ? "Running..." : "Run"}
         </Button>
       </AlertDialogTrigger>

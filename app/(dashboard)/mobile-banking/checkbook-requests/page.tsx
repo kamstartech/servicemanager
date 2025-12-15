@@ -33,32 +33,26 @@ interface CheckbookRequest extends Omit<CheckbookRequestWithUser, 'createdAt' | 
 
 const statusConfig = {
   [CheckbookRequestStatus.PENDING]: {
-    variant: "secondary" as const,
     icon: Clock,
     label: "Pending",
   },
   [CheckbookRequestStatus.APPROVED]: {
-    variant: "default" as const,
     icon: CheckCircle,
     label: "Approved",
   },
   [CheckbookRequestStatus.READY_FOR_COLLECTION]: {
-    variant: "default" as const,
     icon: Package,
     label: "Ready for Collection",
   },
   [CheckbookRequestStatus.COLLECTED]: {
-    variant: "default" as const,
     icon: CheckCircle,
     label: "Collected",
   },
   [CheckbookRequestStatus.CANCELLED]: {
-    variant: "outline" as const,
     icon: Ban,
     label: "Cancelled",
   },
   [CheckbookRequestStatus.REJECTED]: {
-    variant: "destructive" as const,
     icon: XCircle,
     label: "Rejected",
   },
@@ -149,11 +143,6 @@ export default function CheckbookRequestsPage() {
 
   const columns: DataTableColumn<CheckbookRequest>[] = [
     {
-      id: "id",
-      header: "ID",
-      accessor: (request) => `#${request.id}`,
-    },
-    {
       id: "mobileUser",
       header: "User",
       accessor: (request) => (
@@ -199,13 +188,35 @@ export default function CheckbookRequestsPage() {
       accessor: (request) => {
         const config = statusConfig[request.status];
         const Icon = config.icon;
+
+        const tone =
+          request.status === CheckbookRequestStatus.PENDING
+            ? "pending"
+            : request.status === CheckbookRequestStatus.REJECTED
+            ? "error"
+            : request.status === CheckbookRequestStatus.CANCELLED
+            ? "neutral"
+            : "success";
+
+        const classes =
+          tone === "success"
+            ? "bg-green-100 text-green-800"
+            : tone === "error"
+            ? "bg-red-100 text-red-800"
+            : tone === "pending"
+            ? "bg-yellow-100 text-yellow-800"
+            : "bg-gray-100 text-gray-800";
+
         return (
-          <Badge variant={config.variant} className="gap-1">
-            <Icon className="h-3 w-3" />
+          <span
+            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${classes}`}
+          >
+            <Icon size={14} />
             {config.label}
-          </Badge>
+          </span>
         );
       },
+      alignCenter: true,
     },
     {
       id: "requestedAt",
@@ -216,20 +227,25 @@ export default function CheckbookRequestsPage() {
       id: "actions",
       header: "Actions",
       accessor: (request) => (
-        <div className="flex gap-2">
+        <div className="flex flex-wrap justify-center gap-2">
           {request.status === CheckbookRequestStatus.PENDING && (
             <>
               <Button
                 size="sm"
+                variant="outline"
+                className="text-green-700 bg-green-50 hover:bg-green-100 hover:text-green-800 border-green-200"
                 onClick={() => handleStatusChange(request.id, CheckbookRequestStatus.APPROVED)}
               >
+                <CheckCircle className="h-4 w-4 mr-2" />
                 Approve
               </Button>
               <Button
                 size="sm"
-                variant="destructive"
+                variant="outline"
+                className="text-red-700 bg-red-50 hover:bg-red-100 hover:text-red-800 border-red-200"
                 onClick={() => handleStatusChange(request.id, CheckbookRequestStatus.REJECTED)}
               >
+                <XCircle className="h-4 w-4 mr-2" />
                 Reject
               </Button>
             </>
@@ -237,16 +253,22 @@ export default function CheckbookRequestsPage() {
           {request.status === CheckbookRequestStatus.APPROVED && (
             <Button
               size="sm"
+              variant="outline"
+              className="text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 border-amber-200"
               onClick={() => handleStatusChange(request.id, CheckbookRequestStatus.READY_FOR_COLLECTION)}
             >
+              <Package className="h-4 w-4 mr-2" />
               Mark Ready
             </Button>
           )}
           {request.status === CheckbookRequestStatus.READY_FOR_COLLECTION && (
             <Button
               size="sm"
+              variant="outline"
+              className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
               onClick={() => handleStatusChange(request.id, CheckbookRequestStatus.COLLECTED)}
             >
+              <CheckCircle className="h-4 w-4 mr-2" />
               Mark Collected
             </Button>
           )}
@@ -308,12 +330,22 @@ export default function CheckbookRequestsPage() {
             </div>
           )}
 
-          <DataTable
-            columns={columns}
-            data={requests}
-            loading={loading}
-            emptyMessage="No checkbook requests found"
-          />
+          {loading && requests.length === 0 && (
+            <p className="text-sm text-muted-foreground">Loading checkbook requests...</p>
+          )}
+
+          {!loading && !error && requests.length === 0 && (
+            <p className="text-sm text-muted-foreground">No checkbook requests found</p>
+          )}
+
+          {requests.length > 0 && (
+            <DataTable
+              columns={columns}
+              data={requests}
+              showRowNumbers
+              rowNumberHeader="#"
+            />
+          )}
 
           {totalPages > 1 && (
             <div className="flex justify-center gap-2 mt-4">

@@ -4,6 +4,7 @@ import { gql, useQuery } from "@apollo/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
+import { CheckCircle, Clock, XCircle } from "lucide-react";
 
 const LOGIN_ATTEMPTS_QUERY = gql`
   query LoginAttempts($limit: Int, $offset: Int, $status: String, $username: String) {
@@ -72,17 +73,57 @@ function mapLoginAttempts(data: any): LoginAttemptRow[] {
 }
 
 function getStatusBadge(status: string) {
-  const statusMap: Record<string, { variant: any; label: string }> = {
-    SUCCESS: { variant: "default", label: "Success" },
-    FAILED_CREDENTIALS: { variant: "destructive", label: "Failed" },
-    PENDING_VERIFICATION: { variant: "secondary", label: "Pending OTP" },
-    PENDING_APPROVAL: { variant: "outline", label: "Pending Approval" },
-    FAILED_DEVICE_BLOCKED: { variant: "destructive", label: "Device Blocked" },
-    EXPIRED: { variant: "secondary", label: "Expired" },
+  const statusMap: Record<
+    string,
+    { tone: "success" | "pending" | "error" | "neutral"; label: string }
+  > = {
+    SUCCESS: { tone: "success", label: "Success" },
+    FAILED_CREDENTIALS: { tone: "error", label: "Failed" },
+    FAILED_OTP: { tone: "error", label: "Failed" },
+    FAILED_DEVICE_BLOCKED: { tone: "error", label: "Device Blocked" },
+    PENDING_VERIFICATION: { tone: "pending", label: "Pending OTP" },
+    PENDING_APPROVAL: { tone: "pending", label: "Pending Approval" },
+    EXPIRED: { tone: "error", label: "Expired" },
   };
 
-  const config = statusMap[status] || { variant: "outline", label: status };
-  return <Badge variant={config.variant}>{config.label}</Badge>;
+  const config = statusMap[status] || {
+    tone: "neutral" as const,
+    label: status?.replace(/_/g, " ") || "Unknown",
+  };
+
+  if (config.tone === "success") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+        <CheckCircle size={14} />
+        {config.label}
+      </span>
+    );
+  }
+
+  if (config.tone === "error") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+        <XCircle size={14} />
+        {config.label}
+      </span>
+    );
+  }
+
+  if (config.tone === "pending") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+        <Clock size={14} />
+        {config.label}
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+      <Clock size={14} />
+      {config.label}
+    </span>
+  );
 }
 
 type LoginAttemptsTableProps = {
@@ -145,6 +186,7 @@ export function LoginAttemptsTable({
       header: "Status",
       accessor: (row) => getStatusBadge(row.status),
       sortKey: "status",
+      alignCenter: true,
     },
     {
       id: "failureReason",
@@ -185,6 +227,8 @@ export function LoginAttemptsTable({
           columns={columns}
           data={filteredRows}
           searchPlaceholder={searchPlaceholder}
+          showRowNumbers
+          rowNumberHeader="#"
         />
       </CardContent>
     </Card>

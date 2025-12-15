@@ -3,16 +3,9 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/providers/i18n-provider";
+import { DataTable, type DataTableColumn } from "@/components/data-table";
 import {
   Plus,
   RefreshCw,
@@ -45,6 +38,100 @@ export default function ThirdPartyClientsPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [migrationNeeded, setMigrationNeeded] = useState(false);
+
+  const columns: DataTableColumn<ThirdPartyClient>[] = [
+    {
+      id: "name",
+      header: "Name",
+      accessor: (client) => (
+        <div>
+          <p className="font-medium">{client.name}</p>
+          {client.description && (
+            <p className="text-sm text-muted-foreground">{client.description}</p>
+          )}
+        </div>
+      ),
+      sortKey: "name",
+    },
+    {
+      id: "contactEmail",
+      header: "Contact Email",
+      accessor: (client) =>
+        client.contactEmail || <span className="text-muted-foreground">-</span>,
+      sortKey: "contactEmail",
+    },
+    {
+      id: "status",
+      header: "Status",
+      accessor: (client) =>
+        client.isActive ? (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            <CheckCircle size={14} />
+            Active
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+            <XCircle size={14} />
+            Inactive
+          </span>
+        ),
+      sortKey: "isActive",
+      alignCenter: true,
+    },
+    {
+      id: "tokens",
+      header: "Tokens",
+      accessor: (client) => (
+        <span className="inline-flex items-center justify-center gap-1">
+          <Key className="h-4 w-4 text-fdh-orange" />
+          {client._count.apiKeys}
+        </span>
+      ),
+      alignCenter: true,
+    },
+    {
+      id: "apiCalls",
+      header: "API Calls",
+      accessor: (client) => (
+        <span className="inline-flex items-center justify-center gap-1">
+          <Activity className="h-4 w-4 text-blue-600" />
+          {client._count.accessLogs.toLocaleString()}
+        </span>
+      ),
+      alignCenter: true,
+    },
+    {
+      id: "createdAt",
+      header: "Created",
+      accessor: (client) => (
+        <span className="text-sm text-muted-foreground">
+          {new Date(client.createdAt).toLocaleDateString()}
+        </span>
+      ),
+      sortKey: "createdAt",
+      alignCenter: true,
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      accessor: (client) => (
+        <div className="flex justify-center">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
+          >
+            <Link href={`/system/third-party/clients/${client.id}`}>
+              <Eye className="h-4 w-4 mr-2" />
+              View
+            </Link>
+          </Button>
+        </div>
+      ),
+      alignCenter: true,
+    },
+  ];
 
   useEffect(() => {
     fetchClients();
@@ -201,76 +288,16 @@ export default function ThirdPartyClientsPage() {
           )}
 
           {!loading && clients.length > 0 && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Contact Email</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
-                  <TableHead className="text-center">Tokens</TableHead>
-                  <TableHead className="text-center">API Calls</TableHead>
-                  <TableHead className="text-center">Created</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {clients.map((client) => (
-                  <TableRow key={client.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{client.name}</p>
-                        {client.description && (
-                          <p className="text-sm text-muted-foreground">
-                            {client.description}
-                          </p>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {client.contactEmail || (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {client.isActive ? (
-                        <span className="inline-flex items-center gap-1 text-green-600">
-                          <CheckCircle className="h-4 w-4" />
-                          Active
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-red-600">
-                          <XCircle className="h-4 w-4" />
-                          Inactive
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <span className="inline-flex items-center gap-1">
-                        <Key className="h-4 w-4 text-fdh-orange" />
-                        {client._count.apiKeys}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <span className="inline-flex items-center gap-1">
-                        <Activity className="h-4 w-4 text-blue-600" />
-                        {client._count.accessLogs.toLocaleString()}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-center text-sm text-muted-foreground">
-                      {new Date(client.createdAt).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Link href={`/system/third-party/clients/${client.id}`}>
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4 mr-2" />
-                          View
-                        </Button>
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <DataTable<ThirdPartyClient>
+              data={clients}
+              columns={columns}
+              searchableKeys={["name", "description", "contactEmail"]}
+              initialSortKey="createdAt"
+              pageSize={10}
+              searchPlaceholder="Search API clients..."
+              showRowNumbers
+              rowNumberHeader="#"
+            />
           )}
         </CardContent>
       </Card>

@@ -325,6 +325,8 @@ export default function DatabaseConnectionShowPage() {
                   initialSortKey="name"
                   pageSize={15}
                   searchPlaceholder="Search tables"
+                  showRowNumbers
+                  rowNumberHeader="#"
                 />
               )}
             </div>

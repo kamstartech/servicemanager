@@ -33,13 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ArrowLeft, Edit, Plus, MoreVertical, Trash2, GripVertical } from "lucide-react";
+import { ArrowLeft, Edit, Plus, Trash2, GripVertical } from "lucide-react";
 import Link from "next/link";
 import {
   DndContext,
@@ -195,7 +189,7 @@ const STEP_TYPES = [
   { value: "REDIRECT", label: "🔄 Redirect", description: "Navigate to another screen" },
 ];
 
-function SortableStepRow({ step, onEdit, onDelete }: any) {
+function SortableStepRow({ step, onEdit, onDelete, rowIndex }: any) {
   const {
     attributes,
     listeners,
@@ -212,7 +206,10 @@ function SortableStepRow({ step, onEdit, onDelete }: any) {
   };
 
   return (
-    <TableRow ref={setNodeRef} style={style}>
+    <TableRow ref={setNodeRef} style={style} className="hover:bg-gray-50">
+      <TableCell className="text-center whitespace-nowrap">
+        {rowIndex + 1}
+      </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
           <div {...attributes} {...listeners} className="cursor-move">
@@ -255,27 +252,31 @@ function SortableStepRow({ step, onEdit, onDelete }: any) {
           {step.isActive ? "Active" : "Inactive"}
         </Badge>
       </TableCell>
-      <TableCell className="text-right">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onEdit(step)}>
+      <TableCell className="text-center">
+        <div className="flex justify-center">
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 border-amber-200"
+              onClick={() => onEdit(step)}
+            >
               <Edit className="h-4 w-4 mr-2" />
               Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="text-red-700 bg-red-50 hover:bg-red-100 hover:text-red-800 border-red-200"
               onClick={() => onDelete(step.id, step.label)}
-              className="text-destructive"
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            </Button>
+          </div>
+        </div>
       </TableCell>
     </TableRow>
   );
@@ -768,25 +769,27 @@ export default function WorkflowDetailPage() {
                 collisionDetection={closestCenter}
                 onDragEnd={handleDragEnd}
               >
-                <Table>
-                  <TableHeader>
+                <Table className="bg-white">
+                  <TableHeader className="bg-gray-50">
                     <TableRow>
+                      <TableHead className="w-12 text-center">#</TableHead>
                       <TableHead className="w-16">Order</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead>Label</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="text-center">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>
+                  <TableBody className="bg-white divide-y divide-gray-200">
                     <SortableContext
                       items={steps.map((s: any) => s.id)}
                       strategy={verticalListSortingStrategy}
                     >
-                      {steps.map((step: any) => (
+                      {steps.map((step: any, index: number) => (
                         <SortableStepRow
                           key={step.id}
                           step={step}
+                          rowIndex={index}
                           onEdit={handleOpenDialog}
                           onDelete={handleDelete}
                         />

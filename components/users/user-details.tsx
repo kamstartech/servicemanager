@@ -9,7 +9,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
-import { Plus, ExternalLink } from "lucide-react";
+import { Plus, ExternalLink, Link2Off, Star, CheckCircle, Clock, XCircle } from "lucide-react";
 
 const USER_DETAILS_QUERY = gql`
   query UserDetails($context: MobileUserContext!) {
@@ -371,42 +371,54 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
       accessor: (row) => (
         <div className="flex gap-1">
           {row.isPrimary && (
-            <Badge variant="default" className="text-xs">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              <Star size={14} />
               Primary
-            </Badge>
+            </span>
           )}
           {!row.isActive && (
-            <Badge variant="outline" className="text-xs">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+              <XCircle size={14} />
               Inactive
-            </Badge>
+            </span>
+          )}
+          {row.isActive && !row.isPrimary && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              <CheckCircle size={14} />
+              Active
+            </span>
           )}
         </div>
       ),
+      alignCenter: true,
     },
     {
       id: "actions",
       header: "Actions",
       accessor: (row) => (
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap justify-center gap-2">
           {!row.isPrimary && row.isActive && (
             <Button
               size="sm"
               variant="outline"
+              className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
               onClick={() => handleSetPrimary(row.id)}
             >
+              <Star className="h-4 w-4 mr-2" />
               Set Primary
             </Button>
           )}
           <Button
             size="sm"
-            variant="destructive"
+            variant="outline"
+            className="text-red-700 bg-red-50 hover:bg-red-100 hover:text-red-800 border-red-200"
             onClick={() => handleUnlinkAccount(row.id)}
           >
+            <Link2Off className="h-4 w-4 mr-2" />
             Unlink
           </Button>
         </div>
       ),
-      alignRight: true,
     },
   ];
 
@@ -440,11 +452,19 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
     {
       id: "status",
       header: "Status",
-      accessor: (row) => (
-        <Badge variant={row.isActive ? "default" : "outline"}>
-          {row.isActive ? "Active" : "Pending"}
-        </Badge>
-      ),
+      accessor: (row) =>
+        row.isActive ? (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            <CheckCircle size={14} />
+            Active
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+            <Clock size={14} />
+            Pending
+          </span>
+        ),
+      alignCenter: true,
     },
     {
       id: "actions",
@@ -455,15 +475,16 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
             <Button
               size="sm"
               variant="outline"
+              className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
               onClick={() => approveDevice({ variables: { deviceId: row.id } })}
               disabled={approvingDevice}
             >
+              <CheckCircle className="h-4 w-4 mr-2" />
               Approve
             </Button>
           )}
         </>
       ),
-      alignRight: true,
     },
   ];
 
@@ -485,11 +506,6 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
       ),
     },
     {
-      id: "identifier",
-      header: "Identifier",
-      accessor: (row) => <span className="font-mono text-sm">{getIdentifier(row)}</span>,
-    },
-    {
       id: "bank",
       header: "Bank",
       accessor: (row) => (
@@ -502,12 +518,14 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
       accessor: (row) => (
         <>
           {!row.isActive && (
-            <Badge variant="secondary" className="text-xs">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+              <XCircle size={14} />
               Inactive
-            </Badge>
+            </span>
           )}
         </>
       ),
+      alignCenter: true,
     },
     {
       id: "actions",
@@ -527,9 +545,6 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">{title}</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Identifier: {user.id}
-            </p>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant={user.isActive ? "default" : "outline"}>
@@ -758,6 +773,8 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
                   initialSortKey="accountNumber"
                   pageSize={10}
                   searchPlaceholder="Search accounts..."
+                  showRowNumbers
+                  rowNumberHeader="#"
                 />
               )}
             </CardContent>
@@ -801,6 +818,8 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
                 initialSortKey="lastUsedAt"
                 pageSize={10}
                 searchPlaceholder="Search devices..."
+                showRowNumbers
+                rowNumberHeader="#"
               />
             )}
           </CardContent>
@@ -855,6 +874,8 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
                 initialSortKey="name"
                 pageSize={10}
                 searchPlaceholder="Search beneficiaries..."
+                showRowNumbers
+                rowNumberHeader="#"
               />
             )}
           </CardContent>

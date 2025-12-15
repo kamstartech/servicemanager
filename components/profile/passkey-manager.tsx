@@ -127,8 +127,13 @@ export function PasskeyManager() {
                 </div>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-red-700 bg-red-50 hover:bg-red-100 hover:text-red-800 border-red-200"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Remove
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>

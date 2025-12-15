@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CheckCircle, Clock, XCircle } from "lucide-react";
 
 const GET_LOGIN_ATTEMPTS = gql`
   query GetLoginAttempts(
@@ -109,6 +110,36 @@ const statusColors: Record<string, "default" | "secondary" | "destructive"> = {
   PENDING_APPROVAL: "secondary",
 };
 
+function getStatusPill(status: string) {
+  const label = status?.replace(/_/g, " ") || "Unknown";
+  const variant = statusColors[status] || "secondary";
+
+  if (variant === "default") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+        <CheckCircle size={14} />
+        {label}
+      </span>
+    );
+  }
+
+  if (variant === "destructive") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+        <XCircle size={14} />
+        {label}
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+      <Clock size={14} />
+      {label}
+    </span>
+  );
+}
+
 export default function LoginAttemptsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
@@ -193,12 +224,9 @@ export default function LoginAttemptsPage() {
     {
       id: "status",
       header: "Status",
-      accessor: (row) => (
-        <Badge variant={statusColors[row.status] || "default"}>
-          {row.status?.replace(/_/g, " ")}
-        </Badge>
-      ),
+      accessor: (row) => getStatusPill(row.status),
       sortKey: "status",
+      alignCenter: true,
     },
     {
       id: "details",
@@ -323,6 +351,8 @@ export default function LoginAttemptsPage() {
               initialSortKey="attemptedAt"
               pageSize={50}
               searchPlaceholder="Search by username, IP, or device..."
+              showRowNumbers
+              rowNumberHeader="#"
             />
           )}
         </CardContent>

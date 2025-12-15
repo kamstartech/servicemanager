@@ -38,6 +38,7 @@ import {
   Clock,
   Activity,
 } from "lucide-react";
+import { CheckCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
 interface Token {
@@ -188,20 +189,39 @@ export default function ClientDetailPage({
   };
 
   const getStatusBadge = (status: string) => {
-    const styles = {
-      ACTIVE: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
-      EXPIRED: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
-      REVOKED: "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300",
-      SUSPENDED: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300",
-    };
+    const label = status?.replace(/_/g, " ") || "Unknown";
+
+    if (status === "ACTIVE") {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          <CheckCircle size={14} />
+          {label}
+        </span>
+      );
+    }
+
+    if (status === "EXPIRED") {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+          <XCircle size={14} />
+          {label}
+        </span>
+      );
+    }
+
+    if (status === "SUSPENDED") {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+          <Clock size={14} />
+          {label}
+        </span>
+      );
+    }
 
     return (
-      <span
-        className={`px-2 py-1 rounded-full text-xs font-medium ${
-          styles[status as keyof typeof styles] || styles.ACTIVE
-        }`}
-      >
-        {status}
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+        <Ban size={14} />
+        {label}
       </span>
     );
   };
@@ -241,10 +261,6 @@ export default function ClientDetailPage({
                   {client.description}
                 </p>
               )}
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">Client ID</p>
-              <p className="font-mono text-sm">{client.id}</p>
             </div>
           </div>
         </div>
@@ -391,17 +407,22 @@ export default function ClientDetailPage({
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-12 text-center">#</TableHead>
                     <TableHead>Name</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                    <TableHead>Created</TableHead>
                     <TableHead>Expires</TableHead>
                     <TableHead className="text-center">Usage</TableHead>
                     <TableHead>Last Used</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {tokens.map((token) => (
+                  {tokens.map((token, index) => (
                     <TableRow key={token.id}>
+                      <TableCell className="text-center whitespace-nowrap">
+                        {index + 1}
+                      </TableCell>
                       <TableCell>
                         <div>
                           <p className="font-medium">{token.name || "Unnamed Token"}</p>
@@ -410,7 +431,7 @@ export default function ClientDetailPage({
                           </p>
                         </div>
                       </TableCell>
-                      <TableCell>{getStatusBadge(token.status)}</TableCell>
+                      <TableCell className="text-center">{getStatusBadge(token.status)}</TableCell>
                       <TableCell>
                         {token.expiresAt ? (
                           <div>
@@ -448,33 +469,39 @@ export default function ClientDetailPage({
                           ? new Date(token.lastUsedAt).toLocaleString()
                           : "Never"}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex gap-1 justify-end">
+                      <TableCell className="text-center">
+                        <div className="flex gap-1 justify-center">
                           {token.status === "ACTIVE" && (
                             <Button
                               variant="outline"
                               size="sm"
+                              className="text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 border-amber-200"
                               onClick={() => updateTokenStatus(token.id, "suspend")}
                             >
-                              <Ban className="h-3 w-3" />
+                              <Ban className="h-4 w-4 mr-2" />
+                              Suspend
                             </Button>
                           )}
                           {token.status === "SUSPENDED" && (
                             <Button
                               variant="outline"
                               size="sm"
+                              className="text-green-700 bg-green-50 hover:bg-green-100 hover:text-green-800 border-green-200"
                               onClick={() => updateTokenStatus(token.id, "reactivate")}
                             >
-                              <Play className="h-3 w-3" />
+                              <Play className="h-4 w-4 mr-2" />
+                              Reactivate
                             </Button>
                           )}
                           {token.status !== "REVOKED" && (
                             <Button
                               variant="outline"
                               size="sm"
+                              className="text-red-700 bg-red-50 hover:bg-red-100 hover:text-red-800 border-red-200"
                               onClick={() => updateTokenStatus(token.id, "revoke")}
                             >
-                              <Trash2 className="h-3 w-3 text-red-600" />
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Revoke
                             </Button>
                           )}
                         </div>

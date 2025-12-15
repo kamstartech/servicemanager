@@ -17,12 +17,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -44,7 +38,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { 
-  Search, Plus, MoreVertical, Edit, Trash2, Eye, GripVertical,
+  Search, Plus, Edit, Trash2, Eye, GripVertical,
   Home, Send, CreditCard, LayoutDashboard, User, Settings,
   Smartphone, Briefcase, TrendingUp, Bell, Target, Wallet,
   FileText, Lock, Phone, MapPin, Store, File, Lightbulb
@@ -193,7 +187,7 @@ const ICONS = [
   { value: "Search", label: "Search" },
 ];
 
-function SortableScreenRow({ screen, onEdit, onDelete }: any) {
+function SortableScreenRow({ screen, onEdit, onDelete, rowIndex }: any) {
   const {
     attributes,
     listeners,
@@ -210,7 +204,10 @@ function SortableScreenRow({ screen, onEdit, onDelete }: any) {
   };
 
   return (
-    <TableRow ref={setNodeRef} style={style}>
+    <TableRow ref={setNodeRef} style={style} className="hover:bg-gray-50">
+      <TableCell className="text-center whitespace-nowrap">
+        {rowIndex + 1}
+      </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
           <div {...attributes} {...listeners} className="cursor-move">
@@ -235,33 +232,42 @@ function SortableScreenRow({ screen, onEdit, onDelete }: any) {
           {screen.isTesting ? "Testing" : "Live"}
         </Badge>
       </TableCell>
-      <TableCell className="text-right">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem asChild>
+      <TableCell className="text-center">
+        <div className="flex justify-center">
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
+            >
               <Link href={`/system/app-screens/${screen.id}`}>
                 <Eye className="h-4 w-4 mr-2" />
-                View Details
+                View
               </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onEdit(screen)}>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 border-amber-200"
+              onClick={() => onEdit(screen)}
+            >
               <Edit className="h-4 w-4 mr-2" />
               Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="text-red-700 bg-red-50 hover:bg-red-100 hover:text-red-800 border-red-200"
               onClick={() => onDelete(screen.id, screen.name)}
-              className="text-destructive"
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            </Button>
+          </div>
+        </div>
       </TableCell>
     </TableRow>
   );
@@ -536,26 +542,28 @@ export default function AppScreensPage() {
                       collisionDetection={closestCenter}
                       onDragEnd={handleDragEnd}
                     >
-                      <Table>
-                        <TableHeader>
+                      <Table className="bg-white">
+                        <TableHeader className="bg-gray-50">
                           <TableRow>
+                            <TableHead className="w-12 text-center">#</TableHead>
                             <TableHead className="w-16">Order</TableHead>
                             <TableHead>Icon</TableHead>
                             <TableHead>Name</TableHead>
                             <TableHead>Active</TableHead>
                             <TableHead>Testing</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                            <TableHead className="text-center">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
-                        <TableBody>
+                        <TableBody className="bg-white divide-y divide-gray-200">
                           <SortableContext
                             items={filteredScreens.map((s: any) => s.id)}
                             strategy={verticalListSortingStrategy}
                           >
-                            {filteredScreens.map((screen: any) => (
+                            {filteredScreens.map((screen: any, index: number) => (
                               <SortableScreenRow
                                 key={screen.id}
                                 screen={screen}
+                                rowIndex={index}
                                 onEdit={handleEditOpen}
                                 onDelete={handleDelete}
                               />

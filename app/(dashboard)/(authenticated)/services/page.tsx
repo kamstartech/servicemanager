@@ -7,7 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { RefreshCw, CheckCircle, Clock, Activity, TestTube, Loader2, FileText, X } from "lucide-react";
+import {
+  RefreshCw,
+  CheckCircle,
+  Clock,
+  Activity,
+  TestTube,
+  Loader2,
+  FileText,
+  X,
+  XCircle,
+} from "lucide-react";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { toast } from "sonner";
 
@@ -300,8 +310,43 @@ export default function ServicesMonitorPage() {
     {
       id: "status",
       header: "Status",
-      accessor: (row) => <Badge variant={row.variant}>{row.status}</Badge>,
+      accessor: (row) => {
+        const tone =
+          row.variant === "default"
+            ? "success"
+            : row.variant === "destructive"
+            ? "error"
+            : row.variant === "secondary"
+            ? "pending"
+            : "neutral";
+
+        const classes =
+          tone === "success"
+            ? "bg-green-100 text-green-800"
+            : tone === "error"
+            ? "bg-red-100 text-red-800"
+            : tone === "pending"
+            ? "bg-yellow-100 text-yellow-800"
+            : "bg-gray-100 text-gray-800";
+
+        const Icon =
+          tone === "success"
+            ? CheckCircle
+            : tone === "error"
+            ? XCircle
+            : Clock;
+
+        return (
+          <span
+            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${classes}`}
+          >
+            <Icon size={14} />
+            {row.status}
+          </span>
+        );
+      },
       sortKey: "status",
+      alignCenter: true,
     },
     {
       id: "interval",
@@ -709,6 +754,8 @@ export default function ServicesMonitorPage() {
             searchableKeys={["name", "type", "description", "status"]}
             pageSize={10}
             searchPlaceholder="Search services..."
+            showRowNumbers
+            rowNumberHeader="#"
           />
         </CardContent>
       </Card>

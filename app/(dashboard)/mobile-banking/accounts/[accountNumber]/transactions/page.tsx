@@ -7,7 +7,16 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
-import { ArrowLeft, RefreshCw, Download, AlertCircle, FileText } from "lucide-react";
+import {
+  ArrowLeft,
+  RefreshCw,
+  Download,
+  AlertCircle,
+  FileText,
+  CheckCircle,
+  Clock,
+  XCircle,
+} from "lucide-react";
 
 const GET_ACCOUNT_TRANSACTIONS = gql`
   query GetAccountTransactions($accountNumber: String!) {
@@ -192,21 +201,43 @@ export default function AccountTransactionsPage() {
       header: "Status",
       accessor: (row) => {
         const status = row.status?.toLowerCase() || "completed";
-        const variant =
-          status === "completed" || status === "success"
-            ? "default"
-            : status === "pending"
-            ? "secondary"
-            : status === "failed"
-            ? "destructive"
-            : "outline";
+        const label = row.status || "Completed";
+
+        if (status === "completed" || status === "success") {
+          return (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 capitalize">
+              <CheckCircle size={14} />
+              {label}
+            </span>
+          );
+        }
+
+        if (status === "pending") {
+          return (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 capitalize">
+              <Clock size={14} />
+              {label}
+            </span>
+          );
+        }
+
+        if (status === "failed") {
+          return (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 capitalize">
+              <XCircle size={14} />
+              {label}
+            </span>
+          );
+        }
 
         return (
-          <Badge variant={variant} className="text-xs capitalize">
-            {row.status || "Completed"}
-          </Badge>
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 capitalize">
+            <Clock size={14} />
+            {label}
+          </span>
         );
       },
+      alignCenter: true,
     },
   ];
 
@@ -401,6 +432,8 @@ export default function AccountTransactionsPage() {
               initialSortKey="transactionDate"
               pageSize={20}
               searchPlaceholder="Search by reference, description, type..."
+              showRowNumbers
+              rowNumberHeader="#"
             />
           )}
         </CardContent>

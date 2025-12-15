@@ -5,6 +5,7 @@ import { gql, useQuery } from "@apollo/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { CheckCircle, Eye, XCircle } from "lucide-react";
 
 const USERS_QUERY = gql`
   query Users($context: MobileUserContext!) {
@@ -56,12 +57,6 @@ export function UsersTable({ context, title, searchPlaceholder }: UsersTableProp
   const rows = mapMobileUsers(data);
 
   const baseColumns: DataTableColumn<MobileUserRow>[] = [
-    {
-      id: "id",
-      header: "Identifier",
-      accessor: (row) => row.id,
-      sortKey: "id",
-    },
     // Context column intentionally hidden in UI to keep tables clean
     // {
     //   id: "context",
@@ -90,8 +85,20 @@ export function UsersTable({ context, title, searchPlaceholder }: UsersTableProp
     {
       id: "status",
       header: "Status",
-      accessor: (row) => (row.isActive ? "Active" : "Inactive"),
+      accessor: (row) =>
+        row.isActive ? (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            <CheckCircle size={14} />
+            Active
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+            <XCircle size={14} />
+            Inactive
+          </span>
+        ),
       sortKey: "isActive",
+      alignCenter: true,
     },
     {
       id: "createdAt",
@@ -109,14 +116,21 @@ export function UsersTable({ context, title, searchPlaceholder }: UsersTableProp
             : `/mobile-banking/users/${row.id}`;
 
         return (
-          <div className="flex justify-end">
-            <Button asChild variant="outline" size="sm">
-              <Link href={detailsHref}>Details</Link>
+          <div className="flex justify-center">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
+            >
+              <Link href={detailsHref}>
+                <Eye className="h-4 w-4 mr-2" />
+                Details
+              </Link>
             </Button>
           </div>
         );
       },
-      alignRight: true,
     },
   ];
 
@@ -152,12 +166,14 @@ export function UsersTable({ context, title, searchPlaceholder }: UsersTableProp
               columns={columns}
               searchableKeys={
                 context === "WALLET"
-                  ? ["id", "phoneNumber"]
-                  : ["id", "username", "phoneNumber", "customerNumber"]
+                  ? ["phoneNumber"]
+                  : ["username", "phoneNumber", "customerNumber"]
               }
-              initialSortKey="id"
+              initialSortKey="createdAt"
               pageSize={10}
               searchPlaceholder={searchPlaceholder ?? "Search users"}
+              showRowNumbers
+              rowNumberHeader="#"
             />
           )}
         </CardContent>

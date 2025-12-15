@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { CheckCircle, Eye, Star, XCircle } from "lucide-react";
 
 const GET_ACCOUNTS = gql`
   query GetMobileUserAccounts {
@@ -129,45 +130,49 @@ export default function AccountsPage() {
       accessor: (row) => (
         <div className="flex flex-col gap-1">
           {row.isPrimary && (
-            <Badge variant="default" className="text-xs">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              <Star size={14} />
               Primary
-            </Badge>
+            </span>
           )}
           {row.accountStatus && (
-            <Badge
-              variant={
+            <span
+              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
                 row.accountStatus.toLowerCase() === "active"
-                  ? "default"
-                  : "secondary"
-              }
-              className="text-xs"
+                  ? "bg-green-100 text-green-800"
+                  : "bg-gray-100 text-gray-800"
+              }`}
             >
+              <CheckCircle size={14} />
               {row.accountStatus}
-            </Badge>
+            </span>
           )}
           {!row.isActive && (
-            <Badge variant="outline" className="text-xs">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+              <XCircle size={14} />
               Inactive
-            </Badge>
+            </span>
           )}
         </div>
       ),
+      alignCenter: true,
     },
     {
       id: "actions",
       header: "Actions",
       accessor: (row) => (
-        <div className="flex justify-end">
-          <Button 
-            size="sm" 
+        <div className="flex justify-center">
+          <Button
+            size="sm"
             variant="outline"
+            className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
             onClick={() => router.push(`/mobile-banking/accounts/${row.accountNumber}`)}
           >
+            <Eye className="h-4 w-4 mr-2" />
             View
           </Button>
         </div>
       ),
-      alignRight: true,
     },
   ];
 
@@ -212,6 +217,8 @@ export default function AccountsPage() {
               initialSortKey="accountNumber"
               pageSize={20}
               searchPlaceholder="Search by account number, holder name, type..."
+              showRowNumbers
+              rowNumberHeader="#"
             />
           )}
         </CardContent>

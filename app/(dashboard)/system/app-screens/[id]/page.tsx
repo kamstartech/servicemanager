@@ -32,13 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ArrowLeft, Plus, MoreVertical, Edit, Trash2, GripVertical, Workflow as WorkflowIcon,
+import { ArrowLeft, Plus, Edit, Trash2, GripVertical, Workflow as WorkflowIcon,
   Home, Send, CreditCard, LayoutDashboard, User, Settings,
   Smartphone, Briefcase, TrendingUp, Bell, Target, Wallet,
   FileText, Lock, Phone, MapPin, Store, File, Lightbulb, Search
@@ -166,7 +160,7 @@ const ICONS = [
   { value: "Search", label: "Search" },
 ];
 
-function SortablePageRow({ page, onEdit, onDelete, screenId }: any) {
+function SortablePageRow({ page, onEdit, onDelete, screenId, rowIndex }: any) {
   const {
     attributes,
     listeners,
@@ -183,7 +177,10 @@ function SortablePageRow({ page, onEdit, onDelete, screenId }: any) {
   };
 
   return (
-    <TableRow ref={setNodeRef} style={style}>
+    <TableRow ref={setNodeRef} style={style} className="hover:bg-gray-50">
+      <TableCell className="text-center whitespace-nowrap">
+        {rowIndex + 1}
+      </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
           <div {...attributes} {...listeners} className="cursor-move">
@@ -208,33 +205,42 @@ function SortablePageRow({ page, onEdit, onDelete, screenId }: any) {
           {page.isTesting ? "Testing" : "Live"}
         </Badge>
       </TableCell>
-      <TableCell className="text-right">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem asChild>
+      <TableCell className="text-center">
+        <div className="flex justify-center">
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
+            >
               <Link href={`/system/app-screens/${screenId}/pages/${page.id}`}>
                 <WorkflowIcon className="h-4 w-4 mr-2" />
-                Manage Workflows
+                Workflows
               </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onEdit(page)}>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 border-amber-200"
+              onClick={() => onEdit(page)}
+            >
               <Edit className="h-4 w-4 mr-2" />
               Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="text-red-700 bg-red-50 hover:bg-red-100 hover:text-red-800 border-red-200"
               onClick={() => onDelete(page.id, page.name)}
-              className="text-destructive"
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            </Button>
+          </div>
+        </div>
       </TableCell>
     </TableRow>
   );
@@ -485,29 +491,31 @@ export default function AppScreenDetailsPage() {
                 collisionDetection={closestCenter}
                 onDragEnd={handleDragEnd}
               >
-                <Table>
-                  <TableHeader>
+                <Table className="bg-white">
+                  <TableHeader className="bg-gray-50">
                     <TableRow>
+                      <TableHead className="w-12 text-center">#</TableHead>
                       <TableHead className="w-16">Order</TableHead>
                       <TableHead>Icon</TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Active</TableHead>
                       <TableHead>Testing</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="text-center">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>
+                  <TableBody className="bg-white divide-y divide-gray-200">
                     <SortableContext
                       items={pages.map((p: any) => p.id)}
                       strategy={verticalListSortingStrategy}
                     >
-                      {pages.map((page: any) => (
+                      {pages.map((page: any, index: number) => (
                         <SortablePageRow
                           key={page.id}
                           page={page}
-                          screenId={screenId}
+                          rowIndex={index}
                           onEdit={handleEditOpen}
                           onDelete={handleDelete}
+                          screenId={screenId}
                         />
                       ))}
                     </SortableContext>

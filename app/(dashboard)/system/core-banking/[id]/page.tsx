@@ -9,6 +9,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { Beaker, Pencil } from "lucide-react";
 import {
   CoreBankingConnectionDialog,
   type CoreBankingConnection,
@@ -164,15 +165,17 @@ export default function CoreBankingConnectionPage() {
           ? translate("common.status.active")
           : translate("common.status.inactive"),
       sortKey: "isActive",
+      alignCenter: true,
     },
     {
       id: "actions",
       header: translate("coreBanking.connectionDetail.endpoints.columns.actions"),
       accessor: (row) => (
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap justify-center gap-2">
           <Button
             variant="outline"
             size="sm"
+            className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
             onClick={async () => {
               const endpoint = (connection?.endpoints ?? []).find(
                 (e: any) => e.id === row.id,
@@ -188,11 +191,13 @@ export default function CoreBankingConnectionPage() {
               setTestDialogOpen(true);
             }}
           >
+            <Beaker className="h-4 w-4 mr-2" />
             {translate("coreBanking.connectionDetail.endpoints.actions.test")}
           </Button>
           <Button
             variant="outline"
             size="sm"
+            className="text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 border-amber-200"
             onClick={() => {
               const endpoint = (connection?.endpoints ?? []).find(
                 (e: any) => e.id === row.id,
@@ -212,11 +217,11 @@ export default function CoreBankingConnectionPage() {
               setEndpointDialogOpen(true);
             }}
           >
+            <Pencil className="h-4 w-4 mr-2" />
             {translate("coreBanking.connectionDetail.endpoints.actions.edit")}
           </Button>
         </div>
       ),
-      alignRight: true,
     },
   ];
 
@@ -416,6 +421,8 @@ export default function CoreBankingConnectionPage() {
               searchPlaceholder={translate(
                 "coreBanking.connectionDetail.endpoints.searchPlaceholder",
               )}
+              showRowNumbers
+              rowNumberHeader="#"
             />
           ) : (
             <p className="text-xs text-muted-foreground">

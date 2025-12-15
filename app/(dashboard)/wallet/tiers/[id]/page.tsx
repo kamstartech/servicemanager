@@ -26,9 +26,10 @@ export default async function EditTierPage({
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
+        <Button variant="outline" size="sm" asChild>
           <a href="/wallet/tiers">
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
           </a>
         </Button>
         <div>
@@ -45,14 +46,14 @@ export default async function EditTierPage({
           description: tier.description || undefined,
           position: tier.position,
           isDefault: tier.isDefault,
-          minimumBalance: parseFloat(tier.minimumBalance),
-          maximumBalance: parseFloat(tier.maximumBalance),
-          maximumCreditLimit: parseFloat(tier.maximumCreditLimit || '0'),
-          maximumDebtLimit: parseFloat(tier.maximumDebtLimit || '0'),
-          minTransactionAmount: parseFloat(tier.minTransactionAmount),
-          maxTransactionAmount: parseFloat(tier.maxTransactionAmount),
-          dailyTransactionLimit: parseFloat(tier.dailyTransactionLimit),
-          monthlyTransactionLimit: parseFloat(tier.monthlyTransactionLimit),
+          minimumBalance: parseFloat(String(tier.minimumBalance ?? 0)),
+          maximumBalance: parseFloat(String(tier.maximumBalance ?? 0)),
+          maximumCreditLimit: parseFloat(String(tier.maximumCreditLimit ?? 0)),
+          maximumDebtLimit: parseFloat(String(tier.maximumDebtLimit ?? 0)),
+          minTransactionAmount: parseFloat(String(tier.minTransactionAmount ?? 0)),
+          maxTransactionAmount: parseFloat(String(tier.maxTransactionAmount ?? 0)),
+          dailyTransactionLimit: parseFloat(String(tier.dailyTransactionLimit ?? 0)),
+          monthlyTransactionLimit: parseFloat(String(tier.monthlyTransactionLimit ?? 0)),
           dailyTransactionCount: tier.dailyTransactionCount,
           monthlyTransactionCount: tier.monthlyTransactionCount,
           requiredKycFields: tier.requiredKycFields as string[],

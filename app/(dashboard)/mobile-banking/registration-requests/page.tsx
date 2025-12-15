@@ -30,27 +30,22 @@ interface RegistrationRequest extends Omit<RequestedRegistrationWithRelations, '
 
 const statusConfig = {
   [RegistrationStatus.PENDING]: {
-    variant: "secondary" as const,
     icon: Clock,
     label: "Pending",
   },
   [RegistrationStatus.APPROVED]: {
-    variant: "default" as const,
     icon: CheckCircle,
     label: "Approved",
   },
   [RegistrationStatus.COMPLETED]: {
-    variant: "default" as const,
     icon: CheckCircle,
     label: "Completed",
   },
   [RegistrationStatus.FAILED]: {
-    variant: "destructive" as const,
     icon: XCircle,
     label: "Failed",
   },
   [RegistrationStatus.DUPLICATE]: {
-    variant: "outline" as const,
     icon: Copy,
     label: "Duplicate",
   },
@@ -142,14 +137,6 @@ export default function RegistrationRequestsPage() {
 
   const columns: DataTableColumn<RegistrationRequest>[] = [
     {
-      id: "id",
-      header: "ID",
-      accessor: (row) => (
-        <span className="font-mono text-sm">{row.id}</span>
-      ),
-      sortKey: "id",
-    },
-    {
       id: "customer",
       header: "Customer Info",
       accessor: (row) => (
@@ -196,13 +183,35 @@ export default function RegistrationRequestsPage() {
       accessor: (row) => {
         const config = statusConfig[row.status];
         const Icon = config.icon;
+
+        const tone =
+          row.status === RegistrationStatus.PENDING
+            ? "pending"
+            : row.status === RegistrationStatus.FAILED
+            ? "error"
+            : row.status === RegistrationStatus.DUPLICATE
+            ? "neutral"
+            : "success";
+
+        const classes =
+          tone === "success"
+            ? "bg-green-100 text-green-800"
+            : tone === "error"
+            ? "bg-red-100 text-red-800"
+            : tone === "pending"
+            ? "bg-yellow-100 text-yellow-800"
+            : "bg-gray-100 text-gray-800";
+
         return (
-          <Badge variant={config.variant} className="text-xs gap-1">
-            <Icon className="h-3 w-3" />
+          <span
+            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${classes}`}
+          >
+            <Icon size={14} />
             {config.label}
-          </Badge>
+          </span>
         );
       },
+      alignCenter: true,
     },
     {
       id: "retry",
@@ -233,10 +242,11 @@ export default function RegistrationRequestsPage() {
       id: "actions",
       header: "Actions",
       accessor: (row) => (
-        <div className="flex gap-1 justify-end">
+        <div className="flex flex-wrap justify-center gap-2">
           <Button
             size="sm"
             variant="outline"
+            className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
             onClick={() => router.push(`/mobile-banking/registration-requests/${row.id}`)}
           >
             <Eye className="h-3 w-3 mr-1" />
@@ -245,16 +255,16 @@ export default function RegistrationRequestsPage() {
           {row.status === RegistrationStatus.PENDING && (
             <Button
               size="sm"
-              variant="default"
+              variant="outline"
+              className="text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 border-amber-200"
               onClick={() => handleProcess(row.id)}
             >
-              <PlayCircle className="h-3 w-3 mr-1" />
+              <PlayCircle className="h-3 w-3 mr-2" />
               Validate
             </Button>
           )}
         </div>
       ),
-      alignRight: true,
     },
   ];
 
@@ -334,6 +344,8 @@ export default function RegistrationRequestsPage() {
               initialSortKey="createdAt"
               pageSize={20}
               searchPlaceholder="Search by customer number, phone, email, name..."
+              showRowNumbers
+              rowNumberHeader="#"
             />
           )}
           {totalPages > 1 && (
