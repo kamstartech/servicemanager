@@ -64,7 +64,8 @@
     "react-hook-form": "^7.68.0",
     "sonner": "^1.5.0",
     "tailwind-merge": "^3.4.0",
-    "undici": "^7.16.0"
+    "undici": "^7.16.0",
+    "zod": "^4.2.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",
