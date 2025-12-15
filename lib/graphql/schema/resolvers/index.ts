@@ -28,10 +28,30 @@ import { workflowExecutionResolvers } from "./workflowExecution";
 import { billersResolvers } from "./billers";
 import { walletTierResolvers } from "./walletTier";
 import { JSONResolver, DateTimeResolver } from "graphql-scalars";
+import { GraphQLScalarType, Kind } from "graphql";
+
+// Custom Decimal scalar for Prisma Decimal type
+const DecimalResolver = new GraphQLScalarType({
+  name: "Decimal",
+  description: "Prisma Decimal custom scalar type",
+  serialize(value: any) {
+    return value.toString();
+  },
+  parseValue(value: any) {
+    return value;
+  },
+  parseLiteral(ast) {
+    if (ast.kind === Kind.STRING || ast.kind === Kind.INT || ast.kind === Kind.FLOAT) {
+      return ast.value;
+    }
+    return null;
+  },
+});
 
 export const resolvers = {
   JSON: JSONResolver,
   DateTime: DateTimeResolver,
+  Decimal: DecimalResolver,
   MobileUser: {
     ...mobileUserResolvers.MobileUser,
   },

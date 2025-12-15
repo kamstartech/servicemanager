@@ -1,6 +1,7 @@
 export const typeDefs = /* GraphQL */ `
   scalar JSON
   scalar DateTime
+  scalar Decimal
 
   enum MobileUserContext {
     MOBILE_BANKING
@@ -1195,10 +1196,10 @@ export const typeDefs = /* GraphQL */ `
   }
 
   # ========================================
-  # TRANSACTIONS
+  # TRANSACTIONS (T24)
   # ========================================
 
-  type Transaction {
+  type T24Transaction {
     transactionId: ID!
     accountNumber: String!
     transactionDate: String!
@@ -1215,8 +1216,8 @@ export const typeDefs = /* GraphQL */ `
     narrative: String
   }
 
-  type TransactionConnection {
-    transactions: [Transaction!]!
+  type T24TransactionConnection {
+    transactions: [T24Transaction!]!
     totalCount: Int!
     accountNumber: String!
     status: String!
@@ -1224,7 +1225,7 @@ export const typeDefs = /* GraphQL */ `
 
   extend type Query {
     # Get transactions for a specific account from T24
-    accountTransactions(accountNumber: String!): TransactionConnection!
+    accountTransactions(accountNumber: String!): T24TransactionConnection!
   }
 
   # ============================================
@@ -1844,6 +1845,13 @@ export const typeDefs = /* GraphQL */ `
     totalCount: Int!
     pageInfo: PageInfo!
   }
+  
+  type PageInfo {
+    hasNextPage: Boolean!
+    hasPreviousPage: Boolean!
+    currentPage: Int!
+    totalPages: Int!
+  }
 
   type RetryStats {
     totalRetryable: Int!
@@ -1853,15 +1861,16 @@ export const typeDefs = /* GraphQL */ `
   }
 
   extend type Query {
-    transaction(id: ID!): Transaction
-    transactionByReference(reference: String!): Transaction
-    transactions(
+    # Proxy Transaction System queries (renamed to avoid conflicts)
+    proxyTransaction(id: ID!): Transaction
+    proxyTransactionByReference(reference: String!): Transaction
+    proxyTransactions(
       filter: TransactionFilterInput
       page: Int = 1
       limit: Int = 20
     ): TransactionConnection!
     
-    accountTransactions(
+    proxyAccountTransactions(
       accountId: Int!
       page: Int = 1
       limit: Int = 20

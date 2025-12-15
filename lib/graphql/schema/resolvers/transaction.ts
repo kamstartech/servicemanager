@@ -4,9 +4,9 @@ import { transactionResolvers as proxyTransactionResolvers } from "@/lib/graphql
 export const transactionResolvers = {
   Query: {
     /**
-     * Fetch transactions for a specific account from T24 (legacy)
+     * Fetch transactions for a specific account from T24
      */
-    t24AccountTransactions: async (
+    accountTransactions: async (
       _parent: any,
       args: { accountNumber: string }
     ) => {
@@ -48,8 +48,14 @@ export const transactionResolvers = {
       };
     },
     
-    // Add proxy transaction queries
-    ...proxyTransactionResolvers.Query,
+    // Add proxy transaction queries (renamed to avoid conflicts)
+    proxyTransaction: proxyTransactionResolvers.Query.transaction,
+    proxyTransactionByReference: proxyTransactionResolvers.Query.transactionByReference,
+    proxyTransactions: proxyTransactionResolvers.Query.transactions,
+    proxyAccountTransactions: proxyTransactionResolvers.Query.accountTransactions,
+    walletTransactions: proxyTransactionResolvers.Query.walletTransactions,
+    retryableTransactions: proxyTransactionResolvers.Query.retryableTransactions,
+    transactionRetryStats: proxyTransactionResolvers.Query.transactionRetryStats,
   },
   
   Mutation: {
@@ -57,6 +63,8 @@ export const transactionResolvers = {
     ...proxyTransactionResolvers.Mutation,
   },
   
-  // Add Transaction type resolver
-  Transaction: proxyTransactionResolvers.Transaction,
+  // Add Transaction type resolver (only statusHistory, others are direct fields)
+  Transaction: {
+    statusHistory: proxyTransactionResolvers.Transaction.statusHistory,
+  },
 };
