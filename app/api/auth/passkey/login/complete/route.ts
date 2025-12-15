@@ -6,8 +6,8 @@ import {
 import type {
   AuthenticationResponseJSON,
   VerifiedAuthenticationResponse,
-} from "@simplewebauthn/server/script/deps";
-import { isoUint8Array, isoBase64URL } from "@simplewebauthn/server/helpers";
+} from "@simplewebauthn/server";
+import { isoBase64URL } from "@simplewebauthn/server/helpers";
 import { redis } from "@/lib/db/redis";
 import { generateToken } from "@/lib/auth/jwt";
 
@@ -74,15 +74,16 @@ export async function POST(request: NextRequest) {
         expectedChallenge,
         expectedOrigin: EXPECTED_ORIGIN,
         expectedRPID: RP_ID,
-        authenticator: {
-          credentialID: isoBase64URL.toBuffer(passkey.credentialId),
-          credentialPublicKey: isoBase64URL.toBuffer(passkey.publicKey),
+        credential: {
+          id: passkey.credentialId,
+          publicKey: isoBase64URL.toBuffer(passkey.publicKey),
           counter: Number(passkey.counter),
           transports: passkey.transports as AuthenticatorTransport[],
         },
       });
     } catch (error: any) {
       console.error("Verification failed:", error);
+
       return NextResponse.json(
         { error: "Authentication verification failed" },
         { status: 401 }
@@ -110,23 +111,6 @@ export async function POST(request: NextRequest) {
     // Delete the challenge from Redis
     await redis.del(challengeKey);
     await redis.del(`passkey:user:${expectedChallenge}`);
-
-    // Log successful login attempt
-    try {
-      await prisma.adminWebLoginAttempt.create({
-        data: {
-          email: passkey.user.email,
-          ipAddress: request.headers.get("x-forwarded-for") || "unknown",
-          userAgent: request.headers.get("user-agent") || "unknown",
-          success: true,
-          method: "PASSKEY",
-          userId: passkey.user.id,
-        },
-      });
-    } catch (logError) {
-      // Don't fail login if logging fails
-      console.error("Failed to log passkey login attempt:", logError);
-    }
 
     // Generate JWT token
     const token = generateToken({

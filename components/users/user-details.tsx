@@ -8,7 +8,7 @@ import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { COMMON_TABLE_HEADERS, DataTable, type DataTableColumn } from "@/components/data-table";
 import { Calendar, Plus, ExternalLink, Link2Off, Star, CheckCircle, Clock, XCircle } from "lucide-react";
 
 const USER_DETAILS_QUERY = gql`
@@ -326,7 +326,7 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
   const accountsColumns: DataTableColumn<any>[] = [
     {
       id: "accountNumber",
-      header: "Account Number",
+      header: COMMON_TABLE_HEADERS.accountNumber,
       accessor: (row) => <span className="font-medium">{row.accountNumber}</span>,
       sortKey: "accountNumber",
     },
@@ -344,7 +344,7 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
     },
     {
       id: "category",
-      header: "Category",
+      header: COMMON_TABLE_HEADERS.category,
       accessor: (row) =>
         row.categoryName ? (
           <span className="text-sm text-muted-foreground">{row.categoryName}</span>
@@ -354,7 +354,7 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
     },
     {
       id: "balance",
-      header: "Balance",
+      header: COMMON_TABLE_HEADERS.balance,
       accessor: (row) =>
         row.balance ? (
           <span className="font-medium">
@@ -367,7 +367,7 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
     },
     {
       id: "status",
-      header: "Status",
+      header: COMMON_TABLE_HEADERS.status,
       accessor: (row) => (
         <div className="flex gap-1">
           {row.isPrimary && (
@@ -394,7 +394,7 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
     },
     {
       id: "actions",
-      header: "Actions",
+      header: COMMON_TABLE_HEADERS.actions,
       accessor: (row) => (
         <div className="flex flex-wrap justify-center gap-2">
           {!row.isPrimary && row.isActive && (
@@ -426,13 +426,13 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
   const devicesColumns: DataTableColumn<any>[] = [
     {
       id: "name",
-      header: "Device Name",
+      header: COMMON_TABLE_HEADERS.deviceName,
       accessor: (row) => <span className="font-medium">{row.name || "Device"}</span>,
       sortKey: "name",
     },
     {
       id: "model",
-      header: "Model / OS",
+      header: COMMON_TABLE_HEADERS.modelOs,
       accessor: (row) => (
         <span className="text-sm text-muted-foreground">
           {row.model || "Unknown"} • {row.os || "Unknown"}
@@ -441,7 +441,7 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
     },
     {
       id: "lastUsed",
-      header: "Last Used",
+      header: COMMON_TABLE_HEADERS.lastUsed,
       accessor: (row) => (
         row.lastUsedAt ? (
           <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
@@ -464,7 +464,7 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
     },
     {
       id: "status",
-      header: "Status",
+      header: COMMON_TABLE_HEADERS.status,
       accessor: (row) =>
         row.isActive ? (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -481,7 +481,7 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
     },
     {
       id: "actions",
-      header: "Actions",
+      header: COMMON_TABLE_HEADERS.actions,
       accessor: (row) => (
         <>
           {!row.isActive && (
@@ -505,13 +505,13 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
   const beneficiariesColumns: DataTableColumn<any>[] = [
     {
       id: "name",
-      header: "Name",
+      header: COMMON_TABLE_HEADERS.name,
       accessor: (row) => <span className="font-medium">{row.name}</span>,
       sortKey: "name",
     },
     {
       id: "type",
-      header: "Type",
+      header: COMMON_TABLE_HEADERS.type,
       accessor: (row) => (
         <Badge variant="outline" className="text-xs">
           {getBeneficiaryTypeLabel(row.beneficiaryType)}
@@ -520,14 +520,14 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
     },
     {
       id: "bank",
-      header: "Bank",
+      header: COMMON_TABLE_HEADERS.bank,
       accessor: (row) => (
         <span className="text-sm text-muted-foreground">{row.bankName || "-"}</span>
       ),
     },
     {
       id: "status",
-      header: "Status",
+      header: COMMON_TABLE_HEADERS.status,
       accessor: (row) => (
         <>
           {!row.isActive && (
@@ -542,7 +542,7 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
     },
     {
       id: "actions",
-      header: "Actions",
+      header: COMMON_TABLE_HEADERS.actions,
       accessor: (row) => (
         <Button size="sm" variant="ghost" asChild>
           <Link href={`${basePath}/${id}/beneficiaries/${row.id}/edit`}>View</Link>

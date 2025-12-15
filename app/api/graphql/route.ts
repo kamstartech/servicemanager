@@ -52,7 +52,7 @@ const yoga = createYoga({
   // Security plugins
   plugins: [
     {
-      onValidate: ({ addValidationRule }) => {
+      onValidate: ({ addValidationRule }: any) => {
         // Limit query depth to 15 levels (increased for nested data)
         addValidationRule(depthLimit(15));
         

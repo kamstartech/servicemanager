@@ -3,10 +3,6 @@ import { prisma } from "@/lib/db/prisma";
 import {
   generateAuthenticationOptions,
 } from "@simplewebauthn/server";
-import type {
-  PublicKeyCredentialDescriptorFuture,
-} from "@simplewebauthn/server/script/deps";
-import { isoUint8Array, isoBase64URL } from "@simplewebauthn/server/helpers";
 import { redis } from "@/lib/db/redis";
 
 const RP_ID = process.env.NEXT_PUBLIC_RP_ID || "localhost";
@@ -66,10 +62,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Prepare allowed credentials
-    const allowCredentials: PublicKeyCredentialDescriptorFuture[] = user.passkeys.map(
+    const allowCredentials = user.passkeys.map(
       (passkey) => ({
-        id: isoBase64URL.toBuffer(passkey.credentialId),
-        type: "public-key",
+        id: passkey.credentialId,
         transports: passkey.transports as AuthenticatorTransport[],
       })
     );

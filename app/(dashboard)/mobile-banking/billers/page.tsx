@@ -1,22 +1,46 @@
 import { prisma } from "@/lib/db/prisma";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Receipt, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Receipt, CheckCircle2, Clock } from "lucide-react";
+
+type BillerConfigRow = {
+  id: string;
+  billerType: string;
+  billerName: string;
+  displayName: string;
+  description: string | null;
+  isActive: boolean;
+  timeoutMs: number;
+  retryAttempts: number;
+  _count: {
+    transactions: number;
+  };
+};
+
+type BillerStatsRow = {
+  billerType: string;
+  status: string;
+  _count: {
+    _all: number;
+  };
+};
 
 export default async function BillersPage() {
-  const configs = await prisma.billerConfig.findMany({
+  const configs = (await prisma.billerConfig.findMany({
     orderBy: { billerName: "asc" },
     include: {
       _count: {
         select: { transactions: true },
       },
     },
-  });
+  })) as BillerConfigRow[];
 
   const stats = await prisma.billerTransaction.groupBy({
-    by: ["billerType", "status"],
-    _count: true,
-  });
+    by: ["billerType", "status"] as const,
+    _count: {
+      _all: true,
+    },
+  }) as unknown as BillerStatsRow[];
 
   return (
     <div className="space-y-6">
@@ -53,13 +77,13 @@ export default async function BillersPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {stats.reduce((acc, s) => acc + s._count, 0)}
+              {stats.reduce((acc, s) => acc + s._count._all, 0)}
             </div>
             <p className="text-xs text-muted-foreground">
               {
                 stats
                   .filter((s) => s.status === "COMPLETED")
-                  .reduce((acc, s) => acc + s._count, 0)
+                  .reduce((acc, s) => acc + s._count._all, 0)
               }{" "}
               completed
             </p>
@@ -77,8 +101,8 @@ export default async function BillersPage() {
                 ? Math.round(
                     (stats
                       .filter((s) => s.status === "COMPLETED")
-                      .reduce((acc, s) => acc + s._count, 0) /
-                      stats.reduce((acc, s) => acc + s._count, 0)) *
+                      .reduce((acc, s) => acc + s._count._all, 0) /
+                      stats.reduce((acc, s) => acc + s._count._all, 0)) *
                       100
                   )
                 : 0}
@@ -97,10 +121,10 @@ export default async function BillersPage() {
             const configStats = stats.filter(
               (s) => s.billerType === config.billerType
             );
-            const totalTx = configStats.reduce((acc, s) => acc + s._count, 0);
+            const totalTx = configStats.reduce((acc, s) => acc + s._count._all, 0);
             const completedTx = configStats
               .filter((s) => s.status === "COMPLETED")
-              .reduce((acc, s) => acc + s._count, 0);
+              .reduce((acc, s) => acc + s._count._all, 0);
 
             return (
               <Card key={config.id}>

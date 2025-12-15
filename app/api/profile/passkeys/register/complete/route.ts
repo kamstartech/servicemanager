@@ -5,7 +5,7 @@ import { verifyRegistrationResponse } from "@simplewebauthn/server";
 import type {
   RegistrationResponseJSON,
   VerifiedRegistrationResponse,
-} from "@simplewebauthn/server/script/deps";
+} from "@simplewebauthn/server";
 import { isoBase64URL } from "@simplewebauthn/server/helpers";
 import { redis } from "@/lib/db/redis";
 
@@ -61,20 +61,18 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
       );
     }
 
-    const {
-      credentialPublicKey,
-      credentialID,
-      counter,
-      credentialBackedUp,
-      credentialDeviceType,
-      attestationObject,
-    } = registrationInfo;
+    const credentialPublicKey = registrationInfo.credential.publicKey;
+    const credentialID = registrationInfo.credential.id;
+    const counter = registrationInfo.credential.counter;
+    const credentialBackedUp = registrationInfo.credentialBackedUp;
+    const credentialDeviceType = registrationInfo.credentialDeviceType;
+    const attestationObject = registrationInfo.attestationObject;
 
     // Store the passkey
     const passkey = await prisma.adminWebPasskey.create({
       data: {
         userId: user.userId,
-        credentialId: isoBase64URL.fromBuffer(credentialID),
+        credentialId: typeof credentialID === 'string' ? credentialID : isoBase64URL.fromBuffer(credentialID),
         publicKey: isoBase64URL.fromBuffer(credentialPublicKey),
         deviceName,
         transports: credential.response.transports || [],

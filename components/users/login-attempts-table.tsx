@@ -2,9 +2,10 @@
 
 import { gql, useQuery } from "@apollo/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { DataTable, type DataTableColumn } from "@/components/data-table";
-import { Badge } from "@/components/ui/badge";
+import { COMMON_TABLE_HEADERS, DataTable, type DataTableColumn } from "@/components/data-table";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { Calendar, CheckCircle, Clock, XCircle } from "lucide-react";
+import { translateStatusOneWord } from "@/lib/utils";
 
 const LOGIN_ATTEMPTS_QUERY = gql`
   query LoginAttempts($limit: Int, $offset: Int, $status: String, $username: String) {
@@ -72,23 +73,20 @@ function mapLoginAttempts(data: any): LoginAttemptRow[] {
   }));
 }
 
-function getStatusBadge(status: string) {
-  const statusMap: Record<
-    string,
-    { tone: "success" | "pending" | "error" | "neutral"; label: string }
-  > = {
-    SUCCESS: { tone: "success", label: "Success" },
-    FAILED_CREDENTIALS: { tone: "error", label: "Failed" },
-    FAILED_OTP: { tone: "error", label: "Failed" },
-    FAILED_DEVICE_BLOCKED: { tone: "error", label: "Device Blocked" },
-    PENDING_VERIFICATION: { tone: "pending", label: "Pending OTP" },
-    PENDING_APPROVAL: { tone: "pending", label: "Pending Approval" },
-    EXPIRED: { tone: "error", label: "Expired" },
+function getStatusBadge(status: string, translate: (key: string) => string) {
+  const toneMap: Record<string, "success" | "pending" | "error" | "neutral"> = {
+    SUCCESS: "success",
+    FAILED_CREDENTIALS: "error",
+    FAILED_OTP: "error",
+    FAILED_DEVICE_BLOCKED: "error",
+    PENDING_VERIFICATION: "pending",
+    PENDING_APPROVAL: "pending",
+    EXPIRED: "error",
   };
 
-  const config = statusMap[status] || {
-    tone: "neutral" as const,
-    label: status?.replace(/_/g, " ") || "Unknown",
+  const config = {
+    tone: toneMap[status] || ("neutral" as const),
+    label: translateStatusOneWord(status, translate, "UNKNOWN"),
   };
 
   if (config.tone === "success") {
@@ -137,6 +135,7 @@ export function LoginAttemptsTable({
   title,
   searchPlaceholder = "Search by username or phone...",
 }: LoginAttemptsTableProps) {
+  const { translate } = useI18n();
   const { data, loading, error, refetch } = useQuery(LOGIN_ATTEMPTS_QUERY, {
     variables: { limit: 100, offset: 0 },
   });
@@ -151,7 +150,7 @@ export function LoginAttemptsTable({
   const columns: DataTableColumn<LoginAttemptRow>[] = [
     {
       id: "attemptedAt",
-      header: "Date & Time",
+      header: translate("common.table.columns.dateTime"),
       accessor: (row) => (
         <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
           <Calendar size={16} />
@@ -170,19 +169,19 @@ export function LoginAttemptsTable({
     },
     {
       id: "username",
-      header: "Username/Phone",
+      header: translate("common.table.columns.usernamePhone"),
       accessor: (row) => row.username || row.mobileUser?.phoneNumber || "-",
       sortKey: "username",
     },
     {
       id: "context",
-      header: "Context",
+      header: translate("common.table.columns.context"),
       accessor: (row) => row.context || "-",
       sortKey: "context",
     },
     {
       id: "deviceName",
-      header: "Device",
+      header: translate("common.table.columns.device"),
       accessor: (row) => {
         const name = row.deviceName || "Unknown";
         const model = row.deviceModel;
@@ -191,19 +190,19 @@ export function LoginAttemptsTable({
     },
     {
       id: "ipAddress",
-      header: "IP Address",
+      header: translate("common.table.columns.ipAddress"),
       accessor: (row) => row.ipAddress || "-",
     },
     {
       id: "status",
-      header: "Status",
-      accessor: (row) => getStatusBadge(row.status),
+      header: COMMON_TABLE_HEADERS.status,
+      accessor: (row) => getStatusBadge(row.status, translate),
       sortKey: "status",
       alignCenter: true,
     },
     {
       id: "failureReason",
-      header: "Failure Reason",
+      header: translate("common.table.columns.failureReason"),
       accessor: (row) => row.failureReason || "-",
     },
   ];
@@ -241,7 +240,7 @@ export function LoginAttemptsTable({
           data={filteredRows}
           searchPlaceholder={searchPlaceholder}
           showRowNumbers
-          rowNumberHeader="#"
+          rowNumberHeader={translate("common.table.columns.index")}
         />
       </CardContent>
     </Card>

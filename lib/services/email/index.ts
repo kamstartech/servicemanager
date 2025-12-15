@@ -36,6 +36,7 @@ export interface EmailOptions {
     filename: string;
     content?: Buffer | string;
     path?: string;
+    cid?: string;
   }>;
 }
 

@@ -9,43 +9,24 @@ export async function GET(request: NextRequest) {
     const billerType = searchParams.get("billerType");
     const status = searchParams.get("status");
     const accountNumber = searchParams.get("accountNumber");
-    const limit = parseInt(searchParams.get("limit") || "50");
-    const offset = parseInt(searchParams.get("offset") || "0");
+    const page = parseInt(searchParams.get("page") || "1");
+    const pageSize = parseInt(searchParams.get("pageSize") || "50");
 
     const filters: any = {
-      limit,
-      offset,
+      page,
+      pageSize,
     };
 
-    let transactions;
+    if (billerType) filters.billerType = billerType;
+    if (status) filters.status = status as BillerTransactionStatus;
+    if (accountNumber) filters.accountNumber = accountNumber;
 
-    if (billerType) {
-      transactions = await billerTransactionService.getTransactionsByBiller(
-        billerType as BillerType,
-        filters
-      );
-    } else if (status) {
-      transactions = await billerTransactionService.getTransactionsByStatus(
-        status as BillerTransactionStatus,
-        filters
-      );
-    } else if (accountNumber) {
-      transactions = await billerTransactionService.getTransactionsByAccount(
-        accountNumber,
-        filters
-      );
-    } else {
-      transactions = await billerTransactionService.getAllTransactions(filters);
-    }
+    const result = await billerTransactionService.getTransactions(filters);
 
     return NextResponse.json({
       success: true,
-      data: transactions,
-      pagination: {
-        limit,
-        offset,
-        count: transactions.length,
-      },
+      data: result.transactions,
+      pagination: result.pagination,
     });
   } catch (error: any) {
     console.error("Get transactions error:", error);

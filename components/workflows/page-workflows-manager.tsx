@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { useI18n } from "@/components/providers/i18n-provider";
 import {
   Table,
   TableBody,
@@ -171,6 +172,7 @@ function SortableWorkflowRow({ pageWorkflow, onDetach, rowIndex }: any) {
 }
 
 export function PageWorkflowsManager({ pageId }: { pageId: string }) {
+  const { translate } = useI18n();
   const [attachDialogOpen, setAttachDialogOpen] = useState(false);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState("");
 
@@ -316,12 +318,12 @@ export function PageWorkflowsManager({ pageId }: { pageId: string }) {
               <Table className="bg-white">
                 <TableHeader className="bg-gray-50">
                   <TableRow>
-                    <TableHead className="w-12 text-center">#</TableHead>
-                    <TableHead className="w-16">Order</TableHead>
-                    <TableHead>Workflow</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Version</TableHead>
-                    <TableHead className="text-center">Actions</TableHead>
+                    <TableHead className="w-12 text-center">{translate("common.table.columns.index")}</TableHead>
+                    <TableHead className="w-16">{translate("common.table.columns.order")}</TableHead>
+                    <TableHead>{translate("common.table.columns.workflow")}</TableHead>
+                    <TableHead>{translate("common.table.columns.status")}</TableHead>
+                    <TableHead>{translate("common.table.columns.version")}</TableHead>
+                    <TableHead className="text-center">{translate("common.table.columns.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody className="bg-white divide-y divide-gray-200">

@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
             id: walletAccount.id,
             accountNumber: walletAccount.accountNumber,
             accountName: walletAccount.accountName,
-            balance: walletAccount.balance.toString(),
+            balance: (walletAccount.balance || 0).toString(),
             currency: walletAccount.currency,
           },
         },

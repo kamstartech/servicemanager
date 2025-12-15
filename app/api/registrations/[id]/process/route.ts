@@ -18,7 +18,7 @@ export async function POST(
   const processLog: ProcessStage[] = [];
   const startTime = Date.now();
 
-  function logStage(stage: string, status: 'started' | 'completed' | 'failed', details?: string, error?: string) {
+  function logStage(registrationId: number, stage: string, status: 'started' | 'completed' | 'failed', details?: string, error?: string) {
     const timestamp = new Date().toISOString();
     const lastStage = processLog[processLog.length - 1];
     const duration = lastStage && lastStage.stage === stage && lastStage.status === 'started'
@@ -77,7 +77,7 @@ export async function POST(
     console.log(`🔍 Validating customer ${registration.customerNumber}...`);
 
     // Stage 1: Duplicate Check
-    logStage(VALIDATION_STAGES.DUPLICATE_CHECK, 'started');
+    logStage(registrationId, VALIDATION_STAGES.DUPLICATE_CHECK, 'started');
     
     // Check if user already exists
     const existingUser = await prisma.mobileUser.findFirst({
@@ -93,7 +93,7 @@ export async function POST(
     });
 
     if (existingUser) {
-      logStage(VALIDATION_STAGES.DUPLICATE_CHECK, 'completed', 'User found - checking for updates');
+      logStage(registrationId, VALIDATION_STAGES.DUPLICATE_CHECK, 'completed', 'User found - checking for updates');
       
       // Check if information has changed
       const hasChanges = 
@@ -103,7 +103,7 @@ export async function POST(
         (registration.lastName && registration.lastName !== existingUser.profile?.lastName);
 
       if (hasChanges) {
-        logStage('update_user_info', 'started', 'Updating user information');
+        logStage(registrationId, 'update_user_info', 'started', 'Updating user information');
         
         try {
           // Update MobileUser phone if changed
@@ -137,7 +137,7 @@ export async function POST(
             }
           }
 
-          logStage('update_user_info', 'completed', 'User information updated successfully');
+          logStage(registrationId, 'update_user_info', 'completed', 'User information updated successfully');
 
           // Mark registration as COMPLETED with update note
           await prisma.requestedRegistration.update({
@@ -170,7 +170,7 @@ export async function POST(
           });
 
         } catch (error) {
-          logStage('update_user_info', 'failed', 'Failed to update user information', error instanceof Error ? error.message : 'Unknown error');
+          logStage(registrationId, 'update_user_info', 'failed', 'Failed to update user information', error instanceof Error ? error.message : 'Unknown error');
           
           await prisma.requestedRegistration.update({
             where: { id: registrationId },
@@ -203,7 +203,7 @@ export async function POST(
         }
       } else {
         // No changes - mark as duplicate
-        logStage(VALIDATION_STAGES.DUPLICATE_CHECK, 'completed', 'User exists with same information - no updates needed');
+        logStage(registrationId, VALIDATION_STAGES.DUPLICATE_CHECK, 'completed', 'User exists with same information - no updates needed');
         
         await prisma.requestedRegistration.update({
           where: { id: registrationId },
@@ -236,10 +236,10 @@ export async function POST(
       }
     }
 
-    logStage(VALIDATION_STAGES.DUPLICATE_CHECK, 'completed', 'No duplicate found');
+    logStage(registrationId, VALIDATION_STAGES.DUPLICATE_CHECK, 'completed', 'No duplicate found');
 
     // Stage 2: T24 Account Lookup
-    logStage(VALIDATION_STAGES.T24_LOOKUP, 'started');
+    logStage(registrationId, VALIDATION_STAGES.T24_LOOKUP, 'started');
     
     // Lookup customer accounts in T24
     const accountsResult = await t24AccountsService.getCustomerAccountsDetailed(
@@ -247,7 +247,7 @@ export async function POST(
     );
 
     if (!accountsResult.ok || !accountsResult.accounts || accountsResult.accounts.length === 0) {
-      logStage(VALIDATION_STAGES.T24_LOOKUP, 'failed', 'No accounts found', accountsResult.error || 'Customer has no accounts');
+      logStage(registrationId, VALIDATION_STAGES.T24_LOOKUP, 'failed', 'No accounts found', accountsResult.error || 'Customer has no accounts');
       
       // No accounts found - mark as FAILED
       const updated = await prisma.requestedRegistration.update({
@@ -291,14 +291,14 @@ export async function POST(
       }, { status: 400 });
     }
 
-    logStage(VALIDATION_STAGES.T24_LOOKUP, 'completed', `Found ${accountsResult.accounts.length} accounts`);
+    logStage(registrationId, VALIDATION_STAGES.T24_LOOKUP, 'completed', `Found ${accountsResult.accounts.length} accounts`);
 
     // Stage 3: Account Validation
-    logStage(VALIDATION_STAGES.ACCOUNT_VALIDATION, 'started');
-    logStage(VALIDATION_STAGES.ACCOUNT_VALIDATION, 'completed', `Validated ${accountsResult.accounts.length} accounts`);
+    logStage(registrationId, VALIDATION_STAGES.ACCOUNT_VALIDATION, 'started');
+    logStage(registrationId, VALIDATION_STAGES.ACCOUNT_VALIDATION, 'completed', `Validated ${accountsResult.accounts.length} accounts`);
 
     // Stage 4: Status Update
-    logStage(VALIDATION_STAGES.STATUS_UPDATE, 'started');
+    logStage(registrationId, VALIDATION_STAGES.STATUS_UPDATE, 'started');
     
     // Accounts found - mark as APPROVED and store validation data
     const validationData = {
@@ -327,7 +327,7 @@ export async function POST(
       },
     });
 
-    logStage(VALIDATION_STAGES.STATUS_UPDATE, 'completed', 'Status updated to APPROVED');
+    logStage(registrationId, VALIDATION_STAGES.STATUS_UPDATE, 'completed', 'Status updated to APPROVED');
 
     console.log(`✅ Validation successful: Found ${accountsResult.accounts.length} accounts for ${registration.customerNumber}`);
 
@@ -353,14 +353,15 @@ export async function POST(
   } catch (error) {
     console.error('❌ Validation error:', error);
     
-    logStage('error_handling', 'failed', 'Unexpected error', error instanceof Error ? error.message : 'Unknown error');
-    
     // Update retry count on error
     try {
       const { id } = await params;
-      const registrationId = parseInt(id);
+      const regId = parseInt(id);
+      
+      logStage(regId, 'error_handling', 'failed', 'Unexpected error', error instanceof Error ? error.message : 'Unknown error');
+      
       await prisma.requestedRegistration.update({
-        where: { id: registrationId },
+        where: { id: regId },
         data: {
           retryCount: { increment: 1 },
           lastRetryAt: new Date(),

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
-import jwt, { type Secret } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 
-const JWT_SECRET: Secret = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 
 /**
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
         expiresIn: JWT_EXPIRES_IN,
         issuer: 'service-manager-admin',
         subject: String(attempt.mobileUserId),
-      }
+      } as jwt.SignOptions
     );
 
     // Create device session

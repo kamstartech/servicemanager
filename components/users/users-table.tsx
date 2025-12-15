@@ -5,7 +5,9 @@ import { gql, useQuery } from "@apollo/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { Calendar, CheckCircle, Eye, XCircle } from "lucide-react";
+import { translateStatusOneWord } from "@/lib/utils";
 
 const USERS_QUERY = gql`
   query Users($context: MobileUserContext!) {
@@ -50,6 +52,7 @@ type UsersTableProps = {
 };
 
 export function UsersTable({ context, title, searchPlaceholder }: UsersTableProps) {
+  const { translate } = useI18n();
   const { data, loading, error, refetch } = useQuery(USERS_QUERY, {
     variables: { context },
   });
@@ -66,35 +69,35 @@ export function UsersTable({ context, title, searchPlaceholder }: UsersTableProp
     // },
     {
       id: "username",
-      header: "User name",
+      header: translate("common.table.columns.username"),
       accessor: (row) => row.username ?? "-",
       sortKey: "username",
     },
     {
       id: "phoneNumber",
-      header: "Phone number",
+      header: translate("common.table.columns.phoneNumber"),
       accessor: (row) => row.phoneNumber ?? "-",
       sortKey: "phoneNumber",
     },
     {
       id: "customerNumber",
-      header: "Customer number",
+      header: translate("common.table.columns.customerNumber"),
       accessor: (row) => row.customerNumber ?? "-",
       sortKey: "customerNumber",
     },
     {
       id: "status",
-      header: "Status",
+      header: translate("common.table.columns.status"),
       accessor: (row) =>
         row.isActive ? (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
             <CheckCircle size={14} />
-            Active
+            {translateStatusOneWord("ACTIVE", translate, "ACTIVE")}
           </span>
         ) : (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
             <XCircle size={14} />
-            Inactive
+            {translateStatusOneWord("INACTIVE", translate, "INACTIVE")}
           </span>
         ),
       sortKey: "isActive",
@@ -102,7 +105,7 @@ export function UsersTable({ context, title, searchPlaceholder }: UsersTableProp
     },
     {
       id: "createdAt",
-      header: "Created",
+      header: translate("common.table.columns.created"),
       accessor: (row) => (
         <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
           <Calendar size={16} />
@@ -121,7 +124,7 @@ export function UsersTable({ context, title, searchPlaceholder }: UsersTableProp
     },
     {
       id: "actions",
-      header: "Actions",
+      header: translate("common.table.columns.actions"),
       accessor: (row) => {
         const detailsHref =
           context === "WALLET"
@@ -138,7 +141,7 @@ export function UsersTable({ context, title, searchPlaceholder }: UsersTableProp
             >
               <Link href={detailsHref}>
                 <Eye className="h-4 w-4 mr-2" />
-                Details
+                {translate("common.actions.details")}
               </Link>
             </Button>
           </div>
@@ -163,12 +166,12 @@ export function UsersTable({ context, title, searchPlaceholder }: UsersTableProp
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>{title}</CardTitle>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
-            Refresh
+            {translate("common.actions.refresh")}
           </Button>
         </CardHeader>
         <CardContent>
           {loading && (
-            <p className="text-sm text-muted-foreground">Loading...</p>
+            <p className="text-sm text-muted-foreground">{translate("common.state.loading")}</p>
           )}
           {error && (
             <p className="text-sm text-destructive">Error: {error.message}</p>
@@ -186,7 +189,7 @@ export function UsersTable({ context, title, searchPlaceholder }: UsersTableProp
               pageSize={10}
               searchPlaceholder={searchPlaceholder ?? "Search users"}
               showRowNumbers
-              rowNumberHeader="#"
+              rowNumberHeader={translate("common.table.columns.index")}
             />
           )}
         </CardContent>
