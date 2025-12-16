@@ -5,6 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "dev:clean": "rm -rf .next && npx prisma generate && next dev",
+    "db:push": "npx prisma db push",
+    "db:push:force": "npx prisma db push --accept-data-loss",
+    "prisma:generate": "npx prisma generate",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
