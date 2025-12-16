@@ -15,39 +15,15 @@ type CheckbookRequestStatus =
   (typeof CheckbookRequestStatus)[keyof typeof CheckbookRequestStatus];
 
 function mapDbStatusToUi(status: string | null | undefined): CheckbookRequestStatus {
-  const normalized = (status ?? "pending").toLowerCase();
-
-  if (normalized === "pending") return CheckbookRequestStatus.PENDING;
-  if (normalized === "approved") return CheckbookRequestStatus.APPROVED;
-  if (normalized === "ready_for_collection" || normalized === "ready") {
-    return CheckbookRequestStatus.READY_FOR_COLLECTION;
-  }
-  if (normalized === "fulfilled" || normalized === "collected") {
-    return CheckbookRequestStatus.COLLECTED;
-  }
-  if (normalized === "cancelled" || normalized === "canceled") {
-    return CheckbookRequestStatus.CANCELLED;
-  }
-  if (normalized === "rejected") return CheckbookRequestStatus.REJECTED;
-
-  return CheckbookRequestStatus.PENDING;
+  const normalized = (status ?? CheckbookRequestStatus.PENDING).toString().toUpperCase();
+  const values = Object.values(CheckbookRequestStatus);
+  return values.includes(normalized as CheckbookRequestStatus)
+    ? (normalized as CheckbookRequestStatus)
+    : CheckbookRequestStatus.PENDING;
 }
 
 function mapUiStatusToDb(status: CheckbookRequestStatus): string {
-  switch (status) {
-    case CheckbookRequestStatus.PENDING:
-      return "pending";
-    case CheckbookRequestStatus.APPROVED:
-      return "approved";
-    case CheckbookRequestStatus.READY_FOR_COLLECTION:
-      return "ready_for_collection";
-    case CheckbookRequestStatus.COLLECTED:
-      return "fulfilled";
-    case CheckbookRequestStatus.CANCELLED:
-      return "cancelled";
-    case CheckbookRequestStatus.REJECTED:
-      return "rejected";
-  }
+  return status;
 }
 
 /**
@@ -60,7 +36,7 @@ export async function GET(
 ) {
   try {
     const { id: idStr } = await params;
-    const id = BigInt(idStr);
+    const id = Number(idStr);
 
     if (idStr.trim() === "" || Number.isNaN(Number(idStr))) {
       return NextResponse.json(
@@ -69,15 +45,22 @@ export async function GET(
       );
     }
 
-    const checkbookRequest = await prisma.cheque_book_requests.findUnique({
+    const checkbookRequest = await prisma.checkbookRequest.findUnique({
       where: { id },
       include: {
-        accounts_users: {
+        mobileUser: {
           select: {
             id: true,
             username: true,
-            phone_number: true,
-            customer_number: true,
+            phoneNumber: true,
+            customerNumber: true,
+          },
+        },
+        approvedByUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
           },
         },
       },
@@ -90,20 +73,17 @@ export async function GET(
       );
     }
 
-    const leaves = checkbookRequest.number_of_leaves ?? checkbookRequest.cheque_leaves ?? 25;
-    const numberOfCheckbooks = Math.max(1, Math.ceil(leaves / 25));
-
     return NextResponse.json({
       success: true,
       data: {
         id: Number(checkbookRequest.id),
-        mobileUserId: checkbookRequest.user_id ? Number(checkbookRequest.user_id) : null,
-        mobileUser: checkbookRequest.accounts_users
+        mobileUserId: checkbookRequest.mobileUserId ?? null,
+        mobileUser: checkbookRequest.mobileUser
           ? {
-              id: Number(checkbookRequest.accounts_users.id),
-              username: checkbookRequest.accounts_users.username ?? null,
-              phoneNumber: checkbookRequest.accounts_users.phone_number ?? null,
-              customerNumber: checkbookRequest.accounts_users.customer_number ?? null,
+              id: Number(checkbookRequest.mobileUser.id),
+              username: checkbookRequest.mobileUser.username ?? null,
+              phoneNumber: checkbookRequest.mobileUser.phoneNumber ?? null,
+              customerNumber: checkbookRequest.mobileUser.customerNumber ?? null,
             }
           : {
               id: 0,
@@ -111,20 +91,27 @@ export async function GET(
               phoneNumber: null,
               customerNumber: null,
             },
-        accountNumber: checkbookRequest.account_number,
-        numberOfCheckbooks,
-        collectionPoint: checkbookRequest.branch_code,
-        status: mapDbStatusToUi(checkbookRequest.request_status),
-        requestedAt: checkbookRequest.inserted_at,
-        approvedAt: checkbookRequest.issued_at,
+        approvedByUser: checkbookRequest.approvedByUser
+          ? {
+              id: Number(checkbookRequest.approvedByUser.id),
+              name: checkbookRequest.approvedByUser.name ?? null,
+              email: checkbookRequest.approvedByUser.email,
+            }
+          : null,
+        accountNumber: checkbookRequest.accountNumber,
+        numberOfCheckbooks: checkbookRequest.numberOfCheckbooks,
+        collectionPoint: checkbookRequest.collectionPoint,
+        status: mapDbStatusToUi(checkbookRequest.status),
+        requestedAt: checkbookRequest.requestedAt,
+        approvedAt: checkbookRequest.approvedAt,
         readyAt: null,
-        collectedAt: checkbookRequest.fulfilled_at,
+        collectedAt: checkbookRequest.collectedAt,
         cancelledAt: null,
         rejectedAt: null,
-        createdAt: checkbookRequest.inserted_at,
-        updatedAt: checkbookRequest.updated_at,
-        notes: checkbookRequest.request_reason ?? null,
-        rejectionReason: checkbookRequest.rejection_reason ?? null,
+        createdAt: checkbookRequest.createdAt,
+        updatedAt: checkbookRequest.updatedAt,
+        notes: checkbookRequest.notes ?? null,
+        rejectionReason: checkbookRequest.rejectionReason ?? null,
       },
     });
   } catch (error) {
@@ -149,7 +136,7 @@ export async function PATCH(
 ) {
   try {
     const idStr = (await params).id;
-    const id = BigInt(idStr);
+    const id = Number(idStr);
 
     if (idStr.trim() === "" || Number.isNaN(Number(idStr))) {
       return NextResponse.json(
@@ -161,7 +148,7 @@ export async function PATCH(
     const body: CheckbookRequestUpdate = await request.json();
 
     // Check if request exists
-    const existingRequest = await prisma.cheque_book_requests.findUnique({
+    const existingRequest = await prisma.checkbookRequest.findUnique({
       where: { id },
     });
 
@@ -175,67 +162,69 @@ export async function PATCH(
     // Prepare update data
     const updateData: any = {};
 
-    updateData.updated_at = new Date();
+    updateData.updatedAt = new Date();
 
     if (body.status !== undefined) {
-      updateData.request_status = mapUiStatusToDb(body.status as CheckbookRequestStatus);
+      updateData.status = mapUiStatusToDb(body.status as CheckbookRequestStatus);
 
       if (body.status === CheckbookRequestStatus.APPROVED) {
-        updateData.issued_at = new Date();
+        updateData.approvedAt = new Date();
       }
 
       if (body.status === CheckbookRequestStatus.COLLECTED) {
-        updateData.fulfilled_at = new Date();
+        updateData.collectedAt = new Date();
       }
     }
 
     if (body.numberOfCheckbooks !== undefined) {
-      const leaves = Math.max(25, body.numberOfCheckbooks * 25);
-      updateData.number_of_leaves = leaves;
-      updateData.cheque_leaves = leaves;
+      updateData.numberOfCheckbooks = Math.max(1, body.numberOfCheckbooks);
     }
 
     if (body.collectionPoint !== undefined) {
-      updateData.branch_code = body.collectionPoint;
+      updateData.collectionPoint = body.collectionPoint;
     }
 
     if (body.notes !== undefined) {
-      updateData.request_reason = body.notes;
+      updateData.notes = body.notes;
     }
 
     if (body.rejectionReason !== undefined) {
-      updateData.rejection_reason = body.rejectionReason;
+      updateData.rejectionReason = body.rejectionReason;
     }
 
-    const updatedRequest = await prisma.cheque_book_requests.update({
+    const updatedRequest = await prisma.checkbookRequest.update({
       where: { id },
       data: updateData,
       include: {
-        accounts_users: {
+        mobileUser: {
           select: {
             id: true,
             username: true,
-            phone_number: true,
-            customer_number: true,
+            phoneNumber: true,
+            customerNumber: true,
+          },
+        },
+        approvedByUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
           },
         },
       },
     });
 
-    const leaves = updatedRequest.number_of_leaves ?? updatedRequest.cheque_leaves ?? 25;
-    const numberOfCheckbooks = Math.max(1, Math.ceil(leaves / 25));
-
     return NextResponse.json({
       success: true,
       data: {
         id: Number(updatedRequest.id),
-        mobileUserId: updatedRequest.user_id ? Number(updatedRequest.user_id) : null,
-        mobileUser: updatedRequest.accounts_users
+        mobileUserId: updatedRequest.mobileUserId ?? null,
+        mobileUser: updatedRequest.mobileUser
           ? {
-              id: Number(updatedRequest.accounts_users.id),
-              username: updatedRequest.accounts_users.username ?? null,
-              phoneNumber: updatedRequest.accounts_users.phone_number ?? null,
-              customerNumber: updatedRequest.accounts_users.customer_number ?? null,
+              id: Number(updatedRequest.mobileUser.id),
+              username: updatedRequest.mobileUser.username ?? null,
+              phoneNumber: updatedRequest.mobileUser.phoneNumber ?? null,
+              customerNumber: updatedRequest.mobileUser.customerNumber ?? null,
             }
           : {
               id: 0,
@@ -243,20 +232,27 @@ export async function PATCH(
               phoneNumber: null,
               customerNumber: null,
             },
-        accountNumber: updatedRequest.account_number,
-        numberOfCheckbooks,
-        collectionPoint: updatedRequest.branch_code,
-        status: mapDbStatusToUi(updatedRequest.request_status),
-        requestedAt: updatedRequest.inserted_at,
-        approvedAt: updatedRequest.issued_at,
+        approvedByUser: updatedRequest.approvedByUser
+          ? {
+              id: Number(updatedRequest.approvedByUser.id),
+              name: updatedRequest.approvedByUser.name ?? null,
+              email: updatedRequest.approvedByUser.email,
+            }
+          : null,
+        accountNumber: updatedRequest.accountNumber,
+        numberOfCheckbooks: updatedRequest.numberOfCheckbooks,
+        collectionPoint: updatedRequest.collectionPoint,
+        status: mapDbStatusToUi(updatedRequest.status),
+        requestedAt: updatedRequest.requestedAt,
+        approvedAt: updatedRequest.approvedAt,
         readyAt: null,
-        collectedAt: updatedRequest.fulfilled_at,
+        collectedAt: updatedRequest.collectedAt,
         cancelledAt: null,
         rejectedAt: null,
-        createdAt: updatedRequest.inserted_at,
-        updatedAt: updatedRequest.updated_at,
-        notes: updatedRequest.request_reason ?? null,
-        rejectionReason: updatedRequest.rejection_reason ?? null,
+        createdAt: updatedRequest.createdAt,
+        updatedAt: updatedRequest.updatedAt,
+        notes: updatedRequest.notes ?? null,
+        rejectionReason: updatedRequest.rejectionReason ?? null,
       },
     });
   } catch (error) {
@@ -281,7 +277,7 @@ export async function DELETE(
 ) {
   try {
     const idStr = (await params).id;
-    const id = BigInt(idStr);
+    const id = Number(idStr);
 
     if (idStr.trim() === "" || Number.isNaN(Number(idStr))) {
       return NextResponse.json(
@@ -290,7 +286,7 @@ export async function DELETE(
       );
     }
 
-    await prisma.cheque_book_requests.delete({
+    await prisma.checkbookRequest.delete({
       where: { id },
     });
 
