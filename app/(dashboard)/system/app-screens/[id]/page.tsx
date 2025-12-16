@@ -546,9 +546,13 @@ export default function AppScreenDetailsPage() {
               Manage pages within this screen
             </p>
           </div>
-          <Button onClick={handleCreateOpen}>
+          <Button
+            onClick={handleCreateOpen}
+            size="sm"
+            className="bg-[#f59e0b] text-white hover:bg-[#d97706] w-full sm:w-auto"
+          >
             <Plus className="h-4 w-4 mr-2" />
-            Add Page
+            {`${translate("common.actions.add")} ${translate("common.entities.page")}`}
           </Button>
         </CardHeader>
         <CardContent>
@@ -557,9 +561,13 @@ export default function AppScreenDetailsPage() {
               <div className="text-muted-foreground mb-4">
                 No pages added yet
               </div>
-              <Button onClick={handleCreateOpen}>
+              <Button
+                onClick={handleCreateOpen}
+                size="sm"
+                className="bg-[#f59e0b] text-white hover:bg-[#d97706] w-full sm:w-auto"
+              >
                 <Plus className="h-4 w-4 mr-2" />
-                Add First Page
+                {`${translate("common.actions.addFirst")} ${translate("common.entities.page")}`}
               </Button>
             </div>
           ) : (

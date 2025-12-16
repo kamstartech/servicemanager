@@ -270,7 +270,7 @@ export default function AdminUsersPage() {
             className="bg-[#f59e0b] text-white hover:bg-[#d97706]"
           >
             <Plus className="mr-2 h-4 w-4" />
-            Add Admin User
+            {translate("adminUsers.actions.addAdminUser")}
           </Button>
         </CardHeader>
         <CardContent>

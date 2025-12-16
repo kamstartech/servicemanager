@@ -4,6 +4,8 @@ export const en = {
       actions: "Actions",
       add: "Add",
       addFirst: "Add First",
+      attach: "Attach",
+      attachFirst: "Attach First",
       back: "Back",
       backTo: "Back to",
       cancel: "Cancel",
@@ -39,7 +41,11 @@ export const en = {
       form: "Form",
       forms: "Forms",
       log: "Log",
+      page: "Page",
+      pages: "Pages",
       schedule: "Schedule",
+      screen: "Screen",
+      screens: "Screens",
       step: "Step",
       steps: "Steps",
       workflow: "Workflow",
@@ -213,6 +219,9 @@ export const en = {
   },
   adminUsers: {
     title: "Admin Web Users",
+    actions: {
+      addAdminUser: "Add Admin User",
+    },
     columns: {
       identifier: "Identifier",
       email: "Email",

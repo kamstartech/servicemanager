@@ -296,9 +296,13 @@ export function PageWorkflowsManager({ pageId }: { pageId: string }) {
             Workflows define what happens when users interact with this page
           </p>
         </div>
-        <Button onClick={() => setAttachDialogOpen(true)} size="sm">
+        <Button
+          onClick={() => setAttachDialogOpen(true)}
+          size="sm"
+          className="bg-[#f59e0b] text-white hover:bg-[#d97706] w-full sm:w-auto"
+        >
           <Plus className="h-4 w-4 mr-2" />
-          Attach Workflow
+          {`${translate("common.actions.attach")} ${translate("common.entities.workflow")}`}
         </Button>
       </CardHeader>
       <CardContent>
@@ -320,9 +324,13 @@ export function PageWorkflowsManager({ pageId }: { pageId: string }) {
             <div className="text-muted-foreground mb-4">
               No workflows attached yet
             </div>
-            <Button onClick={() => setAttachDialogOpen(true)}>
+            <Button
+              onClick={() => setAttachDialogOpen(true)}
+              size="sm"
+              className="bg-[#f59e0b] text-white hover:bg-[#d97706] w-full sm:w-auto"
+            >
               <Plus className="h-4 w-4 mr-2" />
-              Attach First Workflow
+              {`${translate("common.actions.attachFirst")} ${translate("common.entities.workflow")}`}
             </Button>
           </div>
         )}
@@ -424,13 +432,16 @@ export function PageWorkflowsManager({ pageId }: { pageId: string }) {
               onClick={() => setAttachDialogOpen(false)}
               disabled={attaching}
             >
-              Cancel
+              {translate("common.actions.cancel")}
             </Button>
             <Button
               onClick={handleAttach}
               disabled={attaching || !selectedWorkflowId}
+              className="bg-[#f59e0b] text-white hover:bg-[#d97706] w-full sm:w-auto"
             >
-              {attaching ? "Attaching..." : "Attach Workflow"}
+              {attaching
+                ? translate("common.state.creating")
+                : `${translate("common.actions.attach")} ${translate("common.entities.workflow")}`}
             </Button>
           </DialogFooter>
         </DialogContent>

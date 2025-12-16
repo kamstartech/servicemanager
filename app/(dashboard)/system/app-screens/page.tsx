@@ -502,9 +502,13 @@ export default function AppScreensPage() {
               Define screens for each app context
             </p>
           </div>
-          <Button onClick={handleCreateOpen}>
+          <Button
+            onClick={handleCreateOpen}
+            size="sm"
+            className="bg-[#f59e0b] text-white hover:bg-[#d97706] w-full sm:w-auto"
+          >
             <Plus className="h-4 w-4 mr-2" />
-            New Screen
+            {`${translate("common.actions.new")} ${translate("common.entities.screen")}`}
           </Button>
         </CardHeader>
         <CardContent>
@@ -562,9 +566,9 @@ export default function AppScreensPage() {
                     </div>
                     {!searchTerm && (
                       <Link href="/system/app-screens/new">
-                        <Button>
+                        <Button className="bg-[#f59e0b] text-white hover:bg-[#d97706] w-full sm:w-auto">
                           <Plus className="h-4 w-4 mr-2" />
-                          Create First Screen
+                          {`${translate("common.actions.createFirst")} ${translate("common.entities.screen")}`}
                         </Button>
                       </Link>
                     )}
