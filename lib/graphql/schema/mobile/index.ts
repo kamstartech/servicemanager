@@ -38,6 +38,10 @@ const MOBILE_MUTATION_FIELDS = new Set([
   "registerDeviceForPush",
   "unregisterDeviceFromPush",
   "testPushNotification",
+  "setAccountNickname",
+  "freezeAccount",
+  "unfreezeAccount",
+  "hideAccount",
 ]);
 
 function pickRootFields(
