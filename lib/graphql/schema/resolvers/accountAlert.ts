@@ -1,12 +1,38 @@
 import { prisma } from "@/lib/db/prisma";
 import { AccountAlertService } from "@/lib/services/account-alert";
+import type { GraphQLContext } from "@/lib/graphql/context";
 
 export const accountAlertResolvers = {
   Query: {
-    async accountAlertSettings(_parent: unknown, args: { accountNumber: string }) {
+    async accountAlertSettings(
+      _parent: unknown,
+      args: { accountNumber: string },
+      context: GraphQLContext
+    ) {
       try {
+        if (!context.adminId && !context.userId) {
+          throw new Error("Authentication required");
+        }
+
+        if (!context.adminId && context.userId) {
+          const ownsAccount = await prisma.mobileUserAccount.findFirst({
+            where: {
+              mobileUserId: context.userId,
+              accountNumber: args.accountNumber,
+              isActive: true,
+            },
+            select: { id: true },
+          });
+
+          if (!ownsAccount) {
+            return null;
+          }
+        }
+
         const settings = await prisma.accountAlertSettings.findFirst({
-          where: { accountNumber: args.accountNumber },
+          where: context.adminId
+            ? { accountNumber: args.accountNumber }
+            : { accountNumber: args.accountNumber, mobileUserId: context.userId },
           include: { mobileUser: true }
         });
 
@@ -55,10 +81,19 @@ export const accountAlertResolvers = {
         endDate?: string;
         limit?: number;
         offset?: number;
-      }
+      },
+      context: GraphQLContext
     ) {
       try {
+        if (!context.adminId && !context.userId) {
+          throw new Error("Authentication required");
+        }
+
         const where: any = {};
+
+        if (!context.adminId && context.userId) {
+          where.mobileUserId = context.userId;
+        }
 
         if (args.accountNumber) {
           where.accountNumber = args.accountNumber;
@@ -120,13 +155,22 @@ export const accountAlertResolvers = {
         isResolved?: boolean;
         limit?: number;
         offset?: number;
-      }
+      },
+      context: GraphQLContext
     ) {
       try {
+        if (!context.adminId && !context.userId) {
+          throw new Error("Authentication required");
+        }
+
         const where: any = {};
 
-        if (args.mobileUserId) {
-          where.mobileUserId = args.mobileUserId;
+        if (context.adminId) {
+          if (args.mobileUserId) {
+            where.mobileUserId = args.mobileUserId;
+          }
+        } else if (context.userId) {
+          where.mobileUserId = context.userId;
         }
 
         if (args.isResolved !== undefined) {
@@ -192,14 +236,21 @@ export const accountAlertResolvers = {
           quietHoursStart?: string;
           quietHoursEnd?: string;
         };
-      }
+      },
+      context: GraphQLContext
     ) {
       try {
+        if (!context.adminId && !context.userId) {
+          throw new Error("Authentication required");
+        }
+
         const { accountNumber, ...settingsData } = args.settings;
 
         // Find the mobile user by account number
         const account = await prisma.mobileUserAccount.findFirst({
-          where: { accountNumber },
+          where: context.adminId
+            ? { accountNumber }
+            : { accountNumber, mobileUserId: context.userId, isActive: true },
         });
 
         if (!account) {
@@ -315,10 +366,28 @@ export const accountAlertResolvers = {
 
     async acknowledgeAlert(
       _parent: unknown,
-      args: { alertId: string; action?: string }
+      args: { alertId: string; action?: string },
+      context: GraphQLContext
     ) {
       try {
+        if (!context.adminId && !context.userId) {
+          throw new Error("Authentication required");
+        }
+
         const alertId = parseInt(args.alertId);
+
+        const alert = await prisma.accountAlert.findUnique({
+          where: { id: alertId },
+          select: { id: true, mobileUserId: true },
+        });
+
+        if (!alert) {
+          return false;
+        }
+
+        if (!context.adminId && context.userId && alert.mobileUserId !== context.userId) {
+          throw new Error("Access denied");
+        }
 
         await prisma.accountAlert.update({
           where: { id: alertId },
@@ -337,12 +406,23 @@ export const accountAlertResolvers = {
 
     async testAlert(
       _parent: unknown,
-      args: { accountNumber: string; alertType: string }
+      args: { accountNumber: string; alertType: string },
+      context: GraphQLContext
     ) {
       try {
+        if (!context.adminId && !context.userId) {
+          throw new Error("Authentication required");
+        }
+
         // Find the mobile user by account number
         const account = await prisma.mobileUserAccount.findFirst({
-          where: { accountNumber: args.accountNumber },
+          where: context.adminId
+            ? { accountNumber: args.accountNumber }
+            : {
+                accountNumber: args.accountNumber,
+                mobileUserId: context.userId,
+                isActive: true,
+              },
         });
 
         if (!account) {
@@ -374,9 +454,14 @@ export const accountAlertResolvers = {
         logId: string;
         action: string;
         adminNotes?: string;
-      }
+      },
+      context: GraphQLContext
     ) {
       try {
+        if (!context.adminId) {
+          throw new Error("Forbidden");
+        }
+
         const logId = parseInt(args.logId);
 
         await prisma.suspiciousActivityLog.update({

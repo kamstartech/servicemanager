@@ -278,6 +278,7 @@ export const typeDefs = /* GraphQL */ `
     user: MobileUser
     device: MobileDevice
     message: String
+    appStructure: [AppScreen!]
   }
   
   type DeviceLoginAttempt {

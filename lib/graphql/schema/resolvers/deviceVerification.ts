@@ -98,6 +98,21 @@ export const deviceVerificationResolvers = {
         where: { mobileUserId: attempt.mobileUserId! },
       });
 
+      // Fetch app structure for user's context
+      const appStructure = await prisma.appScreen.findMany({
+        where: {
+          context: attempt.context as any,
+          isActive: true,
+        },
+        include: {
+          pages: {
+            where: { isActive: true },
+            orderBy: { order: "asc" },
+          },
+        },
+        orderBy: { order: "asc" },
+      });
+
       // Generate session ID and JWT token
       const sessionId = crypto.randomUUID();
       const token = jwt.sign(
@@ -211,6 +226,28 @@ export const deviceVerificationResolvers = {
           updatedAt: device.updatedAt.toISOString(),
         },
         message: "Device verified successfully",
+        appStructure: appStructure.map((screen) => ({
+          id: screen.id,
+          name: screen.name,
+          context: screen.context,
+          icon: screen.icon,
+          order: screen.order,
+          isActive: screen.isActive,
+          isTesting: screen.isTesting,
+          pages: screen.pages.map((page) => ({
+            id: page.id,
+            name: page.name,
+            icon: page.icon,
+            order: page.order,
+            isActive: page.isActive,
+            isTesting: page.isTesting,
+            screenId: page.screenId,
+            createdAt: page.createdAt.toISOString(),
+            updatedAt: page.updatedAt.toISOString(),
+          })),
+          createdAt: screen.createdAt.toISOString(),
+          updatedAt: screen.updatedAt.toISOString(),
+        })),
       };
     },
 

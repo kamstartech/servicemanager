@@ -14,6 +14,7 @@ const publicRoutes = [
   "/api/auth/reset-password",
   "/api/auth/validate-reset-token",
   "/api/graphql", // Allow GraphQL for mobile login and public operations
+  "/api/mobile/graphql",
 ];
 
 // Third-party API routes (handled by endpoint-level JWT verification)
