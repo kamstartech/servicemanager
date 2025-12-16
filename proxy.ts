@@ -7,10 +7,12 @@ const publicRoutes = [
   "/login",
   "/forgot-password",
   "/reset-password",
+  "/setup-password",
   "/api/auth/login",
   "/api/auth/logout",
   "/api/auth/forgot-password",
   "/api/auth/reset-password",
+  "/api/auth/validate-reset-token",
   "/api/graphql", // Allow GraphQL for mobile login and public operations
 ];
 
