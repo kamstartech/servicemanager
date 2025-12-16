@@ -161,7 +161,15 @@ const ICONS = [
   { value: "Search", label: "Search" },
 ];
 
-function SortablePageRow({ page, onEdit, onDelete, screenId, rowIndex }: any) {
+function SortablePageRow({
+  page,
+  onEdit,
+  onDelete,
+  onToggleActive,
+  onToggleTesting,
+  screenId,
+  rowIndex,
+}: any) {
   const {
     attributes,
     listeners,
@@ -197,14 +205,20 @@ function SortablePageRow({ page, onEdit, onDelete, screenId, rowIndex }: any) {
         <p className="font-medium">{page.name}</p>
       </TableCell>
       <TableCell>
-        <Badge variant={page.isActive ? "default" : "secondary"}>
-          {page.isActive ? "Active" : "Inactive"}
-        </Badge>
+        <div className="flex justify-center">
+          <Switch
+            checked={page.isActive}
+            onCheckedChange={() => onToggleActive(page.id, page.isActive)}
+          />
+        </div>
       </TableCell>
       <TableCell>
-        <Badge variant={page.isTesting ? "default" : "outline"}>
-          {page.isTesting ? "Testing" : "Live"}
-        </Badge>
+        <div className="flex justify-center">
+          <Switch
+            checked={page.isTesting}
+            onCheckedChange={() => onToggleTesting(page.id, page.isTesting)}
+          />
+        </div>
       </TableCell>
       <TableCell className="text-center">
         <div className="flex justify-center">
@@ -263,6 +277,26 @@ export default function AppScreenDetailsPage() {
     isActive: true,
     isTesting: false,
   });
+
+  const handleTogglePageActive = async (id: string, currentValue: boolean) => {
+    await updatePage({
+      variables: {
+        id,
+        input: { isActive: !currentValue },
+      },
+    });
+    refetch();
+  };
+
+  const handleTogglePageTesting = async (id: string, currentValue: boolean) => {
+    await updatePage({
+      variables: {
+        id,
+        input: { isTesting: !currentValue },
+      },
+    });
+    refetch();
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -517,11 +551,11 @@ export default function AppScreenDetailsPage() {
                   <TableHeader className="bg-gray-50">
                     <TableRow>
                       <TableHead className="w-12 text-center">{translate("common.table.columns.index")}</TableHead>
-                      <TableHead className="w-16">{translate("common.table.columns.order")}</TableHead>
-                      <TableHead>{translate("common.table.columns.icon")}</TableHead>
-                      <TableHead>{translate("common.table.columns.name")}</TableHead>
-                      <TableHead>{translate("common.table.columns.active")}</TableHead>
-                      <TableHead>{translate("common.table.columns.testing")}</TableHead>
+                      <TableHead className="w-16 text-center">{translate("common.table.columns.order")}</TableHead>
+                      <TableHead className="text-center">{translate("common.table.columns.icon")}</TableHead>
+                      <TableHead className="text-center">{translate("common.table.columns.name")}</TableHead>
+                      <TableHead className="text-center">{translate("common.table.columns.active")}</TableHead>
+                      <TableHead className="text-center">{translate("common.table.columns.testing")}</TableHead>
                       <TableHead className="text-center">{translate("common.table.columns.actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -537,6 +571,8 @@ export default function AppScreenDetailsPage() {
                           rowIndex={index}
                           onEdit={handleEditOpen}
                           onDelete={handleDelete}
+                          onToggleActive={handleTogglePageActive}
+                          onToggleTesting={handleTogglePageTesting}
                           screenId={screenId}
                         />
                       ))}

@@ -188,7 +188,14 @@ const ICONS = [
   { value: "Search", label: "Search" },
 ];
 
-function SortableScreenRow({ screen, onEdit, onDelete, rowIndex }: any) {
+function SortableScreenRow({
+  screen,
+  onEdit,
+  onDelete,
+  onToggleActive,
+  onToggleTesting,
+  rowIndex,
+}: any) {
   const {
     attributes,
     listeners,
@@ -224,14 +231,20 @@ function SortableScreenRow({ screen, onEdit, onDelete, rowIndex }: any) {
         <p className="font-medium">{screen.name}</p>
       </TableCell>
       <TableCell>
-        <Badge variant={screen.isActive ? "default" : "secondary"}>
-          {screen.isActive ? "Active" : "Inactive"}
-        </Badge>
+        <div className="flex justify-center">
+          <Switch
+            checked={screen.isActive}
+            onCheckedChange={() => onToggleActive(screen.id, screen.isActive)}
+          />
+        </div>
       </TableCell>
       <TableCell>
-        <Badge variant={screen.isTesting ? "default" : "outline"}>
-          {screen.isTesting ? "Testing" : "Live"}
-        </Badge>
+        <div className="flex justify-center">
+          <Switch
+            checked={screen.isTesting}
+            onCheckedChange={() => onToggleTesting(screen.id, screen.isTesting)}
+          />
+        </div>
       </TableCell>
       <TableCell className="text-center">
         <div className="flex justify-center">
@@ -548,11 +561,11 @@ export default function AppScreensPage() {
                         <TableHeader className="bg-gray-50">
                           <TableRow>
                             <TableHead className="w-12 text-center">{translate("common.table.columns.index")}</TableHead>
-                            <TableHead className="w-16">{translate("common.table.columns.order")}</TableHead>
-                            <TableHead>{translate("common.table.columns.icon")}</TableHead>
-                            <TableHead>{translate("common.table.columns.name")}</TableHead>
-                            <TableHead>{translate("common.table.columns.active")}</TableHead>
-                            <TableHead>{translate("common.table.columns.testing")}</TableHead>
+                            <TableHead className="w-16 text-center">{translate("common.table.columns.order")}</TableHead>
+                            <TableHead className="text-center">{translate("common.table.columns.icon")}</TableHead>
+                            <TableHead className="text-center">{translate("common.table.columns.name")}</TableHead>
+                            <TableHead className="text-center">{translate("common.table.columns.active")}</TableHead>
+                            <TableHead className="text-center">{translate("common.table.columns.testing")}</TableHead>
                             <TableHead className="text-center">{translate("common.table.columns.actions")}</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -568,6 +581,8 @@ export default function AppScreensPage() {
                                 rowIndex={index}
                                 onEdit={handleEditOpen}
                                 onDelete={handleDelete}
+                                onToggleActive={handleToggleActive}
+                                onToggleTesting={handleToggleTesting}
                               />
                             ))}
                           </SortableContext>
