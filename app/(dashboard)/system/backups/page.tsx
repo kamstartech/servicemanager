@@ -4,10 +4,13 @@ import { gql, useMutation, useQuery } from "@apollo/client";
 import { toast } from "sonner";
 import { Calendar, Download, Plus, RefreshCw, Trash2, RotateCcw, Upload } from "lucide-react";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useI18n } from "@/components/providers/i18n-provider";
 import {
     AlertDialog,
@@ -57,6 +60,32 @@ const DELETE_BACKUP = gql`
   }
 `;
 
+const BACKUP_SCHEDULE_QUERY = gql`
+  query BackupSchedule {
+    backupSchedule {
+      id
+      enabled
+      time
+      timeZone
+      lastRunAt
+      isRunning
+    }
+  }
+`;
+
+const UPDATE_BACKUP_SCHEDULE = gql`
+  mutation UpdateBackupSchedule($input: BackupScheduleInput!) {
+    updateBackupSchedule(input: $input) {
+      id
+      enabled
+      time
+      timeZone
+      lastRunAt
+      isRunning
+    }
+  }
+`;
+
 type BackupRow = {
     id: string;
     filename: string;
@@ -80,12 +109,36 @@ export default function BackupsPage() {
         pollInterval: 10000, // Auto-refresh every 10s
     });
 
+    const {
+        data: scheduleData,
+        loading: scheduleLoading,
+        error: scheduleError,
+        refetch: refetchSchedule,
+    } = useQuery(BACKUP_SCHEDULE_QUERY);
+
     const [createBackup, { loading: creating }] = useMutation(CREATE_BACKUP);
     const [restoreBackup, { loading: restoring }] = useMutation(RESTORE_BACKUP);
     const [deleteBackup, { loading: deleting }] = useMutation(DELETE_BACKUP);
+    const [updateBackupSchedule, { loading: savingSchedule }] = useMutation(UPDATE_BACKUP_SCHEDULE);
     
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const schedule = scheduleData?.backupSchedule;
+    const [scheduleEnabled, setScheduleEnabled] = useState<boolean>(false);
+    const [scheduleTime, setScheduleTime] = useState<string>("02:00");
+    const [scheduleTimeZone, setScheduleTimeZone] = useState<string>("UTC");
+
+    const scheduleInitializedRef = useRef(false);
+    useEffect(() => {
+        if (!schedule) return;
+        if (scheduleInitializedRef.current) return;
+
+        scheduleInitializedRef.current = true;
+        setScheduleEnabled(Boolean(schedule.enabled));
+        setScheduleTime(schedule.time || "02:00");
+        setScheduleTimeZone(schedule.timeZone || "UTC");
+    }, [schedule]);
 
     const handleCreateBackup = async () => {
         try {
@@ -95,6 +148,24 @@ export default function BackupsPage() {
             refetch();
         } catch (err: any) {
             toast.error(`Backup failed: ${err.message}`);
+        }
+    };
+
+    const handleSaveSchedule = async () => {
+        try {
+            await updateBackupSchedule({
+                variables: {
+                    input: {
+                        enabled: scheduleEnabled,
+                        time: scheduleTime,
+                        timeZone: scheduleTimeZone,
+                    },
+                },
+            });
+            toast.success("Backup schedule saved.");
+            refetchSchedule();
+        } catch (err: any) {
+            toast.error(`Failed to save schedule: ${err.message}`);
         }
     };
 
@@ -328,6 +399,77 @@ export default function BackupsPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
+                    <div className="mb-6 rounded-lg border border-border bg-muted/20 p-4">
+                        <div className="flex flex-col gap-4">
+                            <div className="flex items-center justify-between gap-4">
+                                <div>
+                                    <p className="text-sm font-medium">Recurring Backups</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Automatically create one backup per day at the configured time.
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <Label htmlFor="backup-schedule-enabled" className="text-sm">
+                                        Enabled
+                                    </Label>
+                                    <Switch
+                                        id="backup-schedule-enabled"
+                                        checked={scheduleEnabled}
+                                        onCheckedChange={(v) => setScheduleEnabled(Boolean(v))}
+                                        disabled={scheduleLoading || savingSchedule}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                                <div className="flex flex-col gap-2">
+                                    <Label htmlFor="backup-schedule-time">Time (HH:MM)</Label>
+                                    <Input
+                                        id="backup-schedule-time"
+                                        type="time"
+                                        value={scheduleTime}
+                                        onChange={(e) => setScheduleTime(e.target.value)}
+                                        disabled={scheduleLoading || savingSchedule}
+                                    />
+                                </div>
+
+                                <div className="flex flex-col gap-2">
+                                    <Label htmlFor="backup-schedule-timezone">Time Zone</Label>
+                                    <Input
+                                        id="backup-schedule-timezone"
+                                        type="text"
+                                        value={scheduleTimeZone}
+                                        onChange={(e) => setScheduleTimeZone(e.target.value)}
+                                        placeholder="UTC"
+                                        disabled={scheduleLoading || savingSchedule}
+                                    />
+                                </div>
+
+                                <div className="flex flex-col gap-2 items-start justify-end">
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleSaveSchedule}
+                                        disabled={scheduleLoading || savingSchedule}
+                                    >
+                                        {savingSchedule ? "Saving..." : "Save Schedule"}
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div className="text-xs text-muted-foreground">
+                                {scheduleError ? (
+                                    <span className="text-red-600">Error loading schedule: {scheduleError.message}</span>
+                                ) : schedule?.isRunning ? (
+                                    <span>Backup is currently running...</span>
+                                ) : schedule?.lastRunAt ? (
+                                    <span>Last run: {new Date(schedule.lastRunAt).toLocaleString()}</span>
+                                ) : (
+                                    <span>Last run: never</span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
                     {error && (
                         <p className="mb-4 text-sm text-red-600">Error loading backups: {error.message}</p>
                     )}

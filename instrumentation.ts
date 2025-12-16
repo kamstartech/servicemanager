@@ -3,6 +3,7 @@ export async function register() {
         // Use dynamic imports to prevent Edge Runtime warnings
         const { initializeBuckets } = await import('@/lib/storage/minio');
         const { migrationScheduler } = await import('@/lib/services/scheduler');
+        const { backupScheduler } = await import('@/lib/services/backup-scheduler');
         const { balanceSyncService } = await import('@/lib/services/background/balance-sync');
         const { accountDiscoveryService } = await import('@/lib/services/background/account-discovery');
         const { accountEnrichmentService } = await import('@/lib/services/background/account-enrichment');
@@ -17,6 +18,7 @@ export async function register() {
         }
         
         migrationScheduler.init();
+        backupScheduler.init();
         balanceSyncService.start();
         accountDiscoveryService.start();
         accountEnrichmentService.start();

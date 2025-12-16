@@ -29,6 +29,7 @@ import { billersResolvers } from "./billers";
 import { walletTierResolvers } from "./walletTier";
 import { checkbookRequestResolvers } from "./checkbookRequest";
 import { pushNotificationResolvers } from "./pushNotification";
+import { backupScheduleResolvers } from "./backupSchedule";
 import { JSONResolver, DateTimeResolver } from "graphql-scalars";
 import { GraphQLScalarType, Kind } from "graphql";
 
@@ -66,6 +67,7 @@ export const resolvers = {
     ...coreBankingEndpointResolvers.Query,
     ...beneficiaryResolvers.Query,
     ...backupResolvers.Query,
+    ...backupScheduleResolvers.Query,
     ...passkeyResolvers.Query,
     ...mobileUserAccountResolvers.Query,
     ...loginAttemptResolvers.Query,
@@ -94,6 +96,7 @@ export const resolvers = {
     ...beneficiaryResolvers.Mutation,
     ...passkeyResolvers.Mutation,
     ...backupResolvers.Mutation,
+    ...backupScheduleResolvers.Mutation,
     ...migrationSchedulingResolvers.Mutation,
     ...mobileUserAccountResolvers.Mutation,
     ...deviceVerificationResolvers.Mutation,

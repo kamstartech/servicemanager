@@ -1,9 +1,18 @@
 import { backupService } from "@/lib/services/backup";
 import { prisma } from "@/lib/db/prisma";
+import type { GraphQLContext } from "@/lib/graphql/context";
+
+function requireAdminContext(ctx: GraphQLContext) {
+    const context = ctx.auth?.context;
+    if (context !== "ADMIN" && context !== "ADMIN_WEB") {
+        throw new Error("Forbidden");
+    }
+}
 
 export const backupResolvers = {
     Query: {
-        async backups() {
+        async backups(_parent: unknown, _args: unknown, ctx: GraphQLContext) {
+            requireAdminContext(ctx);
             // Cast to any because backup model might not be in types yet
             const backups = await (prisma as any).backup.findMany({
                 orderBy: { createdAt: "desc" },
@@ -18,7 +27,8 @@ export const backupResolvers = {
     },
 
     Mutation: {
-        async createBackup() {
+        async createBackup(_parent: unknown, _args: unknown, ctx: GraphQLContext) {
+            requireAdminContext(ctx);
             const filename = await backupService.createBackup();
             const backup = await (prisma as any).backup.findUnique({ where: { filename } });
 
@@ -31,11 +41,13 @@ export const backupResolvers = {
             };
         },
 
-        async restoreBackup(_parent: unknown, args: { id: string }) {
+        async restoreBackup(_parent: unknown, args: { id: string }, ctx: GraphQLContext) {
+            requireAdminContext(ctx);
             return await backupService.restoreBackup(args.id);
         },
 
-        async deleteBackup(_parent: unknown, args: { id: string }) {
+        async deleteBackup(_parent: unknown, args: { id: string }, ctx: GraphQLContext) {
+            requireAdminContext(ctx);
             return await backupService.deleteBackup(args.id);
         },
     },

@@ -444,6 +444,24 @@ model Backup {
   @@map("fdh_backups")
 }
 
+model BackupSchedule {
+  id Int @id
+
+  enabled  Boolean @default(false)
+  time     String  @default("02:00") @db.VarChar(5)
+  timeZone String  @default("UTC") @map("time_zone") @db.Text
+
+  isRunning Boolean @default(false) @map("is_running")
+
+  lastRunAt DateTime? @map("last_run_at")
+  lastRunDate String? @map("last_run_date") @db.VarChar(10)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("backup_schedule")
+}
+
 enum BeneficiaryType {
   WALLET
   BANK_INTERNAL

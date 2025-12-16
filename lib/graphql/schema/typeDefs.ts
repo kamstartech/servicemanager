@@ -545,6 +545,24 @@ export const typeDefs = /* GraphQL */ `
     createdAt: String!
   }
 
+  type BackupSchedule {
+    id: ID!
+    enabled: Boolean!
+    time: String!
+    timeZone: String!
+    isRunning: Boolean!
+    lastRunAt: String
+    lastRunDate: String
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  input BackupScheduleInput {
+    enabled: Boolean
+    time: String
+    timeZone: String
+  }
+
   type Query {
     mobileUsers(context: MobileUserContext): [MobileUser!]!
     mobileUserDevices(userId: ID!): [MobileDevice!]!
@@ -553,6 +571,7 @@ export const typeDefs = /* GraphQL */ `
     mobileUserAccount(accountNumber: String!): Account
     adminWebUsers: [AdminWebUser!]!
     backups: [Backup!]!
+    backupSchedule: BackupSchedule!
     loginAttempts(
       limit: Int
       offset: Int
@@ -640,6 +659,8 @@ export const typeDefs = /* GraphQL */ `
     createBackup: Backup!
     restoreBackup(id: ID!): Boolean!
     deleteBackup(id: ID!): Boolean!
+
+    updateBackupSchedule(input: BackupScheduleInput!): BackupSchedule!
 
     # Mobile User Accounts
     linkAccountToUser(
