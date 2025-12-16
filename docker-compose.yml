@@ -149,7 +149,7 @@ services:
       BALANCE_SYNC_INTERVAL: "${BALANCE_SYNC_INTERVAL:-300000}"
       ACCOUNT_DISCOVERY_INTERVAL: "${ACCOUNT_DISCOVERY_INTERVAL:-86400000}"
       ACCOUNT_DISCOVERY_BATCH_SIZE: "${ACCOUNT_DISCOVERY_BATCH_SIZE:-50}"
-    command: sh -c "npm install && npx prisma generate && npx prisma migrate deploy && npm run dev"
+    command: sh -c "npm install && npx prisma generate && npx prisma db push --skip-generate && npm run dev"
 
 networks:
   service_manager_network:
