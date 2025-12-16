@@ -8,14 +8,21 @@ const JWT_SECRET: Secret =
 const JWT_EXPIRES_IN: SignOptions["expiresIn"] =
   (process.env.JWT_EXPIRES_IN as SignOptions["expiresIn"]) || "24h";
 
-async function issueMobileUserSecret(mobileUserId: number): Promise<string> {
+async function issueMobileUserSecret(
+  mobileUserId: number
+): Promise<string | null> {
   const secret = crypto.randomBytes(32).toString("base64url");
   const secretHash = await bcrypt.hash(secret, 12);
 
-  await prisma.mobileUser.update({
-    where: { id: mobileUserId },
-    data: { secretHash },
-  });
+  try {
+    await prisma.mobileUser.update({
+      where: { id: mobileUserId },
+      data: { secretHash },
+    });
+  } catch (err) {
+    console.error("Failed to persist mobile user secretHash:", err);
+    return null;
+  }
 
   return secret;
 }
@@ -64,15 +71,36 @@ export const deviceVerificationResolvers = {
         throw new Error("Invalid verification code");
       }
 
+      if (!attempt.mobileUserId || !attempt.deviceId) {
+        throw new Error("Invalid verification session");
+      }
+
       // ✅ OTP VERIFIED - Create device!
-      const device = await prisma.mobileDevice.create({
-        data: {
-          mobileUserId: attempt.mobileUserId!,
-          deviceId: attempt.deviceId!,
+      const verifiedVia = attempt.otpSentTo?.includes("@") ? "OTP_EMAIL" : "OTP_SMS";
+
+      const device = await prisma.mobileDevice.upsert({
+        where: {
+          mobileUserId_deviceId: {
+            mobileUserId: attempt.mobileUserId,
+            deviceId: attempt.deviceId,
+          },
+        },
+        create: {
+          mobileUserId: attempt.mobileUserId,
+          deviceId: attempt.deviceId,
           name: attempt.deviceName || "Mobile Device",
           model: attempt.deviceModel,
           os: attempt.deviceOs,
-          verifiedVia: attempt.otpSentTo?.includes("@") ? "OTP_EMAIL" : "OTP_SMS",
+          verifiedVia,
+          verificationIp: attempt.ipAddress,
+          verificationLocation: attempt.location,
+          isActive: true,
+        },
+        update: {
+          name: attempt.deviceName || "Mobile Device",
+          model: attempt.deviceModel,
+          os: attempt.deviceOs,
+          verifiedVia,
           verificationIp: attempt.ipAddress,
           verificationLocation: attempt.location,
           isActive: true,
@@ -90,12 +118,12 @@ export const deviceVerificationResolvers = {
 
       // Fetch user's accounts and profile
       const accounts = await prisma.mobileUserAccount.findMany({
-        where: { mobileUserId: attempt.mobileUserId! },
+        where: { mobileUserId: attempt.mobileUserId },
         orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
       });
 
       const profile = await prisma.mobileUserProfile.findUnique({
-        where: { mobileUserId: attempt.mobileUserId! },
+        where: { mobileUserId: attempt.mobileUserId },
       });
 
       // Fetch app structure for user's context
