@@ -380,7 +380,7 @@ export default function ServicesMonitorPage() {
             className="h-7 text-xs"
           >
             <FileText className="h-3 w-3 mr-1" />
-            Logs
+            {translate("common.actions.logs")}
           </Button>
           {row.testable && (
             <Button
@@ -390,7 +390,7 @@ export default function ServicesMonitorPage() {
               className="h-7 text-xs"
             >
               <TestTube className="h-3 w-3 mr-1" />
-              Test
+              {translate("common.actions.test")}
             </Button>
           )}
         </div>
@@ -792,14 +792,14 @@ export default function ServicesMonitorPage() {
               onClick={() => setTestDialogOpen(false)}
               disabled={testLoading}
             >
-              Cancel
+              {translate("common.actions.cancel")}
             </Button>
             <Button
               onClick={runTest}
               disabled={testLoading || !testParam}
             >
               {testLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Run Test
+              {translate("common.actions.runTest")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -864,10 +864,10 @@ export default function ServicesMonitorPage() {
               variant="outline"
               onClick={() => setLogs([])}
             >
-              Clear Logs
+              {translate("common.actions.clearLogs")}
             </Button>
             <Button onClick={closeLogsDialog}>
-              Close
+              {translate("common.actions.close")}
             </Button>
           </DialogFooter>
         </DialogContent>

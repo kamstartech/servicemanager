@@ -8,8 +8,8 @@ services:
     container_name: service_manager_db
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: fdh_service_manager
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-Z761HPjTU6li}
+      POSTGRES_DB: ${POSTGRES_DB:-fdh_service_manager}
     ports:
       - "5432:5432"
     volumes:
@@ -51,7 +51,7 @@ services:
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-Z761HPjTU6li}
     ports:
       - "9000:9000"  # API
       - "9001:9001"  # Console
@@ -83,7 +83,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: service_manager_redis
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_dev_password}
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-R5tX6G1qFae3DYgXFOTyoysrV7jWhfFh}
     ports:
       - "6379:6379"
     volumes:
@@ -122,7 +122,7 @@ services:
       - service_manager_network
     environment:
       NODE_ENV: development
-      DATABASE_URL: "postgresql://postgres:postgres@db:5432/service_manager"
+      DATABASE_URL: "postgresql://postgres:${POSTGRES_PASSWORD:-Z761HPjTU6li}@db:5432/${POSTGRES_DB:-fdh_service_manager}"
       JWT_SECRET: "${JWT_SECRET:-change-this-to-a-secure-random-string-in-production}"
       JWT_EXPIRES_IN: "${JWT_EXPIRES_IN:-24h}"
       BACKUP_DIR: "/app/backups"
@@ -130,7 +130,7 @@ services:
       MINIO_PORT: "9000"
       MINIO_USE_SSL: "false"
       MINIO_ACCESS_KEY: "${MINIO_ACCESS_KEY:-minioadmin}"
-      MINIO_SECRET_KEY: "${MINIO_SECRET_KEY:-minioadmin}"
+      MINIO_SECRET_KEY: "${MINIO_SECRET_KEY:-Z761HPjTU6li}"
       MINIO_BUCKET_NAME: "${MINIO_BUCKET_NAME:-backups}"
       SMTP_HOST: "${SMTP_HOST:-mail.abakula.com}"
       SMTP_PORT: "${SMTP_PORT:-465}"
@@ -140,7 +140,7 @@ services:
       SMTP_FROM: "${SMTP_FROM:-uat@abakula.com}"
       REDIS_HOST: "redis"
       REDIS_PORT: "6379"
-      REDIS_PASSWORD: "${REDIS_PASSWORD:-redis_dev_password}"
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-R5tX6G1qFae3DYgXFOTyoysrV7jWhfFh}"
       # T24 Configuration
       T24_BASE_URL: "${T24_BASE_URL:-https://fdh-esb.ngrok.dev}"
       T24_USERNAME: "${T24_USERNAME:-admin}"

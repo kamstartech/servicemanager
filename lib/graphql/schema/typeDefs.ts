@@ -253,6 +253,7 @@ export const typeDefs = /* GraphQL */ `
     success: Boolean!
     user: MobileUser
     token: String
+    secret: String
     message: String
     devicePending: Boolean!
     
@@ -272,6 +273,7 @@ export const typeDefs = /* GraphQL */ `
   type VerifyDeviceOtpResult {
     success: Boolean!
     token: String!
+    secret: String
     user: MobileUser
     device: MobileDevice
     message: String

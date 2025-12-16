@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useI18n } from "@/components/providers/i18n-provider";
 
 const CREATE_FORM = gql`
   mutation CreateForm($input: CreateFormInput!) {
@@ -22,6 +23,7 @@ const CREATE_FORM = gql`
 `;
 
 export default function NewFormPage() {
+  const { translate } = useI18n();
   const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -67,7 +69,7 @@ export default function NewFormPage() {
               <Link href="/system/forms">
                 <Button variant="ghost" size="sm">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Forms
+                  {`${translate("common.actions.backTo")} ${translate("common.entities.forms")}`}
                 </Button>
               </Link>
             </div>
@@ -136,11 +138,13 @@ export default function NewFormPage() {
               {/* Actions */}
               <div className="flex gap-3 pt-4">
                 <Button type="submit" disabled={loading}>
-                  {loading ? "Creating..." : "Create Form & Add Fields"}
+                  {loading
+                    ? translate("common.state.creating")
+                    : translate("forms.new.actions.createFormAndAddFields")}
                 </Button>
                 <Link href="/system/forms">
                   <Button type="button" variant="outline">
-                    Cancel
+                    {translate("common.actions.cancel")}
                   </Button>
                 </Link>
               </div>

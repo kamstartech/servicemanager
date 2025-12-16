@@ -40,6 +40,18 @@ function maskContact(contact: string, method: "SMS" | "EMAIL"): string {
   }
 }
 
+async function issueMobileUserSecret(mobileUserId: number): Promise<string> {
+  const secret = crypto.randomBytes(32).toString("base64url");
+  const secretHash = await bcrypt.hash(secret, 12);
+
+  await prisma.mobileUser.update({
+    where: { id: mobileUserId },
+    data: { secretHash },
+  });
+
+  return secret;
+}
+
 export const authResolvers = {
   Mutation: {
     async login(_parent: unknown, args: { input: LoginInput }) {
@@ -204,6 +216,8 @@ export const authResolvers = {
           },
         });
 
+        const secret = await issueMobileUserSecret(user.id);
+
         // Fetch app structure for user's context
         const appStructure = await prisma.appScreen.findMany({
           where: {
@@ -284,6 +298,7 @@ export const authResolvers = {
             updatedAt: user.updatedAt.toISOString(),
           },
           token,
+          secret,
           message: "Login successful",
           devicePending: false,
           requiresVerification: false,

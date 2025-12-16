@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useI18n } from "@/components/providers/i18n-provider";
 
 const CREATE_CORE_BANKING_ENDPOINT = gql`
   mutation CreateCoreBankingEndpoint($input: CoreBankingEndpointInput!) {
@@ -62,6 +63,7 @@ export function CoreBankingEndpointDialog({
   onOpenChange,
   onCompleted,
 }: Props) {
+  const { translate } = useI18n();
   const [form, setForm] = useState<CoreBankingEndpoint>({
     connectionId,
     name: "",
@@ -244,16 +246,16 @@ export function CoreBankingEndpointDialog({
               onClick={() => onOpenChange(false)}
               disabled={isSaving}
             >
-              Cancel
+              {translate("common.actions.cancel")}
             </Button>
             <Button type="submit" disabled={isSaving}>
               {isSaving
                 ? mode === "create"
-                  ? "Creating..."
-                  : "Saving..."
+                  ? translate("common.state.creating")
+                  : translate("common.state.saving")
                 : mode === "create"
-                  ? "Create"
-                  : "Save"}
+                  ? translate("common.actions.create")
+                  : translate("common.actions.save")}
             </Button>
           </DialogFooter>
         </form>

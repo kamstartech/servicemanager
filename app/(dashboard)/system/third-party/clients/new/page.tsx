@@ -9,8 +9,10 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Save } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useI18n } from "@/components/providers/i18n-provider";
 
 export default function NewClientPage() {
+  const { translate } = useI18n();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -65,7 +67,7 @@ export default function NewClientPage() {
           <Link href="/system/third-party">
             <Button variant="ghost" size="sm" className="mb-4">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Clients
+              {`${translate("common.actions.backTo")} ${translate("common.entities.clients")}`}
             </Button>
           </Link>
           <h1 className="text-3xl font-bold">Create New Client</h1>
@@ -226,11 +228,13 @@ export default function NewClientPage() {
                   className="bg-fdh-orange hover:bg-fdh-orange/90"
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  {loading ? "Creating..." : "Create Client"}
+                  {loading
+                    ? translate("common.state.creating")
+                    : `${translate("common.actions.create")} ${translate("common.entities.client")}`}
                 </Button>
                 <Link href="/system/third-party">
                   <Button type="button" variant="outline" disabled={loading}>
-                    Cancel
+                    {translate("common.actions.cancel")}
                   </Button>
                 </Link>
               </div>

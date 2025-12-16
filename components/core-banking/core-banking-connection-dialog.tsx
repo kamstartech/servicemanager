@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useI18n } from "@/components/providers/i18n-provider";
 
 const CREATE_CORE_BANKING_CONNECTION = gql`
   mutation CreateCoreBankingConnection($input: CoreBankingConnectionInput!) {
@@ -60,6 +61,7 @@ export function CoreBankingConnectionDialog({
   onOpenChange,
   onCompleted,
 }: Props) {
+  const { translate } = useI18n();
   const [formData, setFormData] = useState({
     name: "",
     username: "",
@@ -298,16 +300,16 @@ export function CoreBankingConnectionDialog({
               onClick={() => onOpenChange(false)}
               disabled={isSaving}
             >
-              Cancel
+              {translate("common.actions.cancel")}
             </Button>
             <Button type="submit" disabled={isSaving}>
               {isSaving
                 ? mode === "create"
-                  ? "Creating..."
-                  : "Saving..."
+                  ? translate("common.state.creating")
+                  : translate("common.state.saving")
                 : mode === "create"
-                  ? "Create"
-                  : "Save"}
+                  ? translate("common.actions.create")
+                  : translate("common.actions.save")}
             </Button>
           </DialogFooter>
         </form>

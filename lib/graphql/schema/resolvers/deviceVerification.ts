@@ -1,11 +1,24 @@
 import { prisma } from "@/lib/db/prisma";
 import jwt, { type Secret, type SignOptions } from "jsonwebtoken";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 
 const JWT_SECRET: Secret =
   process.env.JWT_SECRET || "your-secret-key-change-in-production";
 const JWT_EXPIRES_IN: SignOptions["expiresIn"] =
   (process.env.JWT_EXPIRES_IN as SignOptions["expiresIn"]) || "24h";
+
+async function issueMobileUserSecret(mobileUserId: number): Promise<string> {
+  const secret = crypto.randomBytes(32).toString("base64url");
+  const secretHash = await bcrypt.hash(secret, 12);
+
+  await prisma.mobileUser.update({
+    where: { id: mobileUserId },
+    data: { secretHash },
+  });
+
+  return secret;
+}
 
 export const deviceVerificationResolvers = {
   Mutation: {
@@ -122,9 +135,12 @@ export const deviceVerificationResolvers = {
         },
       });
 
+      const secret = await issueMobileUserSecret(attempt.mobileUserId!);
+
       return {
         success: true,
         token,
+        secret,
         user: {
           id: attempt.mobileUser!.id,
           context: attempt.mobileUser!.context,
@@ -133,7 +149,7 @@ export const deviceVerificationResolvers = {
           customerNumber: attempt.mobileUser!.customerNumber,
           accountNumber: attempt.mobileUser!.accountNumber,
           isActive: attempt.mobileUser!.isActive,
-          accounts: accounts.map((acc) => ({
+          accounts: accounts.map((acc: any) => ({
             id: acc.id,
             accountNumber: acc.accountNumber,
             accountName: acc.accountName,
@@ -145,24 +161,24 @@ export const deviceVerificationResolvers = {
             createdAt: acc.createdAt.toISOString(),
             updatedAt: acc.updatedAt.toISOString(),
           })),
-          primaryAccount: accounts.find((acc) => acc.isPrimary)
+          primaryAccount: accounts.find((acc: any) => acc.isPrimary)
             ? {
-                id: accounts.find((acc) => acc.isPrimary)!.id,
-                accountNumber: accounts.find((acc) => acc.isPrimary)!
+                id: accounts.find((acc: any) => acc.isPrimary)!.id,
+                accountNumber: accounts.find((acc: any) => acc.isPrimary)!
                   .accountNumber,
-                accountName: accounts.find((acc) => acc.isPrimary)!.accountName,
-                accountType: accounts.find((acc) => acc.isPrimary)!.accountType,
-                currency: accounts.find((acc) => acc.isPrimary)!.currency,
+                accountName: accounts.find((acc: any) => acc.isPrimary)!.accountName,
+                accountType: accounts.find((acc: any) => acc.isPrimary)!.accountType,
+                currency: accounts.find((acc: any) => acc.isPrimary)!.currency,
                 balance: accounts
-                  .find((acc) => acc.isPrimary)!
+                  .find((acc: any) => acc.isPrimary)!
                   .balance?.toString(),
                 isPrimary: true,
-                isActive: accounts.find((acc) => acc.isPrimary)!.isActive,
+                isActive: accounts.find((acc: any) => acc.isPrimary)!.isActive,
                 createdAt: accounts
-                  .find((acc) => acc.isPrimary)!
+                  .find((acc: any) => acc.isPrimary)!
                   .createdAt.toISOString(),
                 updatedAt: accounts
-                  .find((acc) => acc.isPrimary)!
+                  .find((acc: any) => acc.isPrimary)!
                   .updatedAt.toISOString(),
               }
             : null,

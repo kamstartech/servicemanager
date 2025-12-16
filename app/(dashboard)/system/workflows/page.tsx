@@ -217,30 +217,30 @@ export default function WorkflowsPage() {
                 className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
               >
                 <MoreVertical className="h-4 w-4 mr-2" />
-                Actions
+                {translate("common.actions.actions")}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
                 <Link href={`/system/workflows/${row.id}`}>
                   <Eye className="h-4 w-4 mr-2" />
-                  View Details
+                  {translate("common.actions.viewDetails")}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleOpenDialog(row)}>
                 <Edit className="h-4 w-4 mr-2" />
-                Edit
+                {translate("common.actions.edit")}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => alert("Clone functionality coming soon")}>
                 <Copy className="h-4 w-4 mr-2" />
-                Clone
+                {translate("common.actions.clone")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => handleDelete(row.id, row.name)}
                 className="text-destructive"
               >
                 <Trash2 className="h-4 w-4 mr-2" />
-                Delete
+                {translate("common.actions.delete")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -325,7 +325,7 @@ export default function WorkflowsPage() {
           </div>
           <Button onClick={() => handleOpenDialog()}>
             <Plus className="h-4 w-4 mr-2" />
-            New Workflow
+            {`${translate("common.actions.new")} ${translate("common.entities.workflow")}`}
           </Button>
         </CardHeader>
         <CardContent>
@@ -377,7 +377,7 @@ export default function WorkflowsPage() {
               </div>
               <Button onClick={() => handleOpenDialog()}>
                 <Plus className="h-4 w-4 mr-2" />
-                Create First Workflow
+                {`${translate("common.actions.createFirst")} ${translate("common.entities.workflow")}`}
               </Button>
             </div>
           )}
@@ -471,7 +471,7 @@ export default function WorkflowsPage() {
               onClick={handleCloseDialog}
               disabled={creating || updating}
             >
-              Cancel
+              {translate("common.actions.cancel")}
             </Button>
             <Button
               onClick={handleSubmit}
@@ -479,11 +479,11 @@ export default function WorkflowsPage() {
             >
               {creating || updating
                 ? editingWorkflow
-                  ? "Updating..."
-                  : "Creating..."
+                  ? translate("common.state.updating")
+                  : translate("common.state.creating")
                 : editingWorkflow
-                ? "Update Workflow"
-                : "Create Workflow"}
+                ? `${translate("common.actions.update")} ${translate("common.entities.workflow")}`
+                : `${translate("common.actions.create")} ${translate("common.entities.workflow")}`}
             </Button>
           </DialogFooter>
         </DialogContent>

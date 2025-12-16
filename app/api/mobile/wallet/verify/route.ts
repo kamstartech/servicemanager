@@ -2,9 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
+
+async function issueMobileUserSecret(mobileUserId: number): Promise<string> {
+  const secret = crypto.randomBytes(32).toString('base64url');
+  const secretHash = await bcrypt.hash(secret, 12);
+
+  await prisma.mobileUser.update({
+    where: { id: mobileUserId },
+    data: { secretHash },
+  });
+
+  return secret;
+}
 
 /**
  * POST /api/mobile/wallet/verify
@@ -158,9 +171,12 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    const secret = await issueMobileUserSecret(attempt.mobileUserId!);
+
     return NextResponse.json({
       success: true,
       token,
+      secret,
       message: 'Device verified successfully',
       user: {
         id: attempt.mobileUser!.id,
@@ -168,7 +184,7 @@ export async function POST(request: NextRequest) {
         username: attempt.mobileUser!.username,
         phoneNumber: attempt.mobileUser!.phoneNumber,
         isActive: attempt.mobileUser!.isActive,
-        accounts: accounts.map((acc) => ({
+        accounts: accounts.map((acc: any) => ({
           id: acc.id,
           accountNumber: acc.accountNumber,
           accountName: acc.accountName,
@@ -178,13 +194,13 @@ export async function POST(request: NextRequest) {
           isPrimary: acc.isPrimary,
           isActive: acc.isActive,
         })),
-        primaryAccount: accounts.find((acc) => acc.isPrimary)
+        primaryAccount: accounts.find((acc: any) => acc.isPrimary)
           ? {
-              id: accounts.find((acc) => acc.isPrimary)!.id,
-              accountNumber: accounts.find((acc) => acc.isPrimary)!.accountNumber,
-              accountName: accounts.find((acc) => acc.isPrimary)!.accountName,
-              balance: accounts.find((acc) => acc.isPrimary)!.balance?.toString(),
-              currency: accounts.find((acc) => acc.isPrimary)!.currency,
+              id: accounts.find((acc: any) => acc.isPrimary)!.id,
+              accountNumber: accounts.find((acc: any) => acc.isPrimary)!.accountNumber,
+              accountName: accounts.find((acc: any) => acc.isPrimary)!.accountName,
+              balance: accounts.find((acc: any) => acc.isPrimary)!.balance?.toString(),
+              currency: accounts.find((acc: any) => acc.isPrimary)!.currency,
             }
           : null,
         profile: profile
@@ -216,13 +232,13 @@ export async function POST(request: NextRequest) {
         os: device.os,
         isActive: device.isActive,
       },
-      appStructure: appStructure.map((screen) => ({
+      appStructure: appStructure.map((screen: any) => ({
         id: screen.id,
         name: screen.name,
         context: screen.context,
         icon: screen.icon,
         order: screen.order,
-        pages: screen.pages.map((page) => ({
+        pages: screen.pages.map((page: any) => ({
           id: page.id,
           name: page.name,
           icon: page.icon,

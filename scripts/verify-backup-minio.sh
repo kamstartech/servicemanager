@@ -55,7 +55,7 @@ import { prisma } from './lib/db/prisma';
 echo ""
 
 echo "4️⃣ Listing files in MinIO backups bucket..."
-docker exec -e MC_HOST_myminio=http://minioadmin:minioadmin@localhost:9000 service_manager_minio mc ls myminio/backups/ 2>&1 | head -10
+docker exec -e MC_HOST_myminio=http://${MINIO_ACCESS_KEY:-minioadmin}:${MINIO_SECRET_KEY:-Z761HPjTU6li}@localhost:9000 service_manager_minio mc ls myminio/backups/ 2>&1 | head -10
 echo ""
 
 echo "5️⃣ Verifying container starts with MinIO initialization..."

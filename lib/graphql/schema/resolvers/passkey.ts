@@ -8,6 +8,7 @@ import {
 import { isoUint8Array } from "@simplewebauthn/server/helpers";
 import jwt, { Secret, SignOptions } from "jsonwebtoken";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 
 // Constants
 const RP_ID = process.env.RP_ID || "service-manager.local";
@@ -28,6 +29,18 @@ function base64UrlToUint8Array(base64: string): Uint8Array {
         .replace(/-/g, '+')
         .replace(/_/g, '/');
     return new Uint8Array(Buffer.from(base64Standard, 'base64'));
+}
+
+async function issueMobileUserSecret(mobileUserId: number): Promise<string> {
+    const secret = crypto.randomBytes(32).toString("base64url");
+    const secretHash = await bcrypt.hash(secret, 12);
+
+    await prisma.mobileUser.update({
+        where: { id: mobileUserId },
+        data: { secretHash },
+    });
+
+    return secret;
 }
 
 export const passkeyResolvers = {
@@ -171,7 +184,7 @@ export const passkeyResolvers = {
 
             const options = await generateAuthenticationOptions({
                 rpID: RP_ID,
-                allowCredentials: user.devices.map((device) => ({
+                allowCredentials: user.devices.map((device: any) => ({
                     id: device.credentialId, // base64url string
                     type: "public-key",
                     transports: device.transports as any[],
@@ -202,7 +215,7 @@ export const passkeyResolvers = {
             if (!expectedChallenge) throw new Error("Login session expired");
 
             const credentialId = responseJson.id;
-            const device = user.devices.find(d => d.credentialId === credentialId && d.isActive);
+            const device = user.devices.find((d: any) => d.credentialId === credentialId && d.isActive);
 
             if (!device) throw new Error("Device not found or inactive");
 
@@ -275,6 +288,8 @@ export const passkeyResolvers = {
                     },
                 });
 
+                const secret = await issueMobileUserSecret(user.id);
+
                 // Fetch accounts and profile
                 const accounts = await prisma.mobileUserAccount.findMany({
                     where: { mobileUserId: user.id },
@@ -303,6 +318,7 @@ export const passkeyResolvers = {
                 return {
                     success: true,
                     token,
+                    secret,
                     message: "Login successful",
                     devicePending: false,
                     requiresVerification: false,
@@ -314,7 +330,7 @@ export const passkeyResolvers = {
                         customerNumber: user.customerNumber,
                         accountNumber: user.accountNumber,
                         isActive: user.isActive,
-                        accounts: accounts.map((acc) => ({
+                        accounts: accounts.map((acc: any) => ({
                             id: acc.id,
                             accountNumber: acc.accountNumber,
                             accountName: acc.accountName,
@@ -326,18 +342,18 @@ export const passkeyResolvers = {
                             createdAt: acc.createdAt.toISOString(),
                             updatedAt: acc.updatedAt.toISOString(),
                         })),
-                        primaryAccount: accounts.find((acc) => acc.isPrimary)
+                        primaryAccount: accounts.find((acc: any) => acc.isPrimary)
                             ? {
-                                id: accounts.find((acc) => acc.isPrimary)!.id,
-                                accountNumber: accounts.find((acc) => acc.isPrimary)!.accountNumber,
-                                accountName: accounts.find((acc) => acc.isPrimary)!.accountName,
-                                accountType: accounts.find((acc) => acc.isPrimary)!.accountType,
-                                currency: accounts.find((acc) => acc.isPrimary)!.currency,
-                                balance: accounts.find((acc) => acc.isPrimary)!.balance?.toString(),
+                                id: accounts.find((acc: any) => acc.isPrimary)!.id,
+                                accountNumber: accounts.find((acc: any) => acc.isPrimary)!.accountNumber,
+                                accountName: accounts.find((acc: any) => acc.isPrimary)!.accountName,
+                                accountType: accounts.find((acc: any) => acc.isPrimary)!.accountType,
+                                currency: accounts.find((acc: any) => acc.isPrimary)!.currency,
+                                balance: accounts.find((acc: any) => acc.isPrimary)!.balance?.toString(),
                                 isPrimary: true,
-                                isActive: accounts.find((acc) => acc.isPrimary)!.isActive,
-                                createdAt: accounts.find((acc) => acc.isPrimary)!.createdAt.toISOString(),
-                                updatedAt: accounts.find((acc) => acc.isPrimary)!.updatedAt.toISOString(),
+                                isActive: accounts.find((acc: any) => acc.isPrimary)!.isActive,
+                                createdAt: accounts.find((acc: any) => acc.isPrimary)!.createdAt.toISOString(),
+                                updatedAt: accounts.find((acc: any) => acc.isPrimary)!.updatedAt.toISOString(),
                             }
                             : null,
                         profile: profile
@@ -359,7 +375,7 @@ export const passkeyResolvers = {
                         createdAt: user.createdAt.toISOString(),
                         updatedAt: user.updatedAt.toISOString(),
                     },
-                    appStructure: appStructure.map((screen) => ({
+                    appStructure: appStructure.map((screen: any) => ({
                         id: screen.id,
                         name: screen.name,
                         context: screen.context,
@@ -367,7 +383,7 @@ export const passkeyResolvers = {
                         order: screen.order,
                         isActive: screen.isActive,
                         isTesting: screen.isTesting,
-                        pages: screen.pages.map((page) => ({
+                        pages: screen.pages.map((page: any) => ({
                             id: page.id,
                             name: page.name,
                             icon: page.icon,
@@ -428,7 +444,7 @@ export const passkeyResolvers = {
                     orderBy: { updatedAt: 'desc' }
                 });
 
-                return devices.map(d => ({
+                return devices.map((d: any) => ({
                     ...d,
                     createdAt: d.createdAt.toISOString(),
                     updatedAt: d.updatedAt.toISOString(),

@@ -23,7 +23,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: development
-      DATABASE_URL: "postgresql://postgres:postgres@db:5432/service_manager"
+      DATABASE_URL: "postgresql://postgres:${POSTGRES_PASSWORD:-Z761HPjTU6li}@db:5432/${POSTGRES_DB:-fdh_service_manager}"
       JWT_SECRET: "${JWT_SECRET:-change-this-to-a-secure-random-string-in-production}"
       JWT_EXPIRES_IN: "${JWT_EXPIRES_IN:-24h}"
       BACKUP_DIR: "/app/backups"
@@ -31,7 +31,7 @@ services:
       MINIO_PORT: "9000"
       MINIO_USE_SSL: "false"
       MINIO_ACCESS_KEY: "${MINIO_ACCESS_KEY:-minioadmin}"
-      MINIO_SECRET_KEY: "${MINIO_SECRET_KEY:-minioadmin}"
+      MINIO_SECRET_KEY: "${MINIO_SECRET_KEY:-Z761HPjTU6li}"
       MINIO_BUCKET_NAME: "${MINIO_BUCKET_NAME:-backups}"
       # T24 Configuration
       T24_BASE_URL: "${T24_BASE_URL}"

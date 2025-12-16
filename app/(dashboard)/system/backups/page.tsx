@@ -295,7 +295,7 @@ export default function BackupsPage() {
                     >
                         <a href={`/api/backups/${row.id}/download`} target="_blank" rel="noopener noreferrer">
                             <Download className="h-4 w-4 mr-2" />
-                            Download
+                            {translate("common.actions.download")}
                         </a>
                     </Button>
 
@@ -310,7 +310,7 @@ export default function BackupsPage() {
                                 disabled={restoring}
                             >
                                 <RotateCcw className="h-4 w-4 mr-2" />
-                                Restore
+                                {translate("common.actions.restore")}
                             </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
@@ -323,9 +323,9 @@ export default function BackupsPage() {
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogCancel>{translate("common.actions.cancel")}</AlertDialogCancel>
                                 <AlertDialogAction onClick={() => handleRestoreBackup(row.id, row.filename)} className="bg-red-600 hover:bg-red-700">
-                                    Confirm Restore
+                                    {translate("common.actions.confirmRestore")}
                                 </AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
@@ -342,7 +342,7 @@ export default function BackupsPage() {
                                 disabled={deleting}
                             >
                                 <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
+                                {translate("common.actions.delete")}
                             </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
@@ -353,9 +353,9 @@ export default function BackupsPage() {
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogCancel>{translate("common.actions.cancel")}</AlertDialogCancel>
                                 <AlertDialogAction onClick={() => handleDeleteBackup(row.id)}>
-                                    Delete
+                                    {translate("common.actions.delete")}
                                 </AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
@@ -379,11 +379,13 @@ export default function BackupsPage() {
                     <div className="flex gap-2">
                         <Button variant="outline" size="sm" onClick={() => refetch()} disabled={loading}>
                             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                            Refresh
+                            {translate("common.actions.refresh")}
                         </Button>
                         <Button variant="outline" size="sm" onClick={handleUploadClick} disabled={uploading}>
                             <Upload className="h-4 w-4 mr-2" />
-                            {uploading ? "Uploading..." : "Upload Backup"}
+                            {uploading
+                              ? translate("common.state.uploading")
+                              : `${translate("common.actions.upload")} ${translate("common.entities.backup")}`}
                         </Button>
                         <input
                             ref={fileInputRef}
@@ -394,7 +396,9 @@ export default function BackupsPage() {
                         />
                         <Button size="sm" onClick={handleCreateBackup} disabled={creating}>
                             <Plus className="h-4 w-4 mr-2" />
-                            {creating ? "Creating..." : "Create Backup"}
+                            {creating
+                              ? translate("common.state.creating")
+                              : `${translate("common.actions.create")} ${translate("common.entities.backup")}`}
                         </Button>
                     </div>
                 </CardHeader>
@@ -451,7 +455,9 @@ export default function BackupsPage() {
                                         onClick={handleSaveSchedule}
                                         disabled={scheduleLoading || savingSchedule}
                                     >
-                                        {savingSchedule ? "Saving..." : "Save Schedule"}
+                                        {savingSchedule
+                                          ? translate("common.state.saving")
+                                          : `${translate("common.actions.save")} ${translate("common.entities.schedule")}`}
                                     </Button>
                                 </div>
                             </div>

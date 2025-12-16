@@ -190,7 +190,7 @@ const STEP_TYPES = [
   { value: "REDIRECT", label: "🔄 Redirect", description: "Navigate to another screen" },
 ];
 
-function SortableStepRow({ step, onEdit, onDelete, rowIndex }: any) {
+function SortableStepRow({ step, onEdit, onDelete, rowIndex, translate }: any) {
   const {
     attributes,
     listeners,
@@ -264,7 +264,7 @@ function SortableStepRow({ step, onEdit, onDelete, rowIndex }: any) {
               onClick={() => onEdit(step)}
             >
               <Edit className="h-4 w-4 mr-2" />
-              Edit
+              {translate("common.actions.edit")}
             </Button>
             <Button
               type="button"
@@ -274,7 +274,7 @@ function SortableStepRow({ step, onEdit, onDelete, rowIndex }: any) {
               onClick={() => onDelete(step.id, step.label)}
             >
               <Trash2 className="h-4 w-4 mr-2" />
-              Delete
+              {translate("common.actions.delete")}
             </Button>
           </div>
         </div>
@@ -689,12 +689,12 @@ export default function WorkflowDetailPage() {
         <Link href="/system/workflows">
           <Button variant="outline" size="sm">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Workflows
+            {`${translate("common.actions.backTo")} ${translate("common.entities.workflows")}`}
           </Button>
         </Link>
         <Button onClick={handleOpenWorkflowDialog}>
           <Edit className="h-4 w-4 mr-2" />
-          Edit Workflow
+          {`${translate("common.actions.edit")} ${translate("common.entities.workflow")}`}
         </Button>
       </div>
 
@@ -769,7 +769,7 @@ export default function WorkflowDetailPage() {
           </div>
           <Button onClick={() => handleOpenDialog()} size="sm">
             <Plus className="h-4 w-4 mr-2" />
-            Add Step
+            {`${translate("common.actions.add")} ${translate("common.entities.step")}`}
           </Button>
         </CardHeader>
         <CardContent>
@@ -781,7 +781,7 @@ export default function WorkflowDetailPage() {
               </div>
               <Button onClick={() => handleOpenDialog()}>
                 <Plus className="h-4 w-4 mr-2" />
-                Add First Step
+                {`${translate("common.actions.addFirst")} ${translate("common.entities.step")}`}
               </Button>
             </div>
           ) : (
@@ -814,6 +814,7 @@ export default function WorkflowDetailPage() {
                           rowIndex={index}
                           onEdit={handleOpenDialog}
                           onDelete={handleDelete}
+                          translate={translate}
                         />
                       ))}
                     </SortableContext>
@@ -915,13 +916,15 @@ export default function WorkflowDetailPage() {
               onClick={() => setWorkflowDialogOpen(false)}
               disabled={updatingWorkflow}
             >
-              Cancel
+              {translate("common.actions.cancel")}
             </Button>
             <Button
               onClick={handleUpdateWorkflow}
               disabled={updatingWorkflow || !workflowName.trim()}
             >
-              {updatingWorkflow ? "Updating..." : "Update Workflow"}
+              {updatingWorkflow
+                ? translate("common.state.updating")
+                : `${translate("common.actions.update")} ${translate("common.entities.workflow")}`}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1335,7 +1338,7 @@ export default function WorkflowDetailPage() {
               onClick={handleCloseDialog}
               disabled={creating || updating}
             >
-              Cancel
+              {translate("common.actions.cancel")}
             </Button>
             <Button
               onClick={handleSubmit}
@@ -1343,11 +1346,11 @@ export default function WorkflowDetailPage() {
             >
               {creating || updating
                 ? editingStep
-                  ? "Updating..."
-                  : "Creating..."
+                  ? translate("common.state.updating")
+                  : translate("common.state.creating")
                 : editingStep
-                ? "Update Step"
-                : "Create Step"}
+                ? `${translate("common.actions.update")} ${translate("common.entities.step")}`
+                : `${translate("common.actions.create")} ${translate("common.entities.step")}`}
             </Button>
           </DialogFooter>
         </DialogContent>
