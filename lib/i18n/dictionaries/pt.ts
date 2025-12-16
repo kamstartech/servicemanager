@@ -4,6 +4,8 @@ export const pt = {
       actions: "Ações",
       add: "Adicionar",
       addFirst: "Adicionar primeiro",
+      attach: "Associar",
+      attachFirst: "Associar primeiro",
       back: "Voltar",
       backTo: "Voltar para",
       cancel: "Cancelar",
@@ -39,7 +41,11 @@ export const pt = {
       form: "Formulário",
       forms: "Formulários",
       log: "Registo",
+      page: "Página",
+      pages: "Páginas",
       schedule: "Agenda",
+      screen: "Ecrã",
+      screens: "Ecrãs",
       step: "Passo",
       steps: "Passos",
       workflow: "Fluxo de trabalho",
@@ -214,6 +220,9 @@ export const pt = {
   },
   adminUsers: {
     title: "Utilizadores de administração",
+    actions: {
+      addAdminUser: "Adicionar utilizador admin",
+    },
     columns: {
       identifier: "Identificador",
       email: "Email",
