@@ -1,0 +1,9 @@
+model AccountCategory {
+  id              Int      @id @default(autoincrement())
+  category        String   @unique @db.Text
+  displayToMobile Boolean  @default(true) @map("display_to_mobile")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("fdh_account_categories")
+}

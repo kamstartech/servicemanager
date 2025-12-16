@@ -1,0 +1,6 @@
+enum AlertStatus {
+  PENDING
+  SENT
+  FAILED
+  ACKNOWLEDGED
+}

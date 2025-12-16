@@ -1,0 +1,31 @@
+model Migration {
+  id          Int     @id @default(autoincrement())
+  name        String
+  description String? @db.Text
+
+  // Source database (external - where we read from)
+  sourceConnectionId Int
+  sourceConnection   DatabaseConnection @relation(fields: [sourceConnectionId], references: [id], onDelete: Cascade)
+  sourceQuery        String             @db.Text
+
+  // Target database (our database - where we write to)
+  targetTable       String
+  targetInsertQuery String @db.Text // Template query with placeholders
+
+  // Execution tracking
+  status              MigrationStatus @default(PENDING)
+  lastRunAt           DateTime?
+  lastRunSuccess      Boolean?
+  lastRunMessage      String?         @db.Text
+  lastRunRowsAffected Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Scheduling
+  isRecurring    Boolean   @default(false) @map("is_recurring") // Run periodically?
+  cronExpression String?   @map("cron_expression") @db.Text // e.g. "0 0 * * *"
+  nextRunAt      DateTime? @map("next_run_at") // When is it due next?
+
+  @@map("fdh_migrations")
+}

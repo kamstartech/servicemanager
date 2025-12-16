@@ -1,0 +1,43 @@
+model DeviceLoginAttempt {
+  id String @id @default(cuid())
+
+  // User Context
+  mobileUserId Int?    @map("mobile_user_id")
+  username     String? @db.Text
+  context      String? @db.Text
+
+  // Device Information (NOT yet in device table)
+  deviceId    String? @map("device_id")
+  deviceName  String? @map("device_name")
+  deviceModel String? @map("device_model")
+  deviceOs    String? @map("device_os")
+
+  // Network Context
+  ipAddress String? @map("ip_address")
+  location  String? @db.Text
+
+  // Attempt Details
+  attemptType   AttemptType   @map("attempt_type")
+  status        AttemptStatus
+  failureReason String?       @map("failure_reason") @db.Text
+
+  // OTP Verification
+  otpCode           String?   @map("otp_code")
+  otpSentTo         String?   @map("otp_sent_to")
+  otpSentAt         DateTime? @map("otp_sent_at")
+  otpExpiresAt      DateTime? @map("otp_expires_at")
+  otpVerifiedAt     DateTime? @map("otp_verified_at")
+  otpAttempts       Int       @default(0) @map("otp_attempts")
+  verificationToken String?   @unique @map("verification_token")
+
+  attemptedAt DateTime @default(now()) @map("attempted_at")
+
+  // Relations
+  mobileUser MobileUser? @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
+
+  @@index([mobileUserId])
+  @@index([deviceId])
+  @@index([verificationToken])
+  @@index([attemptedAt])
+  @@map("fdh_device_login_attempts")
+}

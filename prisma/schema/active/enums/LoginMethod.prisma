@@ -1,0 +1,6 @@
+enum LoginMethod {
+  PASSWORD
+  BIOMETRIC
+  PASSKEY
+  OTP
+}

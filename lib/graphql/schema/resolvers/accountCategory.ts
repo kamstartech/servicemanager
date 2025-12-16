@@ -9,7 +9,7 @@ export const accountCategoryResolvers = {
 
       // Fetch category names from accounts table
       const categoriesWithNames = await Promise.all(
-        categories.map(async (cat) => {
+        categories.map(async (cat: any) => {
           const account = await prisma.mobileUserAccount.findFirst({
             where: { categoryId: cat.category },
             select: { categoryName: true },

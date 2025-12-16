@@ -1,0 +1,39 @@
+model WorkflowStep {
+  id         String @id @default(cuid())
+  workflowId String @map("workflow_id")
+
+  // Step details
+  type  WorkflowStepType
+  label String           @db.Text
+  order Int              @default(0)
+
+  // Step configuration (JSON for flexibility)
+  config Json
+
+  // Validation rules (optional)
+  validation Json?
+
+  // Status
+  isActive Boolean @default(true) @map("is_active")
+
+  // Execution configuration
+  executionMode   StepExecutionMode @default(CLIENT_ONLY) @map("execution_mode")
+  triggerTiming   TriggerTiming?    @map("trigger_timing")
+  triggerEndpoint String?           @map("trigger_endpoint") @db.Text
+  triggerConfig   Json?             @map("trigger_config")
+  timeoutMs       Int?              @map("timeout_ms")
+  retryConfig     Json?             @map("retry_config")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([type])
+  @@index([order])
+  @@index([isActive])
+  @@index([executionMode])
+  @@map("workflow_steps")
+}

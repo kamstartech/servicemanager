@@ -1,0 +1,14 @@
+model CoreBankingEndpoint {
+  id           Int                   @id @default(autoincrement())
+  connection   CoreBankingConnection @relation(fields: [connectionId], references: [id])
+  connectionId Int
+
+  name         String
+  method       String  @default("POST")
+  path         String  @db.Text
+  bodyTemplate String? @db.Text
+  isActive     Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

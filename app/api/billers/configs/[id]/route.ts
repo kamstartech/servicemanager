@@ -9,11 +9,6 @@ export async function GET(
     const { id } = await params;
     const config = await prisma.billerConfig.findUnique({
       where: { id },
-      include: {
-        _count: {
-          select: { transactions: true },
-        },
-      },
     });
 
     if (!config) {

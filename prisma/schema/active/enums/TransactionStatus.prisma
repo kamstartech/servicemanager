@@ -1,0 +1,8 @@
+enum TransactionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  FAILED_PERMANENT
+  REVERSED
+}

@@ -1,0 +1,32 @@
+model ThirdPartyClient {
+  id          String  @id @default(cuid())
+  name        String  @db.Text // e.g., "External Registration System"
+  description String? @db.Text
+
+  // Contact information
+  contactName  String? @map("contact_name") @db.Text
+  contactEmail String? @map("contact_email") @db.Text
+  contactPhone String? @map("contact_phone") @db.Text
+
+  // API Access
+  isActive Boolean @default(true) @map("is_active")
+
+  // IP Whitelisting (optional)
+  allowedIps String[] @default([]) @map("allowed_ips")
+
+  // Rate limiting
+  rateLimitPerMinute Int @default(60) @map("rate_limit_per_minute")
+  rateLimitPerHour   Int @default(1000) @map("rate_limit_per_hour")
+
+  // Audit
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy Int?     @map("created_by") // AdminWebUser ID
+
+  // Relations
+  apiKeys    ThirdPartyApiKey[]
+  accessLogs ThirdPartyAccessLog[]
+
+  @@index([isActive])
+  @@map("third_party_clients")
+}

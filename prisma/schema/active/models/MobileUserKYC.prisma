@@ -1,0 +1,43 @@
+model MobileUserKYC {
+  id           Int @id @default(autoincrement())
+  mobileUserId Int @unique @map("mobile_user_id")
+
+  // Wallet Tier Assignment (only for WALLET context users)
+  walletTierId Int? @map("wallet_tier_id")
+
+  // KYC Fields
+  dateOfBirth   DateTime? @map("date_of_birth") @db.Date
+  occupation    String?   @db.Text
+  employerName  String?   @map("employer_name") @db.Text
+  sourceOfFunds String?   @map("source_of_funds") @db.Text
+  idNumber      String?   @map("id_number") @db.Text
+  idImage       String?   @map("id_image") @db.Text
+
+  // KYC Status
+  kycComplete   Boolean   @default(false) @map("kyc_complete")
+  kycVerifiedAt DateTime? @map("kyc_verified_at")
+
+  // NRB Validation
+  nrbValidation      Boolean? @map("nrb_validation")
+  nrbResponseCode    Int?     @map("nrb_response_code")
+  nrbResponseMessage String?  @map("nrb_response_message") @db.Text
+  nrbStatus          String?  @map("nrb_status") @db.Text
+  nrbStatusReason    String?  @map("nrb_status_reason") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  mobileUser MobileUser  @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
+  walletTier WalletTier? @relation(fields: [walletTierId], references: [id])
+
+  @@index([mobileUserId])
+  @@index([walletTierId])
+  @@map("fdh_mobile_user_kyc")
+}
+
+// ============================================
+// TRANSACTION SYSTEM (PROXY)
+// ============================================
+
+// Unified Transaction Model (Proxy for T24)

@@ -5,7 +5,6 @@ import { useRouter, useParams } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RegistrationStatus } from "@prisma/client";
 import type { RequestedRegistrationWithRelations } from "@/types/registration";
 import { useRegistrationUpdates } from "@/lib/hooks/useRegistrationUpdates";
 import {
@@ -25,6 +24,17 @@ import {
   FileJson,
   Radio,
 } from "lucide-react";
+
+const RegistrationStatus = {
+  PENDING: "PENDING",
+  APPROVED: "APPROVED",
+  COMPLETED: "COMPLETED",
+  FAILED: "FAILED",
+  DUPLICATE: "DUPLICATE",
+} as const;
+
+type RegistrationStatus =
+  (typeof RegistrationStatus)[keyof typeof RegistrationStatus];
 
 interface RegistrationRequest extends Omit<RequestedRegistrationWithRelations, 'createdAt' | 'updatedAt' | 'processedAt' | 'lastRetryAt'> {
   createdAt: string;

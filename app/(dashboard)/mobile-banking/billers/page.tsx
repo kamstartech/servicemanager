@@ -14,9 +14,6 @@ type BillerConfigRow = {
   isActive: boolean;
   timeoutMs: number;
   retryAttempts: number;
-  _count: {
-    transactions: number;
-  };
 };
 
 type BillerStatsRow = {
@@ -30,11 +27,6 @@ type BillerStatsRow = {
 export default async function BillersPage() {
   const configs = (await prisma.billerConfig.findMany({
     orderBy: { billerName: "asc" },
-    include: {
-      _count: {
-        select: { transactions: true },
-      },
-    },
   })) as BillerConfigRow[];
 
   const stats = await prisma.billerTransaction.groupBy({

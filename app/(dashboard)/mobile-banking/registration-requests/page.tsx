@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { COMMON_TABLE_HEADERS, DataTable, type DataTableColumn } from "@/components/data-table";
 import { useI18n } from "@/components/providers/i18n-provider";
-import { RegistrationStatus, RegistrationSource } from "@prisma/client";
 import type { RequestedRegistrationWithRelations } from "@/types/registration";
 import { AddRegistrationDialog } from "@/components/registration/add-registration-dialog";
 import { 
@@ -23,6 +22,17 @@ import {
   Plus 
 } from "lucide-react";
 import { translateStatusOneWord } from "@/lib/utils";
+
+const RegistrationStatus = {
+  PENDING: "PENDING",
+  APPROVED: "APPROVED",
+  COMPLETED: "COMPLETED",
+  FAILED: "FAILED",
+  DUPLICATE: "DUPLICATE",
+} as const;
+
+type RegistrationStatus =
+  (typeof RegistrationStatus)[keyof typeof RegistrationStatus];
 
 interface RegistrationRequest extends Omit<RequestedRegistrationWithRelations, 'createdAt' | 'updatedAt' | 'processedAt' | 'lastRetryAt'> {
   createdAt: string;

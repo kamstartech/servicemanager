@@ -1,0 +1,6 @@
+enum RegistrationSource {
+  THIRD_PARTY_API
+  ADMIN_PORTAL
+  SELF_SERVICE
+  T24_SYNC
+}

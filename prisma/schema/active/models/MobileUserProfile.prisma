@@ -1,0 +1,21 @@
+model MobileUserProfile {
+  id           Int @id @default(autoincrement())
+  mobileUserId Int @unique @map("mobile_user_id")
+
+  firstName String? @map("first_name") @db.Text
+  lastName  String? @map("last_name") @db.Text
+  email     String? @db.Text
+  phone     String? @db.Text
+  address   String? @db.Text
+  city      String? @db.Text
+  country   String? @db.Text
+  zip       String? @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  mobileUser MobileUser @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
+
+  @@map("fdh_mobile_user_profiles")
+}

@@ -1,0 +1,39 @@
+model Beneficiary {
+  id Int @id @default(autoincrement())
+
+  // Relationship to user
+  userId Int        @map("user_id")
+  user   MobileUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Beneficiary details
+  name            String          @db.Text
+  beneficiaryType BeneficiaryType @map("beneficiary_type")
+
+  // For WALLET beneficiaries
+  phoneNumber String? @map("phone_number") @db.Text
+
+  // For BANK_INTERNAL and BANK_EXTERNAL beneficiaries
+  accountNumber String? @map("account_number") @db.Text
+
+  // For BANK_EXTERNAL only
+  bankCode String? @map("bank_code") @db.Text
+  bankName String? @map("bank_name") @db.Text
+  branch   String? @db.Text
+
+  // Optional fields
+  description String? @db.Text
+
+  // Metadata
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Unique constraints per type
+  @@unique([userId, phoneNumber, beneficiaryType], name: "unique_user_wallet")
+  @@unique([userId, accountNumber, beneficiaryType], name: "unique_user_internal_bank")
+  @@unique([userId, accountNumber, bankCode, beneficiaryType], name: "unique_user_external_bank")
+  @@index([userId])
+  @@index([beneficiaryType])
+  @@map("fdh_beneficiaries")
+}

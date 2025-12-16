@@ -1,0 +1,25 @@
+model WorkflowExecution {
+  id         String @id @default(cuid())
+  workflowId String @map("workflow_id")
+  userId     String @map("user_id")
+  sessionId  String @map("session_id")
+
+  currentStepId String?                 @map("current_step_id")
+  status        WorkflowExecutionStatus @default(IN_PROGRESS)
+
+  // Only store final result, NOT intermediate inputs (stored in Redis)
+  finalResult Json?   @map("final_result")
+  error       String? @db.Text
+
+  startedAt   DateTime  @default(now()) @map("started_at")
+  completedAt DateTime? @map("completed_at")
+
+  // Relations
+  workflow Workflow @relation(fields: [workflowId], references: [id])
+
+  @@index([workflowId])
+  @@index([userId])
+  @@index([sessionId])
+  @@index([status])
+  @@map("workflow_executions")
+}

@@ -1,0 +1,8 @@
+enum WorkflowStepType {
+  FORM
+  API_CALL
+  VALIDATION
+  CONFIRMATION
+  DISPLAY
+  REDIRECT
+}

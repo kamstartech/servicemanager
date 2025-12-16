@@ -1,0 +1,52 @@
+model MobileUserAccount {
+  id           Int @id @default(autoincrement())
+  mobileUserId Int @map("mobile_user_id")
+
+  // Context to distinguish between WALLET and MOBILE_BANKING accounts
+  context MobileUserContext @default(MOBILE_BANKING)
+
+  accountNumber String  @map("account_number") @db.Text
+  accountName   String? @map("account_name") @db.Text
+  accountType   String? @map("account_type") @db.Text // SAVINGS, CURRENT, WALLET, etc.
+  currency      String  @default("MWK")
+
+  // Account details from T24 (for MOBILE_BANKING context)
+  categoryId    String? @map("category_id") @db.Text // e.g., "1001"
+  categoryName  String? @map("category_name") @db.Text // e.g., "Platinum Current Account"
+  accountStatus String? @map("account_status") @db.Text // e.g., "Active"
+  holderName    String? @map("holder_name") @db.Text // Account holder name
+  nickName      String? @map("nick_name") @db.Text // Account nickname
+  onlineLimit   String? @map("online_limit") @db.Text // Online transaction limit
+  openingDate   String? @map("opening_date") @db.Text // Account opening date
+
+  // Balance fields (synced from T24 for MOBILE_BANKING, managed locally for WALLET)
+  balance          Decimal? @db.Decimal(15, 2)
+  workingBalance   Decimal? @map("working_balance") @db.Decimal(15, 2)
+  availableBalance Decimal? @map("available_balance") @db.Decimal(15, 2)
+  clearedBalance   Decimal? @map("cleared_balance") @db.Decimal(15, 2)
+
+  // Wallet-specific fields (only used when context = WALLET)
+  frozen              Boolean   @default(false)
+  locked              Boolean   @default(false)
+  blocked             Boolean   @default(false)
+  lastTransactionDate DateTime? @map("last_transaction_date")
+
+  isPrimary Boolean @default(false) @map("is_primary")
+  isActive  Boolean @default(true) @map("is_active")
+  isHidden  Boolean @default(false) @map("is_hidden")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  mobileUser MobileUser @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
+  
+  // Transaction relationships (for mobile banking accounts)
+  outgoingTransactions FdhTransaction[] @relation("FromAccount")
+  incomingTransactions FdhTransaction[] @relation("ToAccount")
+
+  @@unique([mobileUserId, accountNumber, context])
+  @@index([mobileUserId])
+  @@index([context])
+  @@map("fdh_mobile_user_accounts")
+}

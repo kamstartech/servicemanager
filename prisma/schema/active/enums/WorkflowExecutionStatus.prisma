@@ -1,0 +1,7 @@
+enum WorkflowExecutionStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  CANCELLED
+}

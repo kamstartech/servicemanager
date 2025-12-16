@@ -1,0 +1,4 @@
+enum CoreBankingAuthType {
+  BASIC
+  BEARER
+}

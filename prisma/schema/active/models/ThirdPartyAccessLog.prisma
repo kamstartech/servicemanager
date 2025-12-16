@@ -1,0 +1,38 @@
+model ThirdPartyAccessLog {
+  id       String  @id @default(cuid())
+  clientId String  @map("client_id")
+  apiKeyId String? @map("api_key_id")
+
+  // Request details
+  method       String @db.VarChar(10) // GET, POST, etc.
+  endpoint     String @db.Text
+  statusCode   Int    @map("status_code")
+  responseTime Int?   @map("response_time") // milliseconds
+
+  // Client info
+  ipAddress String  @map("ip_address") @db.VarChar(45)
+  userAgent String? @map("user_agent") @db.Text
+
+  // Request/Response (optional - for debugging)
+  requestBody  Json?   @map("request_body")
+  responseBody Json?   @map("response_body")
+  errorMessage String? @map("error_message") @db.Text
+
+  // Timestamp
+  requestedAt DateTime @default(now()) @map("requested_at")
+
+  // Relations
+  client ThirdPartyClient  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  apiKey ThirdPartyApiKey? @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+
+  @@index([clientId])
+  @@index([apiKeyId])
+  @@index([requestedAt])
+  @@index([endpoint])
+  @@index([statusCode])
+  @@map("third_party_access_logs")
+}
+
+// ============================================
+// Wallet Tiers System
+// ============================================

@@ -14,11 +14,6 @@ export async function GET(request: NextRequest) {
     const configs = await prisma.billerConfig.findMany({
       where,
       orderBy: { billerName: "asc" },
-      include: {
-        _count: {
-          select: { transactions: true },
-        },
-      },
     });
 
     return NextResponse.json({

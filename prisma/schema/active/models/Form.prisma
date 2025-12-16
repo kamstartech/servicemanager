@@ -1,0 +1,23 @@
+model Form {
+  id          String  @id @default(cuid())
+  name        String  @db.Text
+  description String? @db.Text
+  category    String? @db.Text
+
+  // JSON schema for fields
+  schema Json
+
+  // Settings
+  isActive Boolean @default(true) @map("is_active")
+
+  // Metadata
+  createdBy Int @map("created_by")
+  version   Int @default(1)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@index([category])
+  @@map("forms")
+}

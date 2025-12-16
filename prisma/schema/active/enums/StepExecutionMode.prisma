@@ -1,0 +1,6 @@
+enum StepExecutionMode {
+  CLIENT_ONLY // No backend trigger
+  SERVER_SYNC // Wait for server response
+  SERVER_ASYNC // Fire and forget
+  SERVER_VALIDATION // Validate on server
+}

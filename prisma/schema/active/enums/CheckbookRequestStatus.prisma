@@ -1,0 +1,8 @@
+enum CheckbookRequestStatus {
+  PENDING
+  APPROVED
+  READY_FOR_COLLECTION
+  COLLECTED
+  CANCELLED
+  REJECTED
+}

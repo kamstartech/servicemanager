@@ -1,0 +1,21 @@
+model AdminWebPasskey {
+  id                String    @id @default(cuid())
+  userId            Int       @map("user_id")
+  credentialId      String    @unique @map("credential_id") @db.Text
+  publicKey         String    @map("public_key") @db.Text
+  counter           BigInt    @default(0)
+  deviceName        String?   @map("device_name") @db.Text
+  transports        String[]  @default([])
+  backupEligible    Boolean   @default(false) @map("backup_eligible")
+  backupState       Boolean   @default(false) @map("backup_state")
+  attestationFormat String?   @map("attestation_format") @db.Text
+  aaguid            String?   @db.Text
+  lastUsedAt        DateTime? @map("last_used_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  user AdminWebUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("admin_web_passkeys")
+}

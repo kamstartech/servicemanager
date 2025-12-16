@@ -1,0 +1,20 @@
+model DatabaseConnection {
+  id         Int      @id @default(autoincrement())
+  name       String
+  engine     String // e.g. "postgres" (v1 only)
+  host       String
+  port       Int
+  database   String
+  username   String
+  password   String
+  options    Json?
+  isReadOnly Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  lastTestedAt    DateTime?
+  lastTestOk      Boolean?
+  lastTestMessage String?
+
+  migrations Migration[]
+}

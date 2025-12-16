@@ -1,0 +1,88 @@
+model FdhTransaction {
+  id        String   @id @default(cuid())
+  
+  // Basic Identity
+  reference String   @unique @db.VarChar(100)
+  type      TransactionType
+  source    TransactionSource @default(API)
+  status    TransactionStatus @default(PENDING)
+  
+  // Amount
+  amount    Decimal  @db.Decimal(19, 4)
+  currency  String   @default("MWK") @db.VarChar(3)
+  
+  // Sender (From) - Mobile Banking
+  fromAccountId     Int?  @map("from_account_id")
+  fromAccountNumber String?  @map("from_account_number") @db.VarChar(50)
+  
+  // Sender (From) - Wallet (MobileUser with context=WALLET)
+  fromWalletId      Int?  @map("from_wallet_id")
+  fromWalletNumber  String?  @map("from_wallet_number") @db.VarChar(20)
+  
+  // Receiver (To) - Mobile Banking
+  toAccountId       Int?  @map("to_account_id")
+  toAccountNumber   String?  @map("to_account_number") @db.VarChar(50)
+  
+  // Receiver (To) - Wallet
+  toWalletId        Int?  @map("to_wallet_id")
+  toWalletNumber    String?  @map("to_wallet_number") @db.VarChar(20)
+  
+  // Description
+  description       String   @db.Text
+  
+  // T24 Integration
+  t24Reference      String?  @unique @map("t24_reference") @db.VarChar(100)
+  t24Response       Json?    @map("t24_response")
+  t24RequestBody    Json?    @map("t24_request_body")
+  
+  // Retry Mechanism (Built-in)
+  retryCount        Int      @default(0) @map("retry_count")
+  maxRetries        Int      @default(3) @map("max_retries")
+  nextRetryAt       DateTime? @map("next_retry_at")
+  lastRetryAt       DateTime? @map("last_retry_at")
+  
+  // Error Tracking
+  errorMessage      String?  @db.Text @map("error_message")
+  errorCode         String?  @db.VarChar(50) @map("error_code")
+  
+  // Reversal
+  isReversal        Boolean  @default(false) @map("is_reversal")
+  originalTxnId     String?  @unique @map("original_txn_id")
+  originalTxn       FdhTransaction? @relation("Reversal", fields: [originalTxnId], references: [id], onDelete: SetNull)
+  reversalTxn       FdhTransaction? @relation("Reversal")
+  reversalReason    String?  @db.Text @map("reversal_reason")
+  
+  // Timestamps
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  completedAt       DateTime? @map("completed_at")
+  
+  // Relationships - Mobile Banking Accounts
+  fromAccount MobileUserAccount? @relation("FromAccount", fields: [fromAccountId], references: [id], onDelete: SetNull)
+  toAccount   MobileUserAccount? @relation("ToAccount", fields: [toAccountId], references: [id], onDelete: SetNull)
+  
+  // Relationships - Wallets (MobileUser with context=WALLET)
+  fromWallet  MobileUser? @relation("FromWallet", fields: [fromWalletId], references: [id], onDelete: SetNull)
+  toWallet    MobileUser? @relation("ToWallet", fields: [toWalletId], references: [id], onDelete: SetNull)
+  
+  // User who initiated
+  initiatedByUserId Int? @map("initiated_by_user_id")
+  initiatedBy       MobileUser? @relation("InitiatedBy", fields: [initiatedByUserId], references: [id], onDelete: SetNull)
+  
+  // Audit Trail
+  statusHistory FdhTransactionStatusHistory[]
+  
+  // Indexes
+  @@index([status, nextRetryAt])
+  @@index([status, type])
+  @@index([reference])
+  @@index([fromAccountId])
+  @@index([toAccountId])
+  @@index([fromWalletId])
+  @@index([toWalletId])
+  @@index([t24Reference])
+  @@index([createdAt])
+  @@map("fdh_transactions")
+}
+
+// Transaction Status History (Audit Trail)

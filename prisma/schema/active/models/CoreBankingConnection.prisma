@@ -1,0 +1,20 @@
+model CoreBankingConnection {
+  id       Int    @id @default(autoincrement())
+  name     String
+  username String @db.Text
+  password String @db.Text
+  baseUrl  String @db.Text // e.g. "https://core-banking.internal" or full base API URL
+
+  authType CoreBankingAuthType @default(BASIC)
+  token    String?             @db.Text
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lastTestedAt    DateTime?
+  lastTestOk      Boolean?
+  lastTestMessage String?
+
+  endpoints CoreBankingEndpoint[]
+}

@@ -1,0 +1,7 @@
+enum RegistrationStatus {
+  PENDING
+  APPROVED
+  COMPLETED
+  FAILED
+  DUPLICATE
+}

@@ -1,0 +1,41 @@
+model MobileDevice {
+  id           String     @id @default(cuid())
+  mobileUserId Int        @map("mobile_user_id")
+  user         MobileUser @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
+
+  // Device Metadata
+  name     String? @db.Text
+  model    String? @db.Text
+  os       String? @db.Text
+  deviceId String  @db.Text
+
+  // Passkey Credentials (WebAuthn) - Optional for password-login devices
+  credentialId String?  @unique @db.Text
+  publicKey    String?  @db.Text
+  counter      BigInt?  @default(0)
+  transports   String[] @default([])
+
+  // Verification Context
+  verifiedVia          String? @map("verified_via") // "OTP_SMS", "OTP_EMAIL", "PASSKEY", "ADMIN"
+  verificationIp       String? @map("verification_ip")
+  verificationLocation String? @map("verification_location")
+
+  // Push Notification (FCM)
+  fcmToken          String?   @map("fcm_token") @db.Text
+  fcmTokenUpdatedAt DateTime? @map("fcm_token_updated_at")
+  pushEnabled       Boolean   @default(true) @map("push_enabled")
+
+  // Status
+  isActive    Boolean   @default(true) @map("is_active")
+  lastUsedAt  DateTime? @map("last_used_at")
+  loginCount  Int       @default(0) @map("login_count")
+  lastLoginIp String?   @map("last_login_ip")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([mobileUserId, deviceId])
+  @@index([mobileUserId])
+  @@index([fcmToken])
+  @@map("mobile_devices")
+}

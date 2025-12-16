@@ -1,0 +1,5 @@
+enum PaymentReminderInterval {
+  ONE_WEEK
+  THREE_DAYS
+  ONE_DAY
+}

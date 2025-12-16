@@ -1,0 +1,7 @@
+enum MobileUserContext {
+  MOBILE_BANKING
+  WALLET
+  VILLAGE_BANKING
+  AGENT
+  MERCHANT
+}

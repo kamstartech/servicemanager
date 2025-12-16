@@ -19,7 +19,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RegistrationSource } from "@prisma/client";
+
+const RegistrationSource = {
+  ADMIN_PORTAL: "ADMIN_PORTAL",
+} as const;
+
+type RegistrationSource =
+  (typeof RegistrationSource)[keyof typeof RegistrationSource];
 
 export type RegistrationRequestFormValues = {
   phoneNumber: string;

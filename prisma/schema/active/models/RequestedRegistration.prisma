@@ -1,0 +1,57 @@
+model RequestedRegistration {
+  id Int @id @default(autoincrement())
+
+  // Request metadata
+  sourceIp    String             @map("source_ip") @db.Text
+  requestBody Json               @map("request_body") // Full request payload
+  source      RegistrationSource @default(THIRD_PARTY_API)
+
+  // Customer data (extracted from request)
+  phoneNumber    String  @map("phone_number") @db.Text
+  customerNumber String  @map("customer_number") @db.Text
+  emailAddress   String? @map("email_address") @db.Text
+  firstName      String? @map("first_name") @db.Text
+  lastName       String? @map("last_name") @db.Text
+  profileType    String? @map("profile_type") @db.Text
+  company        String? @db.Text
+
+  // Processing status
+  status       RegistrationStatus @default(PENDING)
+  processedAt  DateTime?          @map("processed_at")
+  elixirUserId Int?               @map("elixir_user_id") // ID from service_manager
+  mobileUserId Int?               @map("mobile_user_id") // Link to MobileUser if created
+
+  // Error handling
+  errorMessage String?   @map("error_message") @db.Text
+  retryCount   Int       @default(0) @map("retry_count")
+  lastRetryAt  DateTime? @map("last_retry_at")
+
+  // Validation data (stored for cron job processing)
+  validationData Json? @map("validation_data")
+
+  // Process stage tracking
+  processLog Json[] @default([]) @map("process_log")
+
+  // Audit trail
+  processedBy Int?    @map("processed_by") // AdminWebUser who processed
+  notes       String? @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  mobileUser      MobileUser?   @relation(fields: [mobileUserId], references: [id], onDelete: SetNull)
+  processedByUser AdminWebUser? @relation(fields: [processedBy], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([customerNumber])
+  @@index([phoneNumber])
+  @@index([sourceIp])
+  @@index([createdAt])
+  @@index([source])
+  @@map("requested_registrations")
+}
+
+// ============================================
+// Account Alerts System
+// ============================================

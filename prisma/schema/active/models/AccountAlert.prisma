@@ -1,0 +1,37 @@
+model AccountAlert {
+  id            Int       @id @default(autoincrement())
+  mobileUserId  Int       @map("mobile_user_id")
+  accountNumber String?   @map("account_number") @db.VarChar(20)
+  alertType     AlertType @map("alert_type")
+
+  // Alert Context (flexible JSON storage)
+  alertData Json @map("alert_data")
+
+  // Status
+  status AlertStatus @default(PENDING)
+
+  // Delivery Tracking
+  channelsSent   NotificationChannel[] @default([]) @map("channels_sent")
+  sentAt         DateTime?             @map("sent_at")
+  deliveryStatus Json?                 @map("delivery_status")
+
+  // User Interaction
+  acknowledgedAt DateTime?   @map("acknowledged_at")
+  userAction     UserAction? @map("user_action")
+
+  // Timestamps
+  triggeredAt DateTime @default(now()) @map("triggered_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  mobileUser           MobileUser              @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
+  suspiciousActivities SuspiciousActivityLog[]
+
+  @@index([mobileUserId])
+  @@index([accountNumber])
+  @@index([alertType])
+  @@index([status])
+  @@index([triggeredAt])
+  @@map("account_alerts")
+}

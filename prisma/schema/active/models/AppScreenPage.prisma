@@ -1,0 +1,24 @@
+model AppScreenPage {
+  id    String @id @default(cuid())
+  name  String @db.Text
+  icon  String @db.Text
+  order Int    @default(0)
+
+  isActive  Boolean @default(true) @map("is_active")
+  isTesting Boolean @default(false) @map("is_testing")
+
+  screenId String    @map("screen_id")
+  screen   AppScreen @relation(fields: [screenId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  workflows AppScreenPageWorkflow[]
+
+  @@unique([screenId, name])
+  @@index([screenId])
+  @@index([order])
+  @@index([isActive])
+  @@map("app_screen_pages")
+}

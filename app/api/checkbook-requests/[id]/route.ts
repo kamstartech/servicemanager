@@ -1,7 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
-import { CheckbookRequestStatus } from '@prisma/client';
 import type { CheckbookRequestUpdate } from '@/types/checkbook';
+
+const CheckbookRequestStatus = {
+  PENDING: "PENDING",
+  APPROVED: "APPROVED",
+  READY_FOR_COLLECTION: "READY_FOR_COLLECTION",
+  COLLECTED: "COLLECTED",
+  CANCELLED: "CANCELLED",
+  REJECTED: "REJECTED",
+} as const;
+
+type CheckbookRequestStatus =
+  (typeof CheckbookRequestStatus)[keyof typeof CheckbookRequestStatus];
+
+function mapDbStatusToUi(status: string | null | undefined): CheckbookRequestStatus {
+  const normalized = (status ?? "pending").toLowerCase();
+
+  if (normalized === "pending") return CheckbookRequestStatus.PENDING;
+  if (normalized === "approved") return CheckbookRequestStatus.APPROVED;
+  if (normalized === "ready_for_collection" || normalized === "ready") {
+    return CheckbookRequestStatus.READY_FOR_COLLECTION;
+  }
+  if (normalized === "fulfilled" || normalized === "collected") {
+    return CheckbookRequestStatus.COLLECTED;
+  }
+  if (normalized === "cancelled" || normalized === "canceled") {
+    return CheckbookRequestStatus.CANCELLED;
+  }
+  if (normalized === "rejected") return CheckbookRequestStatus.REJECTED;
+
+  return CheckbookRequestStatus.PENDING;
+}
+
+function mapUiStatusToDb(status: CheckbookRequestStatus): string {
+  switch (status) {
+    case CheckbookRequestStatus.PENDING:
+      return "pending";
+    case CheckbookRequestStatus.APPROVED:
+      return "approved";
+    case CheckbookRequestStatus.READY_FOR_COLLECTION:
+      return "ready_for_collection";
+    case CheckbookRequestStatus.COLLECTED:
+      return "fulfilled";
+    case CheckbookRequestStatus.CANCELLED:
+      return "cancelled";
+    case CheckbookRequestStatus.REJECTED:
+      return "rejected";
+  }
+}
 
 /**
  * GET /api/checkbook-requests/[id]
@@ -13,31 +60,24 @@ export async function GET(
 ) {
   try {
     const { id: idStr } = await params;
-    const id = parseInt(idStr);
+    const id = BigInt(idStr);
 
-    if (isNaN(id)) {
+    if (idStr.trim() === "" || Number.isNaN(Number(idStr))) {
       return NextResponse.json(
         { success: false, error: 'Invalid request ID' },
         { status: 400 }
       );
     }
 
-    const checkbookRequest = await prisma.checkbookRequest.findUnique({
+    const checkbookRequest = await prisma.cheque_book_requests.findUnique({
       where: { id },
       include: {
-        mobileUser: {
+        accounts_users: {
           select: {
             id: true,
             username: true,
-            phoneNumber: true,
-            customerNumber: true,
-          },
-        },
-        approvedByUser: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+            phone_number: true,
+            customer_number: true,
           },
         },
       },
@@ -50,9 +90,42 @@ export async function GET(
       );
     }
 
+    const leaves = checkbookRequest.number_of_leaves ?? checkbookRequest.cheque_leaves ?? 25;
+    const numberOfCheckbooks = Math.max(1, Math.ceil(leaves / 25));
+
     return NextResponse.json({
       success: true,
-      data: checkbookRequest,
+      data: {
+        id: Number(checkbookRequest.id),
+        mobileUserId: checkbookRequest.user_id ? Number(checkbookRequest.user_id) : null,
+        mobileUser: checkbookRequest.accounts_users
+          ? {
+              id: Number(checkbookRequest.accounts_users.id),
+              username: checkbookRequest.accounts_users.username ?? null,
+              phoneNumber: checkbookRequest.accounts_users.phone_number ?? null,
+              customerNumber: checkbookRequest.accounts_users.customer_number ?? null,
+            }
+          : {
+              id: 0,
+              username: null,
+              phoneNumber: null,
+              customerNumber: null,
+            },
+        accountNumber: checkbookRequest.account_number,
+        numberOfCheckbooks,
+        collectionPoint: checkbookRequest.branch_code,
+        status: mapDbStatusToUi(checkbookRequest.request_status),
+        requestedAt: checkbookRequest.inserted_at,
+        approvedAt: checkbookRequest.issued_at,
+        readyAt: null,
+        collectedAt: checkbookRequest.fulfilled_at,
+        cancelledAt: null,
+        rejectedAt: null,
+        createdAt: checkbookRequest.inserted_at,
+        updatedAt: checkbookRequest.updated_at,
+        notes: checkbookRequest.request_reason ?? null,
+        rejectionReason: checkbookRequest.rejection_reason ?? null,
+      },
     });
   } catch (error) {
     console.error('Error fetching checkbook request:', error);
@@ -75,9 +148,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt((await params).id);
+    const idStr = (await params).id;
+    const id = BigInt(idStr);
 
-    if (isNaN(id)) {
+    if (idStr.trim() === "" || Number.isNaN(Number(idStr))) {
       return NextResponse.json(
         { success: false, error: 'Invalid request ID' },
         { status: 400 }
@@ -87,7 +161,7 @@ export async function PATCH(
     const body: CheckbookRequestUpdate = await request.json();
 
     // Check if request exists
-    const existingRequest = await prisma.checkbookRequest.findUnique({
+    const existingRequest = await prisma.cheque_book_requests.findUnique({
       where: { id },
     });
 
@@ -101,64 +175,89 @@ export async function PATCH(
     // Prepare update data
     const updateData: any = {};
 
+    updateData.updated_at = new Date();
+
     if (body.status !== undefined) {
-      updateData.status = body.status;
-      
-      // Set timestamp fields based on status
+      updateData.request_status = mapUiStatusToDb(body.status as CheckbookRequestStatus);
+
       if (body.status === CheckbookRequestStatus.APPROVED) {
-        updateData.approvedAt = new Date();
-      } else if (body.status === CheckbookRequestStatus.READY_FOR_COLLECTION) {
-        updateData.readyAt = new Date();
-      } else if (body.status === CheckbookRequestStatus.COLLECTED) {
-        updateData.collectedAt = new Date();
-      } else if (body.status === CheckbookRequestStatus.CANCELLED) {
-        updateData.cancelledAt = new Date();
-      } else if (body.status === CheckbookRequestStatus.REJECTED) {
-        updateData.rejectedAt = new Date();
+        updateData.issued_at = new Date();
+      }
+
+      if (body.status === CheckbookRequestStatus.COLLECTED) {
+        updateData.fulfilled_at = new Date();
       }
     }
 
     if (body.numberOfCheckbooks !== undefined) {
-      updateData.numberOfCheckbooks = body.numberOfCheckbooks;
+      const leaves = Math.max(25, body.numberOfCheckbooks * 25);
+      updateData.number_of_leaves = leaves;
+      updateData.cheque_leaves = leaves;
     }
 
     if (body.collectionPoint !== undefined) {
-      updateData.collectionPoint = body.collectionPoint;
+      updateData.branch_code = body.collectionPoint;
     }
 
     if (body.notes !== undefined) {
-      updateData.notes = body.notes;
+      updateData.request_reason = body.notes;
     }
 
     if (body.rejectionReason !== undefined) {
-      updateData.rejectionReason = body.rejectionReason;
+      updateData.rejection_reason = body.rejectionReason;
     }
 
-    const updatedRequest = await prisma.checkbookRequest.update({
+    const updatedRequest = await prisma.cheque_book_requests.update({
       where: { id },
       data: updateData,
       include: {
-        mobileUser: {
+        accounts_users: {
           select: {
             id: true,
             username: true,
-            phoneNumber: true,
-            customerNumber: true,
-          },
-        },
-        approvedByUser: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+            phone_number: true,
+            customer_number: true,
           },
         },
       },
     });
 
+    const leaves = updatedRequest.number_of_leaves ?? updatedRequest.cheque_leaves ?? 25;
+    const numberOfCheckbooks = Math.max(1, Math.ceil(leaves / 25));
+
     return NextResponse.json({
       success: true,
-      data: updatedRequest,
+      data: {
+        id: Number(updatedRequest.id),
+        mobileUserId: updatedRequest.user_id ? Number(updatedRequest.user_id) : null,
+        mobileUser: updatedRequest.accounts_users
+          ? {
+              id: Number(updatedRequest.accounts_users.id),
+              username: updatedRequest.accounts_users.username ?? null,
+              phoneNumber: updatedRequest.accounts_users.phone_number ?? null,
+              customerNumber: updatedRequest.accounts_users.customer_number ?? null,
+            }
+          : {
+              id: 0,
+              username: null,
+              phoneNumber: null,
+              customerNumber: null,
+            },
+        accountNumber: updatedRequest.account_number,
+        numberOfCheckbooks,
+        collectionPoint: updatedRequest.branch_code,
+        status: mapDbStatusToUi(updatedRequest.request_status),
+        requestedAt: updatedRequest.inserted_at,
+        approvedAt: updatedRequest.issued_at,
+        readyAt: null,
+        collectedAt: updatedRequest.fulfilled_at,
+        cancelledAt: null,
+        rejectedAt: null,
+        createdAt: updatedRequest.inserted_at,
+        updatedAt: updatedRequest.updated_at,
+        notes: updatedRequest.request_reason ?? null,
+        rejectionReason: updatedRequest.rejection_reason ?? null,
+      },
     });
   } catch (error) {
     console.error('Error updating checkbook request:', error);
@@ -181,16 +280,17 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt((await params).id);
+    const idStr = (await params).id;
+    const id = BigInt(idStr);
 
-    if (isNaN(id)) {
+    if (idStr.trim() === "" || Number.isNaN(Number(idStr))) {
       return NextResponse.json(
         { success: false, error: 'Invalid request ID' },
         { status: 400 }
       );
     }
 
-    await prisma.checkbookRequest.delete({
+    await prisma.cheque_book_requests.delete({
       where: { id },
     });
 

@@ -1,0 +1,47 @@
+model AccountAlertSettings {
+  id            Int    @id @default(autoincrement())
+  mobileUserId  Int    @map("mobile_user_id")
+  accountNumber String @map("account_number") @db.VarChar(20)
+
+  // Low Balance Alert
+  lowBalanceEnabled   Boolean               @default(true) @map("low_balance_enabled")
+  lowBalanceThreshold Decimal?              @map("low_balance_threshold") @db.Decimal(19, 4)
+  lowBalanceChannels  NotificationChannel[] @default([PUSH]) @map("low_balance_channels")
+
+  // Large Transaction Alert
+  largeTransactionEnabled   Boolean               @default(true) @map("large_transaction_enabled")
+  largeTransactionThreshold Decimal?              @map("large_transaction_threshold") @db.Decimal(19, 4)
+  largeTransactionChannels  NotificationChannel[] @default([PUSH, SMS]) @map("large_transaction_channels")
+  largeTransactionDebitOnly Boolean               @default(true) @map("large_transaction_debit_only")
+
+  // Suspicious Activity Alert
+  alertUnusualLocation        Boolean               @default(true) @map("alert_unusual_location")
+  alertMultipleFailedAttempts Boolean               @default(true) @map("alert_multiple_failed_attempts")
+  alertNewDeviceTransaction   Boolean               @default(true) @map("alert_new_device_transaction")
+  suspiciousActivityChannels  NotificationChannel[] @default([PUSH, SMS, EMAIL]) @map("suspicious_activity_channels")
+
+  // Payment Due Alert
+  paymentDueEnabled       Boolean                 @default(true) @map("payment_due_enabled")
+  paymentDueChannels      NotificationChannel[]   @default([PUSH, SMS]) @map("payment_due_channels")
+  paymentReminderInterval PaymentReminderInterval @default(ONE_DAY) @map("payment_reminder_interval")
+
+  // Login Alert
+  loginAlertMode     LoginAlertMode        @default(NEW_DEVICE) @map("login_alert_mode")
+  loginAlertChannels NotificationChannel[] @default([PUSH, EMAIL]) @map("login_alert_channels")
+
+  // Quiet Hours
+  quietHoursEnabled Boolean   @default(false) @map("quiet_hours_enabled")
+  quietHoursStart   DateTime? @map("quiet_hours_start") @db.Time(6)
+  quietHoursEnd     DateTime? @map("quiet_hours_end") @db.Time(6)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  mobileUser MobileUser @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
+
+  @@unique([mobileUserId, accountNumber])
+  @@index([mobileUserId])
+  @@index([accountNumber])
+  @@map("account_alert_settings")
+}

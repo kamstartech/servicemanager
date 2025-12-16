@@ -1,0 +1,31 @@
+model DeviceSession {
+  id           String @id @default(cuid())
+  deviceId     String @map("device_id")
+  mobileUserId Int    @map("mobile_user_id")
+
+  // Token tracking
+  tokenHash String @unique @db.Text
+  sessionId String @unique @map("session_id") @db.Text
+
+  // Session info
+  isActive       Boolean  @default(true) @map("is_active")
+  expiresAt      DateTime @map("expires_at")
+  lastActivityAt DateTime @default(now()) @map("last_activity_at")
+
+  // Context
+  ipAddress String? @map("ip_address")
+  userAgent String? @map("user_agent") @db.Text
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  revokedAt DateTime? @map("revoked_at")
+
+  // Relations
+  mobileUser MobileUser @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId])
+  @@index([mobileUserId])
+  @@index([tokenHash])
+  @@index([sessionId])
+  @@index([isActive])
+  @@map("fdh_device_sessions")
+}

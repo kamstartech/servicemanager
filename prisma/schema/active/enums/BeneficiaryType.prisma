@@ -1,0 +1,5 @@
+enum BeneficiaryType {
+  WALLET
+  BANK_INTERNAL
+  BANK_EXTERNAL
+}

@@ -1,0 +1,39 @@
+model ThirdPartyApiKey {
+  id       String @id @default(cuid())
+  clientId String @map("client_id")
+
+  // API Key (hashed)
+  keyHash   String @unique @map("key_hash") @db.Text
+  keyPrefix String @map("key_prefix") @db.VarChar(50) // First 50 chars for display
+
+  // Key metadata
+  name        String?      @db.Text // e.g., "Production Key", "Testing Key"
+  description String?      @db.Text
+  status      ApiKeyStatus @default(ACTIVE)
+
+  // Permissions (JSON array of allowed endpoints/actions)
+  permissions Json @default("[]") // e.g., ["registrations:read", "registrations:create"]
+
+  // Expiration
+  expiresAt DateTime? @map("expires_at")
+
+  // Usage tracking
+  lastUsedAt DateTime? @map("last_used_at")
+  usageCount Int       @default(0) @map("usage_count")
+
+  // Audit
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdBy Int?      @map("created_by") // AdminWebUser ID
+  revokedAt DateTime? @map("revoked_at")
+  revokedBy Int?      @map("revoked_by") // AdminWebUser ID
+
+  // Relations
+  client     ThirdPartyClient      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  accessLogs ThirdPartyAccessLog[]
+
+  @@index([clientId])
+  @@index([status])
+  @@index([keyHash])
+  @@map("third_party_api_keys")
+}

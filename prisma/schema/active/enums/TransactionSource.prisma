@@ -1,0 +1,6 @@
+enum TransactionSource {
+  MOBILE_BANKING
+  WALLET
+  ADMIN
+  API
+}

@@ -1,0 +1,44 @@
+model MobileUser {
+  id      Int               @id @default(autoincrement())
+  context MobileUserContext
+
+  // Login identifiers (only some are used depending on context)
+  username    String? @db.Text
+  phoneNumber String? @db.Text
+
+  // Core banking linkage
+  customerNumber String? @db.Text
+  accountNumber  String? @db.Text // Deprecated: use accounts relation
+
+  // Secrets (storage/validation rules depend on context)
+  passwordHash String? @db.Text
+  memoWord     String? @map("memo_word") @db.Text // Security word for password reset
+
+  // Token versioning for rotation
+  tokenVersion Int @default(0) @map("token_version")
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  beneficiaries        Beneficiary[]
+  devices              MobileDevice[]
+  accounts             MobileUserAccount[]
+  loginAttempts        DeviceLoginAttempt[]
+  profile              MobileUserProfile?
+  sessions             DeviceSession[]
+  registrationRequests RequestedRegistration[]
+  alertSettings        AccountAlertSettings[]
+  alerts               AccountAlert[]
+  suspiciousActivities SuspiciousActivityLog[]
+  checkbookRequests    CheckbookRequest[]
+  kyc                  MobileUserKYC?
+  
+  // Transaction relationships (for wallet context)
+  outgoingWalletTransactions FdhTransaction[] @relation("FromWallet")
+  incomingWalletTransactions FdhTransaction[] @relation("ToWallet")
+  initiatedTransactions      FdhTransaction[] @relation("InitiatedBy")
+
+  @@map("fdh_mobile_users")
+}

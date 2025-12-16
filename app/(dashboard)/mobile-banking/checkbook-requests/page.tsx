@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { useI18n } from "@/components/providers/i18n-provider";
-import { CheckbookRequestStatus } from "@prisma/client";
 import type { CheckbookRequestWithUser } from "@/types/checkbook";
 import {
   BookOpen,
@@ -22,6 +21,18 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { translateStatusOneWord } from "@/lib/utils";
+
+const CheckbookRequestStatus = {
+  PENDING: "PENDING",
+  APPROVED: "APPROVED",
+  READY_FOR_COLLECTION: "READY_FOR_COLLECTION",
+  COLLECTED: "COLLECTED",
+  CANCELLED: "CANCELLED",
+  REJECTED: "REJECTED",
+} as const;
+
+type CheckbookRequestStatus =
+  (typeof CheckbookRequestStatus)[keyof typeof CheckbookRequestStatus];
 
 interface CheckbookRequest extends Omit<CheckbookRequestWithUser, 'createdAt' | 'updatedAt' | 'requestedAt' | 'approvedAt' | 'readyAt' | 'collectedAt' | 'cancelledAt' | 'rejectedAt'> {
   createdAt: string;

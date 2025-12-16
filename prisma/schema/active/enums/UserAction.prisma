@@ -1,0 +1,6 @@
+enum UserAction {
+  DISMISSED
+  THIS_WAS_ME
+  REPORT_FRAUD
+  QUICK_PAY
+}

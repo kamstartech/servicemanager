@@ -1,0 +1,29 @@
+model AppScreenPageWorkflow {
+  id String @id @default(cuid())
+
+  pageId     String @map("page_id")
+  workflowId String @map("workflow_id")
+
+  order    Int     @default(0)
+  isActive Boolean @default(true) @map("is_active")
+
+  // Override config if needed (optional)
+  configOverride Json? @map("config_override")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  page     AppScreenPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  workflow Workflow      @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, workflowId])
+  @@index([pageId])
+  @@index([workflowId])
+  @@index([order])
+  @@map("app_screen_page_workflows")
+}
+
+// ============================================
+// Billers System
+// ============================================

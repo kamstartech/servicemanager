@@ -1,0 +1,5 @@
+enum ResolutionAction {
+  CONFIRMED_LEGITIMATE
+  FRAUD_REPORTED
+  ACCOUNT_LOCKED
+}

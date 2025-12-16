@@ -1,0 +1,39 @@
+model WalletTier {
+  id Int @id @default(autoincrement())
+
+  // Basic Info
+  name        String  @db.Text
+  description String? @db.Text
+  position    Int // Hierarchy: 1, 2, 3, etc.
+  isDefault   Boolean @default(false) @map("is_default")
+
+  // Balance Limits
+  minimumBalance     Decimal @default(0) @map("minimum_balance") @db.Decimal(15, 2)
+  maximumBalance     Decimal @map("maximum_balance") @db.Decimal(15, 2)
+  maximumCreditLimit Decimal @default(0) @map("maximum_credit_limit") @db.Decimal(15, 2)
+  maximumDebtLimit   Decimal @default(0) @map("maximum_debt_limit") @db.Decimal(15, 2)
+
+  // Transaction Amount Limits
+  minTransactionAmount    Decimal @map("min_transaction_amount") @db.Decimal(15, 2)
+  maxTransactionAmount    Decimal @map("max_transaction_amount") @db.Decimal(15, 2)
+  dailyTransactionLimit   Decimal @map("daily_transaction_limit") @db.Decimal(15, 2)
+  monthlyTransactionLimit Decimal @map("monthly_transaction_limit") @db.Decimal(15, 2)
+
+  // Transaction Count Limits
+  dailyTransactionCount   Int @map("daily_transaction_count")
+  monthlyTransactionCount Int @map("monthly_transaction_count")
+
+  // Dynamic KYC Requirements (JSON)
+  requiredKycFields String[] @default([]) @map("required_kyc_fields")
+  kycRules          Json     @default("{}") @map("kyc_rules") // Map of rule_name -> value
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  kycRecords MobileUserKYC[]
+
+  @@unique([position])
+  @@index([isDefault])
+  @@map("fdh_wallet_tiers")
+}

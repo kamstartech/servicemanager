@@ -1,0 +1,70 @@
+model BillerTransaction {
+  id String @id @default(cuid())
+
+  // Biller Reference
+  billerConfigId String?       @map("biller_config_id")
+  billerConfig   BillerConfig? @relation(fields: [billerConfigId], references: [id])
+  billerType     BillerType    @map("biller_type")
+  billerName     String        @map("biller_name") @db.Text
+
+  // Transaction Identity
+  ourTransactionId      String  @unique @map("our_transaction_id") @db.VarChar(50)
+  externalTransactionId String? @map("external_transaction_id") @db.Text
+
+  // Transaction Type
+  transactionType BillerTransactionType @map("transaction_type")
+
+  // Account Information
+  accountNumber       String  @map("account_number") @db.Text
+  accountType         String? @map("account_type") @db.VarChar(20)
+  customerAccountName String? @map("customer_account_name") @db.Text
+
+  // T24 Integration
+  creditAccount     String? @map("credit_account") @db.VarChar(20)
+  creditAccountType String? @map("credit_account_type") @db.VarChar(20)
+  debitAccount      String? @map("debit_account") @db.VarChar(20)
+  debitAccountType  String? @map("debit_account_type") @db.VarChar(20)
+
+  // Amount
+  amount   Decimal @db.Decimal(18, 2)
+  currency String  @default("MWK") @db.VarChar(3)
+
+  // Status & Processing
+  status BillerTransactionStatus
+
+  // API Details
+  apiEndpoint     String? @map("api_endpoint") @db.Text
+  requestPayload  Json?   @map("request_payload")
+  responsePayload Json?   @map("response_payload")
+  errorMessage    String? @map("error_message") @db.Text
+  errorCode       String? @map("error_code") @db.VarChar(50)
+
+  // Special Fields
+  bundleId      String? @map("bundle_id") @db.VarChar(50)
+  invoiceNumber String? @map("invoice_number") @db.VarChar(100)
+  meterNumber   String? @map("meter_number") @db.VarChar(50)
+
+  // Metadata
+  metadata Json? // Additional context
+
+  // Timestamps
+  processedAt DateTime? @map("processed_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Audit
+  initiatedBy String? @map("initiated_by")
+
+  @@index([billerType])
+  @@index([status])
+  @@index([ourTransactionId])
+  @@index([accountNumber])
+  @@index([createdAt])
+  @@index([billerConfigId])
+  @@map("biller_transactions")
+}
+
+// ============================================
+// Third-Party API Access Management
+// ============================================

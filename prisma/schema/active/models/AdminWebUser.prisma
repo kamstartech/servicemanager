@@ -1,0 +1,16 @@
+model AdminWebUser {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique @db.Text
+  passwordHash String   @db.Text
+  name         String?  @db.Text
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  resetTokens            AdminWebPasswordResetToken[]
+  processedRegistrations RequestedRegistration[]
+  approvedCheckbooks     CheckbookRequest[]
+  passkeys               AdminWebPasskey[]
+
+  @@map("admin_web_users")
+}

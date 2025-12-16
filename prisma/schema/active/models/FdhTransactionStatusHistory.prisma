@@ -1,0 +1,20 @@
+model FdhTransactionStatusHistory {
+  id            String   @id @default(cuid())
+  
+  transactionId String   @map("transaction_id")
+  transaction   FdhTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  
+  fromStatus    TransactionStatus @map("from_status")
+  toStatus      TransactionStatus @map("to_status")
+  
+  reason        String?  @db.Text
+  retryNumber   Int?     @map("retry_number")
+  
+  createdAt     DateTime @default(now()) @map("created_at")
+  
+  @@index([transactionId])
+  @@index([toStatus, createdAt])
+  @@map("fdh_transaction_status_history")
+}
+
+// SMS Notifications Model

@@ -1,0 +1,5 @@
+enum LoginAlertMode {
+  EVERY_LOGIN
+  NEW_DEVICE
+  NEW_LOCATION
+}

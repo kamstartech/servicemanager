@@ -1,0 +1,41 @@
+model SuspiciousActivityLog {
+  id            Int     @id @default(autoincrement())
+  alertId       Int?    @map("alert_id")
+  mobileUserId  Int     @map("mobile_user_id")
+  accountNumber String? @map("account_number") @db.VarChar(20)
+
+  // Detection Details
+  suspicionReason  SuspicionReason @map("suspicion_reason")
+  riskScore        Int             @map("risk_score")
+  detectionDetails Json            @map("detection_details")
+
+  // Related Data
+  relatedTransactionIds String[] @default([]) @map("related_transaction_ids")
+  deviceId              String?  @map("device_id") @db.VarChar(255)
+  ipAddress             String?  @map("ip_address") @db.VarChar(45)
+  location              String?  @db.VarChar(255)
+
+  // Resolution
+  isResolved       Boolean           @default(false) @map("is_resolved")
+  resolvedAt       DateTime?         @map("resolved_at")
+  resolutionAction ResolutionAction? @map("resolution_action")
+  adminNotes       String?           @map("admin_notes") @db.Text
+
+  detectedAt DateTime @default(now()) @map("detected_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  alert      AccountAlert? @relation(fields: [alertId], references: [id], onDelete: SetNull)
+  mobileUser MobileUser    @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
+
+  @@index([mobileUserId])
+  @@index([alertId])
+  @@index([riskScore])
+  @@index([isResolved])
+  @@index([detectedAt])
+  @@map("suspicious_activity_log")
+}
+
+// ============================================
+// Checkbook Requests
+// ============================================

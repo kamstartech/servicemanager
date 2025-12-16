@@ -1,0 +1,36 @@
+model CheckbookRequest {
+  id            Int    @id @default(autoincrement())
+  mobileUserId  Int    @map("mobile_user_id")
+  accountNumber String @map("account_number") @db.Text
+
+  // Checkbook details
+  numberOfCheckbooks Int    @default(1) @map("number_of_checkbooks")
+  collectionPoint    String @map("collection_point") @db.Text
+
+  // Status tracking
+  status      CheckbookRequestStatus @default(PENDING)
+  requestedAt DateTime               @default(now()) @map("requested_at")
+  approvedAt  DateTime?              @map("approved_at")
+  approvedBy  Int?                   @map("approved_by")
+  readyAt     DateTime?              @map("ready_at")
+  collectedAt DateTime?              @map("collected_at")
+  cancelledAt DateTime?              @map("cancelled_at")
+  rejectedAt  DateTime?              @map("rejected_at")
+
+  // Additional information
+  notes           String? @db.Text
+  rejectionReason String? @map("rejection_reason") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  mobileUser     MobileUser    @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
+  approvedByUser AdminWebUser? @relation(fields: [approvedBy], references: [id], onDelete: SetNull)
+
+  @@index([mobileUserId])
+  @@index([accountNumber])
+  @@index([status])
+  @@index([requestedAt])
+  @@map("checkbook_requests")
+}

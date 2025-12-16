@@ -1,0 +1,21 @@
+model AppScreen {
+  id      String            @id @default(cuid())
+  name    String            @db.Text
+  context MobileUserContext
+  icon    String            @db.Text // Icon name from predefined list
+  order   Int               @default(0)
+
+  isActive  Boolean @default(true) @map("is_active")
+  isTesting Boolean @default(false) @map("is_testing")
+
+  pages AppScreenPage[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([context, name])
+  @@index([context])
+  @@index([order])
+  @@index([isActive])
+  @@map("app_screens")
+}
