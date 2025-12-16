@@ -256,6 +256,7 @@ export const authResolvers = {
               accountName: acc.accountName,
               accountType: acc.accountType,
               currency: acc.currency,
+              holderName: acc.holderName,
               balance: acc.balance?.toString(),
               isPrimary: acc.isPrimary,
               isActive: acc.isActive,
@@ -272,6 +273,7 @@ export const authResolvers = {
                 accountType: accounts.find((acc) => acc.isPrimary)!
                   .accountType,
                 currency: accounts.find((acc) => acc.isPrimary)!.currency,
+                holderName: accounts.find((acc) => acc.isPrimary)!.holderName,
                 balance: accounts
                   .find((acc) => acc.isPrimary)!
                   .balance?.toString(),
