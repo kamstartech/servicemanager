@@ -9,13 +9,13 @@ import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { CheckbookRequestStatus } from "@prisma/client";
 import type { CheckbookRequestWithUser } from "@/types/checkbook";
-import { 
+import {
   BookOpen,
-  RefreshCw, 
-  CheckCircle, 
-  XCircle, 
+  RefreshCw,
+  CheckCircle,
+  XCircle,
   Calendar,
-  Clock, 
+  Clock,
   Package,
   MapPin,
   Ban
@@ -61,7 +61,9 @@ const statusConfig = {
   },
 };
 
-export default function CheckbookRequestsPage() {
+import { Suspense } from "react";
+
+function CheckbookRequestsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { translate } = useI18n();
@@ -96,13 +98,13 @@ export default function CheckbookRequestsPage() {
       }
 
       const response = await fetch(`/api/checkbook-requests?${params}`);
-      
+
       if (!response.ok) {
         throw new Error("Failed to fetch checkbook requests");
       }
 
       const result = await response.json();
-      
+
       if (result.success) {
         setRequests(result.data);
         setTotal(result.pagination.total);
@@ -198,19 +200,19 @@ export default function CheckbookRequestsPage() {
           request.status === CheckbookRequestStatus.PENDING
             ? "pending"
             : request.status === CheckbookRequestStatus.REJECTED
-            ? "error"
-            : request.status === CheckbookRequestStatus.CANCELLED
-            ? "neutral"
-            : "success";
+              ? "error"
+              : request.status === CheckbookRequestStatus.CANCELLED
+                ? "neutral"
+                : "success";
 
         const classes =
           tone === "success"
             ? "bg-green-100 text-green-800"
             : tone === "error"
-            ? "bg-red-100 text-red-800"
-            : tone === "pending"
-            ? "bg-yellow-100 text-yellow-800"
-            : "bg-gray-100 text-gray-800";
+              ? "bg-red-100 text-red-800"
+              : tone === "pending"
+                ? "bg-yellow-100 text-yellow-800"
+                : "bg-gray-100 text-gray-800";
 
         return (
           <span
@@ -391,5 +393,17 @@ export default function CheckbookRequestsPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function CheckbookRequestsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-screen">
+        <RefreshCw className="h-8 w-8 animate-spin" />
+      </div>
+    }>
+      <CheckbookRequestsContent />
+    </Suspense>
   );
 }

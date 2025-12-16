@@ -1205,7 +1205,7 @@ export const typeDefs = /* GraphQL */ `
 
   input InitiatePasswordResetInput {
     username: String!
-    memoWord: String!
+    secret: String!
     phoneNumber: String
     deviceId: String!
     deviceName: String

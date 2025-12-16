@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { billerTransactionService } from "@/lib/services/billers/transactions";
 import { BillerType, BillerTransactionStatus } from "@prisma/client";
-import type { GraphQLContext } from "../context";
+import type { GraphQLContext } from "@/lib/graphql/context";
 
 export const billersResolvers = {
   Query: {
@@ -191,12 +191,12 @@ export const billersResolvers = {
           creditAccountType: input.creditAccountType,
           debitAccount: input.debitAccount,
           debitAccountType: input.debitAccountType,
-          customerAccountNumber: input.customerAccountNumber || context.user.username,
-          customerAccountName: input.customerAccountName || context.user.username,
+          customerAccountNumber: input.customerAccountNumber || (context.user as any).username,
+          customerAccountName: input.customerAccountName || (context.user as any).username,
           metadata: {
             ...input.metadata,
             userId: context.user.id,
-            username: context.user.username,
+            username: (context.user as any).username,
           },
         }
       );

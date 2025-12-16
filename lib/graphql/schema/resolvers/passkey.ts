@@ -154,7 +154,7 @@ export const passkeyResolvers = {
                         credentialId: newDevice.credentialId,
                         createdAt: newDevice.createdAt.toISOString(),
                         updatedAt: newDevice.updatedAt.toISOString(),
-                        counter: newDevice.counter.toString(),
+                        counter: newDevice.counter?.toString() || "0",
                     },
                 };
             }
@@ -229,7 +229,7 @@ export const passkeyResolvers = {
                     authenticator: {
                         // Need to reconstruct the authenticator matching the stored device
                         credentialID: device.credentialId, // base64url string
-                        credentialPublicKey: base64UrlToUint8Array(device.publicKey), // Uint8Array
+                        credentialPublicKey: base64UrlToUint8Array(device.publicKey || ""), // Uint8Array
                         counter: Number(device.counter), // number
                         transports: device.transports as any[],
                     },
@@ -265,7 +265,7 @@ export const passkeyResolvers = {
                     },
                     JWT_SECRET,
                     {
-                        expiresIn: JWT_EXPIRES_IN,
+                        expiresIn: JWT_EXPIRES_IN as any,
                         issuer: "service-manager-admin",
                         subject: String(user.id),
                     }

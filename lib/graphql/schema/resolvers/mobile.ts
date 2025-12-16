@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
-import { GraphQLContext } from "../context";
+import type { GraphQLContext } from "@/lib/graphql/context";
 
 export const mobileResolvers = {
   Query: {

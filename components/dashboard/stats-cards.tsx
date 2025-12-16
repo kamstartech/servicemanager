@@ -149,41 +149,52 @@ export function DashboardStatsCards() {
           ? stats[card.secondaryKey]
           : null;
 
-        const CardWrapper = card.link ? Link : "div";
-        const cardProps = card.link
-          ? { href: card.link, className: "block" }
-          : { className: "block" };
+        const content = (
+          <Card className="transition duration-300 hover:shadow-lg hover:scale-105 cursor-pointer">
+            <CardContent className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-sm font-medium text-gray-500">
+                  {card.title}
+                </h3>
+                <div
+                  className={`${card.color} text-white p-2 rounded-full transition duration-300 hover:rotate-12`}
+                >
+                  <Icon className="h-5 w-5" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">
+                {typeof value === "number" ? value.toLocaleString() : value}
+                {card.showBadge && secondaryValue !== null && (
+                  <span className="ml-2 text-sm font-normal text-yellow-600">
+                    ({secondaryValue} pending)
+                  </span>
+                )}
+                {card.showSuccess && secondaryValue !== null && (
+                  <span className="ml-2 text-sm font-normal text-green-600">
+                    ({secondaryValue} completed)
+                  </span>
+                )}
+              </p>
+            </CardContent>
+          </Card>
+        );
+
+        if (card.link) {
+          return (
+            <Link
+              key={card.key as string}
+              href={card.link}
+              className="block"
+            >
+              {content}
+            </Link>
+          );
+        }
 
         return (
-          <CardWrapper key={card.key as string} {...cardProps}>
-            <Card className="transition duration-300 hover:shadow-lg hover:scale-105 cursor-pointer">
-              <CardContent className="p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-sm font-medium text-gray-500">
-                    {card.title}
-                  </h3>
-                  <div
-                    className={`${card.color} text-white p-2 rounded-full transition duration-300 hover:rotate-12`}
-                  >
-                    <Icon className="h-5 w-5" />
-                  </div>
-                </div>
-                <p className="text-2xl font-bold text-gray-900">
-                  {typeof value === "number" ? value.toLocaleString() : value}
-                  {card.showBadge && secondaryValue !== null && (
-                    <span className="ml-2 text-sm font-normal text-yellow-600">
-                      ({secondaryValue} pending)
-                    </span>
-                  )}
-                  {card.showSuccess && secondaryValue !== null && (
-                    <span className="ml-2 text-sm font-normal text-green-600">
-                      ({secondaryValue} completed)
-                    </span>
-                  )}
-                </p>
-              </CardContent>
-            </Card>
-          </CardWrapper>
+          <div key={card.key as string} className="block">
+            {content}
+          </div>
         );
       })}
     </div>

@@ -3,6 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Receipt, CheckCircle2, Clock } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 type BillerConfigRow = {
   id: string;
   billerType: string;
@@ -99,12 +101,12 @@ export default async function BillersPage() {
             <div className="text-2xl font-bold">
               {stats.length > 0
                 ? Math.round(
-                    (stats
-                      .filter((s) => s.status === "COMPLETED")
-                      .reduce((acc, s) => acc + s._count._all, 0) /
-                      stats.reduce((acc, s) => acc + s._count._all, 0)) *
-                      100
-                  )
+                  (stats
+                    .filter((s) => s.status === "COMPLETED")
+                    .reduce((acc, s) => acc + s._count._all, 0) /
+                    stats.reduce((acc, s) => acc + s._count._all, 0)) *
+                  100
+                )
                 : 0}
               %
             </div>

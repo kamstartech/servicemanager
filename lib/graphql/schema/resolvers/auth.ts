@@ -71,7 +71,7 @@ export const authResolvers = {
       // For WALLET context, use phoneNumber; for others, use username
       const user = await prisma.mobileUser.findFirst({
         where: {
-          ...(context === "WALLET" 
+          ...(context === "WALLET"
             ? { phoneNumber: username }
             : { username }),
           context: context as any,
@@ -191,7 +191,7 @@ export const authResolvers = {
           },
           JWT_SECRET,
           {
-            expiresIn: JWT_EXPIRES_IN,
+            expiresIn: JWT_EXPIRES_IN as any,
             issuer: "service-manager-admin",
             subject: String(user.id),
           }
@@ -257,42 +257,42 @@ export const authResolvers = {
             })),
             primaryAccount: accounts.find((acc) => acc.isPrimary)
               ? {
-                  id: accounts.find((acc) => acc.isPrimary)!.id,
-                  accountNumber: accounts.find((acc) => acc.isPrimary)!
-                    .accountNumber,
-                  accountName: accounts.find((acc) => acc.isPrimary)!
-                    .accountName,
-                  accountType: accounts.find((acc) => acc.isPrimary)!
-                    .accountType,
-                  currency: accounts.find((acc) => acc.isPrimary)!.currency,
-                  balance: accounts
-                    .find((acc) => acc.isPrimary)!
-                    .balance?.toString(),
-                  isPrimary: true,
-                  isActive: accounts.find((acc) => acc.isPrimary)!.isActive,
-                  createdAt: accounts
-                    .find((acc) => acc.isPrimary)!
-                    .createdAt.toISOString(),
-                  updatedAt: accounts
-                    .find((acc) => acc.isPrimary)!
-                    .updatedAt.toISOString(),
-                }
+                id: accounts.find((acc) => acc.isPrimary)!.id,
+                accountNumber: accounts.find((acc) => acc.isPrimary)!
+                  .accountNumber,
+                accountName: accounts.find((acc) => acc.isPrimary)!
+                  .accountName,
+                accountType: accounts.find((acc) => acc.isPrimary)!
+                  .accountType,
+                currency: accounts.find((acc) => acc.isPrimary)!.currency,
+                balance: accounts
+                  .find((acc) => acc.isPrimary)!
+                  .balance?.toString(),
+                isPrimary: true,
+                isActive: accounts.find((acc) => acc.isPrimary)!.isActive,
+                createdAt: accounts
+                  .find((acc) => acc.isPrimary)!
+                  .createdAt.toISOString(),
+                updatedAt: accounts
+                  .find((acc) => acc.isPrimary)!
+                  .updatedAt.toISOString(),
+              }
               : null,
             profile: profile
               ? {
-                  id: profile.id,
-                  mobileUserId: profile.mobileUserId,
-                  firstName: profile.firstName,
-                  lastName: profile.lastName,
-                  email: profile.email,
-                  phone: profile.phone,
-                  address: profile.address,
-                  city: profile.city,
-                  country: profile.country,
-                  zip: profile.zip,
-                  createdAt: profile.createdAt.toISOString(),
-                  updatedAt: profile.updatedAt.toISOString(),
-                }
+                id: profile.id,
+                mobileUserId: profile.mobileUserId,
+                firstName: profile.firstName,
+                lastName: profile.lastName,
+                email: profile.email,
+                phone: profile.phone,
+                address: profile.address,
+                city: profile.city,
+                country: profile.country,
+                zip: profile.zip,
+                createdAt: profile.createdAt.toISOString(),
+                updatedAt: profile.updatedAt.toISOString(),
+              }
               : null,
             createdAt: user.createdAt.toISOString(),
             updatedAt: user.updatedAt.toISOString(),

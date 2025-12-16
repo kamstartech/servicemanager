@@ -6,12 +6,18 @@ import { extractTokenFromHeader, verifyToken, type JWTPayload } from "@/lib/auth
 const JWT_SECRET = process.env.JWT_SECRET || "change-this-secret";
 const INACTIVITY_TIMEOUT_MS = 5.5 * 60 * 1000; // 5.5 minutes
 
+import { AdminWebUser, MobileUser } from "@prisma/client";
+
 export interface GraphQLContext {
   userId?: number;
   deviceId?: string;
   sessionId?: string;
   token?: string;
   auth?: JWTPayload;
+  adminId?: number;
+  adminUser?: AdminWebUser;
+  mobileUser?: MobileUser;
+  user?: MobileUser | AdminWebUser;
 }
 
 export async function createGraphQLContext({
@@ -112,6 +118,8 @@ export async function createGraphQLContext({
       sessionId: decoded.sessionId,
       token,
       auth: decoded,
+      mobileUser: session.mobileUser,
+      user: session.mobileUser,
     };
   } catch (err: any) {
     console.error("Auth validation error:", err.message);

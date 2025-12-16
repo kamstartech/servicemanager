@@ -1,22 +1,21 @@
 /**
  * SMS Integration Test Script
  * 
- * This script tests the SMS service with all three providers
+ * This script tests the SMS service
  * Run with: npx tsx scripts/test-sms.ts
  */
 
-import { SMSService } from '../lib/services/sms';
+import { ESBSMSService } from '../lib/services/sms';
 
 const TEST_PHONE = process.env.TEST_PHONE_NUMBER || '+260977396223';
 
 async function testSMS() {
   console.log('🧪 Testing SMS Integration\n');
-  console.log(`Provider: ${process.env.SMS_PROVIDER || 'orbit'}`);
   console.log(`Test Phone: ${TEST_PHONE}\n`);
 
   // Test 1: Simple SMS
   console.log('1️⃣  Testing Simple SMS...');
-  const result1 = await SMSService.sendSMS(
+  const result1 = await ESBSMSService.sendSMS(
     TEST_PHONE,
     'Test message from Next.js SMS service',
     1
@@ -26,13 +25,13 @@ async function testSMS() {
 
   // Test 2: OTP
   console.log('2️⃣  Testing OTP SMS...');
-  const result2 = await SMSService.sendOTP(TEST_PHONE, '123456', 1);
+  const result2 = await ESBSMSService.sendOTP(TEST_PHONE, '123456', 1);
   console.log('Result:', result2);
   console.log('');
 
   // Test 3: Account Alert
   console.log('3️⃣  Testing Account Alert SMS...');
-  const result3 = await SMSService.sendAccountAlert(
+  const result3 = await ESBSMSService.sendAccountAlert(
     TEST_PHONE,
     'LOW_BALANCE',
     {
@@ -47,7 +46,7 @@ async function testSMS() {
 
   // Test 4: Transaction Notification
   console.log('4️⃣  Testing Transaction Notification SMS...');
-  const result4 = await SMSService.sendTransactionNotification(
+  const result4 = await ESBSMSService.sendTransactionNotification(
     TEST_PHONE,
     '1000',
     'ZMW',
@@ -60,13 +59,13 @@ async function testSMS() {
 
   // Test 5: Password Reset
   console.log('5️⃣  Testing Password Reset SMS...');
-  const result5 = await SMSService.sendPasswordReset(TEST_PHONE, 'RESET123', 1);
+  const result5 = await ESBSMSService.sendPasswordReset(TEST_PHONE, 'RESET123', 1);
   console.log('Result:', result5);
   console.log('');
 
   // Test 6: Welcome Message
   console.log('6️⃣  Testing Welcome SMS...');
-  const result6 = await SMSService.sendWelcome(TEST_PHONE, 'John Doe', 1);
+  const result6 = await ESBSMSService.sendWelcome(TEST_PHONE, 'John Doe', 1);
   console.log('Result:', result6);
   console.log('');
 

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
-import { GraphQLContext } from "../context";
+import type { GraphQLContext } from "@/lib/graphql/context";
 import { CheckbookRequestStatus } from "@prisma/client";
 import { PushNotificationService } from "@/lib/services/push-notification";
 
@@ -431,7 +431,7 @@ export const checkbookRequestResolvers = {
           CheckbookRequestStatus.REJECTED,
         ];
 
-        if (statusesToNotify.includes(args.input.status as CheckbookRequestStatus)) {
+        if ((statusesToNotify as CheckbookRequestStatus[]).includes(args.input.status as CheckbookRequestStatus)) {
           try {
             await PushNotificationService.sendCheckbookStatusUpdate(
               updated.mobileUserId,

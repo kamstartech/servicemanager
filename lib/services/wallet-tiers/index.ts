@@ -197,7 +197,7 @@ export class WalletTierService {
    */
   static getCompletedKycFields(kyc: any): string[] {
     const fields: string[] = [];
-    
+
     if (kyc.dateOfBirth) fields.push('date_of_birth');
     if (kyc.occupation) fields.push('occupation');
     if (kyc.employerName) fields.push('employer_name');
@@ -205,7 +205,7 @@ export class WalletTierService {
     if (kyc.idNumber) fields.push('id_number');
     if (kyc.idImage) fields.push('id_image');
     if (kyc.nrbValidation) fields.push('nrb_validation');
-    
+
     return fields;
   }
 
@@ -216,11 +216,11 @@ export class WalletTierService {
     const today = new Date();
     let age = today.getFullYear() - dateOfBirth.getFullYear();
     const monthDiff = today.getMonth() - dateOfBirth.getMonth();
-    
+
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dateOfBirth.getDate())) {
       age--;
     }
-    
+
     return age;
   }
 
@@ -427,7 +427,7 @@ export class WalletTierService {
     check: TierRequirementsCheck;
   }> {
     const check = await this.meetsTierRequirements(mobileUserId, newTierId);
-    
+
     // Also verify the new tier is higher than current
     const currentTier = await this.getUserTier(mobileUserId);
     const newTier = await prisma.walletTier.findUnique({
@@ -437,7 +437,7 @@ export class WalletTierService {
     const isHigherTier = !currentTier || (newTier && newTier.position > currentTier.position);
 
     return {
-      canUpgrade: check.meets && isHigherTier,
+      canUpgrade: Boolean(check.meets && isHigherTier),
       check
     };
   }
@@ -450,7 +450,7 @@ export class WalletTierService {
 
     if (!canUpgrade) {
       throw new Error(
-        `Cannot upgrade to tier: ${check.missingFields.length > 0 
+        `Cannot upgrade to tier: ${check.missingFields.length > 0
           ? 'Missing fields: ' + check.missingFields.join(', ')
           : 'Requirements not met: ' + check.failedRules.map(r => r.reason).join(', ')
         }`

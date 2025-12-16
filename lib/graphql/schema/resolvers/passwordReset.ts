@@ -33,7 +33,7 @@ export const passwordResetResolvers = {
       }: {
         input: {
           username: string;
-          memoWord: string;
+          secret: string;
           phoneNumber?: string;
           deviceId: string;
           deviceName?: string;
@@ -41,8 +41,7 @@ export const passwordResetResolvers = {
       }
     ) => {
       try {
-        const { username, memoWord, phoneNumber, deviceId, deviceName } =
-          input;
+        const { username, secret, phoneNumber, deviceId, deviceName } = input;
 
         // 1. Find user by username
         const user = await prisma.mobileUser.findFirst({
@@ -64,18 +63,18 @@ export const passwordResetResolvers = {
           };
         }
 
-        // 2. Verify memo word
-        if (!user.memoWord) {
+        // 2. Verify secret
+        if (!user.secretHash) {
           return {
             success: false,
-            message: "Memo word not set for this account",
+            message: "Secret not set for this account",
             resetToken: null,
             otpSentTo: null,
           };
         }
 
-        const memoWordMatch = await bcrypt.compare(memoWord, user.memoWord);
-        if (!memoWordMatch) {
+        const secretMatch = await bcrypt.compare(secret, user.secretHash);
+        if (!secretMatch) {
           // Log failed attempt
           await prisma.deviceLoginAttempt.create({
             data: {
@@ -89,7 +88,7 @@ export const passwordResetResolvers = {
 
           return {
             success: false,
-            message: "Invalid memo word",
+            message: "Invalid secret",
             resetToken: null,
             otpSentTo: null,
           };
@@ -344,8 +343,7 @@ export const passwordResetResolvers = {
               deviceId: deviceId,
               name: "Reset Device",
               isActive: true,
-              isPending: false,
-              isApproved: true,
+
               lastUsedAt: new Date(),
             },
           });
@@ -354,8 +352,7 @@ export const passwordResetResolvers = {
             where: { id: device.id },
             data: {
               isActive: true,
-              isPending: false,
-              isApproved: true,
+
               lastUsedAt: new Date(),
             },
           });
@@ -373,7 +370,7 @@ export const passwordResetResolvers = {
             sessionId: sessionId,
           },
           JWT_SECRET,
-          { expiresIn: JWT_EXPIRES_IN }
+          { expiresIn: JWT_EXPIRES_IN as any }
         );
 
         // Create session

@@ -6,7 +6,9 @@ import { toast } from "sonner";
 import { Eye, EyeOff, Lock, CheckCircle2, UserPlus } from "lucide-react";
 import Image from "next/image";
 
-export default function SetupPasswordPage() {
+import { Suspense } from "react";
+
+function SetupPasswordContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get("token");
@@ -14,7 +16,7 @@ export default function SetupPasswordPage() {
   const [validating, setValidating] = useState(true);
   const [tokenValid, setTokenValid] = useState(false);
   const [userInfo, setUserInfo] = useState<{ email: string; name: string | null } | null>(null);
-  
+
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -82,7 +84,7 @@ export default function SetupPasswordPage() {
         toast.success("Account setup complete!", {
           description: "You can now login with your new password",
         });
-        
+
         // Redirect to login after 2 seconds
         setTimeout(() => {
           router.push("/login");
@@ -191,7 +193,7 @@ export default function SetupPasswordPage() {
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
-            
+
             {/* Password Strength Indicator */}
             {password && (
               <div className="mt-2">
@@ -199,9 +201,8 @@ export default function SetupPasswordPage() {
                   {[...Array(5)].map((_, i) => (
                     <div
                       key={i}
-                      className={`h-1 flex-1 rounded ${
-                        i < passwordStrength ? strengthColors[passwordStrength - 1] : "bg-gray-200"
-                      }`}
+                      className={`h-1 flex-1 rounded ${i < passwordStrength ? strengthColors[passwordStrength - 1] : "bg-gray-200"
+                        }`}
                     />
                   ))}
                 </div>
@@ -236,7 +237,7 @@ export default function SetupPasswordPage() {
                 {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
-            
+
             {/* Match Indicator */}
             {confirmPassword && (
               <div className="mt-2 flex items-center gap-1 text-sm">
@@ -301,5 +302,20 @@ export default function SetupPasswordPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SetupPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#154E9E]"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <SetupPasswordContent />
+    </Suspense>
   );
 }

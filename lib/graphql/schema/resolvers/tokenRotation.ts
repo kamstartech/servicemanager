@@ -112,7 +112,7 @@ export const tokenRotationResolvers = {
             sessionId: newSessionId,
           },
           JWT_SECRET,
-          { expiresIn: JWT_EXPIRES_IN }
+          { expiresIn: JWT_EXPIRES_IN as any }
         );
 
         // 9. Create new session

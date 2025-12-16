@@ -120,7 +120,7 @@ export async function listFiles(
     const files: Minio.BucketItem[] = [];
 
     return new Promise((resolve, reject) => {
-      stream.on("data", (obj) => files.push(obj));
+      stream.on("data", (obj) => files.push(obj as Minio.BucketItem));
       stream.on("end", () => resolve(files));
       stream.on("error", reject);
     });

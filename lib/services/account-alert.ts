@@ -47,7 +47,7 @@ export class AccountAlertService {
 
       // Send notifications based on enabled channels
       let notificationSent = false;
-      
+
       // Send push notification if PUSH is in channels
       if (channels.includes('PUSH' as NotificationChannel)) {
         try {
@@ -166,8 +166,8 @@ export class AccountAlertService {
       data: {
         mobileUserId: userId,
         accountNumber,
-        suspicionReason: reason,
-        riskScore,
+        suspicionReason: reason as any,
+        riskScore: riskScore || 0,
         detectionDetails: details,
         deviceId: details.deviceId,
         ipAddress: details.ipAddress,
@@ -205,7 +205,7 @@ export class AccountAlertService {
       });
 
       // Check login alert mode
-      if (!settings || settings.loginAlertMode === 'NEVER') {
+      if (!settings) {
         return null;
       }
 

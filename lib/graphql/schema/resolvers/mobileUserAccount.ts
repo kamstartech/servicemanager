@@ -127,7 +127,7 @@ export const mobileUserAccountResolvers = {
       }
     ) {
       const userId = parseInt(args.userId);
-      
+
       // If this is marked as primary, unset other primary accounts
       if (args.isPrimary) {
         await prisma.mobileUserAccount.updateMany({
@@ -187,8 +187,8 @@ export const mobileUserAccountResolvers = {
       // If this was the primary account, promote another
       if (account.isPrimary) {
         const nextAccount = await prisma.mobileUserAccount.findFirst({
-          where: { 
-            mobileUserId: userId, 
+          where: {
+            mobileUserId: userId,
             id: { not: accountId },
             isActive: true
           },
@@ -342,7 +342,7 @@ export const mobileUserAccountResolvers = {
         data: { frozen: true }
       });
 
-      return {
+      const result = {
         id: updatedAccount.id.toString(),
         accountNumber: updatedAccount.accountNumber,
         accountName: updatedAccount.accountName,
@@ -357,7 +357,7 @@ export const mobileUserAccountResolvers = {
         createdAt: updatedAccount.createdAt.toISOString(),
         updatedAt: updatedAccount.updatedAt.toISOString(),
       };
-      
+
       // Send push notification
       try {
         await PushNotificationService.sendAccountFrozenAlert(
@@ -368,7 +368,7 @@ export const mobileUserAccountResolvers = {
       } catch (error) {
         console.error("Failed to send freeze notification:", error);
       }
-      
+
       return result;
     },
 
@@ -410,7 +410,7 @@ export const mobileUserAccountResolvers = {
         createdAt: updatedAccount.createdAt.toISOString(),
         updatedAt: updatedAccount.updatedAt.toISOString(),
       };
-      
+
       // Send push notification
       try {
         await PushNotificationService.sendAccountFrozenAlert(
@@ -421,7 +421,7 @@ export const mobileUserAccountResolvers = {
       } catch (error) {
         console.error("Failed to send unfreeze notification:", error);
       }
-      
+
       return result;
     },
 

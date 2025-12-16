@@ -23,8 +23,8 @@ export async function autoProcessRegistration(registrationId: number) {
     const lastStage = processLog[processLog.length - 1];
     const duration =
       lastStage &&
-      lastStage.stage === stage &&
-      lastStage.status === "started"
+        lastStage.stage === stage &&
+        lastStage.status === "started"
         ? Date.now() - new Date(lastStage.timestamp).getTime()
         : undefined;
 
@@ -317,7 +317,7 @@ export async function autoProcessRegistration(registrationId: number) {
       registrationId,
       RegistrationStatus.APPROVED,
       `Customer validated successfully. Found ${accountsResult.accounts.length} accounts.`,
-      { accountsFound: accountsResult.accounts.length, autoProcessed: true },
+      { accountsFound: accountsResult.accounts.length },
       processLog
     );
 

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
-import { GraphQLContext } from "../context";
+import type { GraphQLContext } from "@/lib/graphql/context";
 import { PushNotificationService } from "@/lib/services/push-notification";
 
 export const pushNotificationResolvers = {

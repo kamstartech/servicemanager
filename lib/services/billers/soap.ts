@@ -68,8 +68,8 @@ export class SoapBillerService extends BaseBillerService {
       throw new Error("Invalid account number format");
     }
 
-    const amount = typeof params.amount === "string" 
-      ? parseFloat(params.amount) 
+    const amount = typeof params.amount === "string"
+      ? parseFloat(params.amount)
       : params.amount;
 
     if (!this.validateAmount(amount)) {
@@ -164,12 +164,12 @@ export class SoapBillerService extends BaseBillerService {
     );
     const message = this.extractXmlValue(xmlResponse, "message");
 
-    const success = status?.toLowerCase() === "success" || 
-                    status?.toLowerCase() === "completed";
+    const success = status?.toLowerCase() === "success" ||
+      status?.toLowerCase() === "completed";
 
     return {
       success,
-      transactionId,
+      transactionId: transactionId || undefined,
       externalReference: externalReference || undefined,
       message: message || undefined,
       data: {

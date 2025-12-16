@@ -494,7 +494,7 @@ export const workflowResolvers = {
   Workflow: {
     screenPages: async (parent: any) => {
       if (parent.screenPages) return parent.screenPages;
-      
+
       const screenPages = await prisma.appScreenPageWorkflow.findMany({
         where: { workflowId: parent.id },
         include: {
@@ -511,6 +511,26 @@ export const workflowResolvers = {
         ...sp,
         createdAt: sp.createdAt.toISOString(),
         updatedAt: sp.updatedAt.toISOString(),
+      }));
+    },
+    steps: async (parent: any) => {
+      if (parent.steps) {
+        return parent.steps.map((step: any) => ({
+          ...step,
+          createdAt: step.createdAt?.toISOString ? step.createdAt.toISOString() : step.createdAt,
+          updatedAt: step.updatedAt?.toISOString ? step.updatedAt.toISOString() : step.updatedAt,
+        }));
+      }
+
+      const steps = await prisma.workflowStep.findMany({
+        where: { workflowId: parent.id },
+        orderBy: { order: "asc" },
+      });
+
+      return steps.map((step) => ({
+        ...step,
+        createdAt: step.createdAt.toISOString(),
+        updatedAt: step.updatedAt.toISOString(),
       }));
     },
   },
@@ -550,26 +570,5 @@ export const workflowResolvers = {
     },
   },
 
-  Workflow: {
-    steps: async (parent: any) => {
-      if (parent.steps) {
-        return parent.steps.map((step: any) => ({
-          ...step,
-          createdAt: step.createdAt?.toISOString ? step.createdAt.toISOString() : step.createdAt,
-          updatedAt: step.updatedAt?.toISOString ? step.updatedAt.toISOString() : step.updatedAt,
-        }));
-      }
 
-      const steps = await prisma.workflowStep.findMany({
-        where: { workflowId: parent.id },
-        orderBy: { order: "asc" },
-      });
-
-      return steps.map((step) => ({
-        ...step,
-        createdAt: step.createdAt.toISOString(),
-        updatedAt: step.updatedAt.toISOString(),
-      }));
-    },
-  },
 };

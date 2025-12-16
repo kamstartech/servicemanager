@@ -16,7 +16,7 @@ export async function POST(request: Request) {
 
     const result = await t24TransactionsService.getAccountTransactions(accountNumber);
 
-    if (!result.ok) {
+    if (result.status !== "success") {
       return NextResponse.json({
         success: false,
         error: result.error || "Failed to fetch transactions",

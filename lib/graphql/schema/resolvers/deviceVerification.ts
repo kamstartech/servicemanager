@@ -111,7 +111,7 @@ export const deviceVerificationResolvers = {
         },
         JWT_SECRET,
         {
-          expiresIn: JWT_EXPIRES_IN,
+          expiresIn: JWT_EXPIRES_IN as any,
           issuer: "service-manager-admin",
           subject: String(attempt.mobileUserId),
         }
@@ -163,40 +163,40 @@ export const deviceVerificationResolvers = {
           })),
           primaryAccount: accounts.find((acc: any) => acc.isPrimary)
             ? {
-                id: accounts.find((acc: any) => acc.isPrimary)!.id,
-                accountNumber: accounts.find((acc: any) => acc.isPrimary)!
-                  .accountNumber,
-                accountName: accounts.find((acc: any) => acc.isPrimary)!.accountName,
-                accountType: accounts.find((acc: any) => acc.isPrimary)!.accountType,
-                currency: accounts.find((acc: any) => acc.isPrimary)!.currency,
-                balance: accounts
-                  .find((acc: any) => acc.isPrimary)!
-                  .balance?.toString(),
-                isPrimary: true,
-                isActive: accounts.find((acc: any) => acc.isPrimary)!.isActive,
-                createdAt: accounts
-                  .find((acc: any) => acc.isPrimary)!
-                  .createdAt.toISOString(),
-                updatedAt: accounts
-                  .find((acc: any) => acc.isPrimary)!
-                  .updatedAt.toISOString(),
-              }
+              id: accounts.find((acc: any) => acc.isPrimary)!.id,
+              accountNumber: accounts.find((acc: any) => acc.isPrimary)!
+                .accountNumber,
+              accountName: accounts.find((acc: any) => acc.isPrimary)!.accountName,
+              accountType: accounts.find((acc: any) => acc.isPrimary)!.accountType,
+              currency: accounts.find((acc: any) => acc.isPrimary)!.currency,
+              balance: accounts
+                .find((acc: any) => acc.isPrimary)!
+                .balance?.toString(),
+              isPrimary: true,
+              isActive: accounts.find((acc: any) => acc.isPrimary)!.isActive,
+              createdAt: accounts
+                .find((acc: any) => acc.isPrimary)!
+                .createdAt.toISOString(),
+              updatedAt: accounts
+                .find((acc: any) => acc.isPrimary)!
+                .updatedAt.toISOString(),
+            }
             : null,
           profile: profile
             ? {
-                id: profile.id,
-                mobileUserId: profile.mobileUserId,
-                firstName: profile.firstName,
-                lastName: profile.lastName,
-                email: profile.email,
-                phone: profile.phone,
-                address: profile.address,
-                city: profile.city,
-                country: profile.country,
-                zip: profile.zip,
-                createdAt: profile.createdAt.toISOString(),
-                updatedAt: profile.updatedAt.toISOString(),
-              }
+              id: profile.id,
+              mobileUserId: profile.mobileUserId,
+              firstName: profile.firstName,
+              lastName: profile.lastName,
+              email: profile.email,
+              phone: profile.phone,
+              address: profile.address,
+              city: profile.city,
+              country: profile.country,
+              zip: profile.zip,
+              createdAt: profile.createdAt.toISOString(),
+              updatedAt: profile.updatedAt.toISOString(),
+            }
             : null,
           createdAt: attempt.mobileUser!.createdAt.toISOString(),
           updatedAt: attempt.mobileUser!.updatedAt.toISOString(),

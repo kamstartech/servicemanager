@@ -30,17 +30,19 @@ export type SidebarSectionId =
   | "system"
   | "administration";
 
+export type SidebarLinkItem = {
+  kind: "link";
+  href: string;
+  icon: LucideIcon;
+  labelKey: string;
+};
+
 export type SidebarItem =
+  | SidebarLinkItem
   | {
-      kind: "link";
-      href: string;
-      icon: LucideIcon;
-      labelKey: string;
-    }
-  | {
-      kind: "checkbookRequests";
-      labelKey: string;
-    };
+    kind: "checkbookRequests";
+    labelKey: string;
+  };
 
 export type SidebarSection = {
   id: SidebarSectionId;
@@ -50,14 +52,14 @@ export type SidebarSection = {
   items: SidebarItem[];
 };
 
-export const SIDEBAR_DASHBOARD: SidebarItem = {
+export const SIDEBAR_DASHBOARD: SidebarLinkItem = {
   kind: "link",
   href: "/",
   icon: LayoutDashboard,
   labelKey: "sidebar.dashboard",
 };
 
-export const SIDEBAR_PROFILE: SidebarItem = {
+export const SIDEBAR_PROFILE: SidebarLinkItem = {
   kind: "link",
   href: "/profile",
   icon: UserCog,

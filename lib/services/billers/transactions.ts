@@ -47,7 +47,7 @@ export class BillerTransactionService {
     return await prisma.billerTransaction.create({
       data: {
         ...data,
-        amount: data.amount 
+        amount: data.amount
           ? (typeof data.amount === "string" ? parseFloat(data.amount) : data.amount)
           : undefined,
         status: BillerTransactionStatus.PENDING,
@@ -66,7 +66,7 @@ export class BillerTransactionService {
     return await prisma.billerTransaction.update({
       where: { id },
       data: {
-        ...updates,
+        ...(updates as any),
         updatedAt: new Date(),
       },
     });
@@ -441,12 +441,12 @@ export class BillerTransactionService {
         case "POST_TRANSACTION":
           result = await billerService.processPayment({
             accountNumber: transaction.accountNumber,
-            amount: transaction.amount!,
+            amount: transaction.amount!.toNumber(),
             currency: transaction.currency,
             accountType: transaction.accountType || undefined,
             metadata: transaction.metadata as any,
           });
-          
+
           if (result.success) {
             await this.completeTransaction(transactionId, result);
           } else {

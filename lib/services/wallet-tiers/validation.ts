@@ -140,13 +140,13 @@ export function validateKYCRules(rules: any): { valid: boolean; errors: string[]
   const validRuleKeys = AVAILABLE_KYC_RULES.map(r => r.key);
 
   for (const [key, value] of Object.entries(rules)) {
-    if (!validRuleKeys.includes(key)) {
+    if (!validRuleKeys.includes(key as any)) {
       errors.push(`Invalid KYC rule: ${key}`);
       continue;
     }
 
     const rule = AVAILABLE_KYC_RULES.find(r => r.key === key);
-    
+
     if (rule?.type === 'number' && typeof value !== 'number') {
       errors.push(`${key} must be a number`);
     }
@@ -187,7 +187,7 @@ export function formatCurrency(amount: number | string): string {
  */
 export function formatCompactNumber(num: number | string): string {
   const value = typeof num === 'number' ? num : parseFloat(num);
-  
+
   if (value >= 1000000) {
     return `${(value / 1000000).toFixed(1)}M`;
   }
