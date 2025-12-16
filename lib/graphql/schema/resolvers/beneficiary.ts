@@ -1,18 +1,23 @@
 import { prisma } from "@/lib/db/prisma";
-import { BeneficiaryType } from "@prisma/client";
 
 export const beneficiaryResolvers = {
   Query: {
     beneficiaries: async (
       _: unknown,
-      { userId, type }: { userId: string; type?: BeneficiaryType }
+      { userId, type }: { userId: string; type?: string }
     ) => {
       const where: any = {
         userId: parseInt(userId),
       };
 
       if (type) {
-        where.beneficiaryType = type;
+        if (type === "BANK") {
+          where.beneficiaryType = {
+            in: ["BANK_INTERNAL", "BANK_EXTERNAL"],
+          };
+        } else {
+          where.beneficiaryType = type;
+        }
       }
 
       return await prisma.beneficiary.findMany({

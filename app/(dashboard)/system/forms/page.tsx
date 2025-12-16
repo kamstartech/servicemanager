@@ -9,6 +9,16 @@ import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { translateStatusOneWord } from "@/lib/utils";
 import { useI18n } from "@/components/providers/i18n-provider";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -62,6 +72,10 @@ const DELETE_FORM = gql`
 export default function FormsPage() {
   const { translate } = useI18n();
   const [activeFilter, setActiveFilter] = useState<boolean | undefined>(undefined);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<
+    { id: string; name: string } | null
+  >(null);
 
   const { data, loading, error, refetch } = useQuery(FORMS_QUERY, {
     variables: {
@@ -210,9 +224,16 @@ export default function FormsPage() {
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
-      await deleteForm({ variables: { id } });
-    }
+    setDeleteTarget({ id, name });
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+
+    await deleteForm({ variables: { id: deleteTarget.id } });
+    setDeleteDialogOpen(false);
+    setDeleteTarget(null);
   };
 
   return (
@@ -307,6 +328,30 @@ export default function FormsPage() {
               Showing {rows.length} of {total} forms
             </div>
           )}
+
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete form</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {deleteTarget
+                    ? `Are you sure you want to delete "${deleteTarget.name}"? This action cannot be undone.`
+                    : "Are you sure you want to delete this form? This action cannot be undone."}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setDeleteTarget(null)}>
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={confirmDelete}
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </CardContent>
       </Card>
     </div>

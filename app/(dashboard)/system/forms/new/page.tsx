@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useI18n } from "@/components/providers/i18n-provider";
+import { toast } from "sonner";
 
 const CREATE_FORM = gql`
   mutation CreateForm($input: CreateFormInput!) {
@@ -35,7 +36,7 @@ export default function NewFormPage() {
       router.push(`/system/forms/${data.createForm.id}/edit`);
     },
     onError: (error) => {
-      alert(`Error creating form: ${error.message}`);
+      toast.error(`Error creating form: ${error.message}`);
     },
   });
 
@@ -43,7 +44,7 @@ export default function NewFormPage() {
     e.preventDefault();
 
     if (!name.trim()) {
-      alert("Form name is required");
+      toast.error("Form name is required");
       return;
     }
 

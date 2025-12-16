@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 
 const CREATE_WORKFLOW = gql`
   mutation CreateWorkflow($input: CreateWorkflowInput!) {
@@ -32,7 +33,7 @@ export default function NewWorkflowPage() {
       router.push(`/system/workflows/${data.createWorkflow.id}`);
     },
     onError: (error) => {
-      alert(error.message);
+      toast.error(error.message);
     },
   });
 
@@ -40,7 +41,7 @@ export default function NewWorkflowPage() {
     e.preventDefault();
 
     if (!name.trim()) {
-      alert("Please enter a workflow name");
+      toast.error("Please enter a workflow name");
       return;
     }
 

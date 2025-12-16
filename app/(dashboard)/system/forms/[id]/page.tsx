@@ -30,12 +30,12 @@ const GET_FORM = gql`
 
 interface FormField {
   id: string;
-  type: "text" | "number" | "date" | "dropdown" | "toggle" | "beneficiary";
+  type: "text" | "number" | "date" | "dropdown" | "toggle" | "beneficiary" | "account";
   label: string;
   required: boolean;
   placeholder?: string;
   options?: string[];
-  beneficiaryType?: "WALLET" | "BANK_INTERNAL" | "BANK_EXTERNAL" | "ALL";
+  beneficiaryType?: "WALLET" | "BANK" | "BANK_INTERNAL" | "BANK_EXTERNAL" | "ALL";
   validation?: {
     minLength?: number;
     maxLength?: number;
@@ -302,6 +302,17 @@ export default function ViewFormPage() {
                                   Filter: {field.beneficiaryType || "All Beneficiaries"}
                                 </p>
                               </div>
+                            )}
+
+                            {field.type === "account" && (
+                              <select
+                                className="w-full rounded-md border border-input bg-background px-3 py-2"
+                                disabled
+                              >
+                                <option value="">Select an account</option>
+                                <option value="sample1">Savings - 1234567890</option>
+                                <option value="sample2">Current - 0987654321</option>
+                              </select>
                             )}
                           </div>
 

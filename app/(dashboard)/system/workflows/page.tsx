@@ -13,6 +13,16 @@ import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { translateStatusOneWord } from "@/lib/utils";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -38,6 +48,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 const WORKFLOWS_QUERY = gql`
   query Workflows($page: Int, $limit: Int, $isActive: Boolean) {
@@ -105,6 +116,11 @@ export default function WorkflowsPage() {
   const [description, setDescription] = useState("");
   const [isActive, setIsActive] = useState(true);
 
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<
+    { id: string; name: string } | null
+  >(null);
+
   const { data, loading, error, refetch } = useQuery(WORKFLOWS_QUERY, {
     variables: {
       page: 1,
@@ -124,7 +140,7 @@ export default function WorkflowsPage() {
       router.push(`/system/workflows/${data.createWorkflow.id}`);
     },
     onError: (error) => {
-      alert(error.message);
+      toast.error(error.message);
     },
   });
 
@@ -134,7 +150,7 @@ export default function WorkflowsPage() {
       handleCloseDialog();
     },
     onError: (error) => {
-      alert(error.message);
+      toast.error(error.message);
     },
   });
 
@@ -231,7 +247,7 @@ export default function WorkflowsPage() {
                 <Edit className="h-4 w-4 mr-2" />
                 {translate("common.actions.edit")}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => alert("Clone functionality coming soon")}>
+              <DropdownMenuItem onClick={() => toast("Clone functionality coming soon")}>
                 <Copy className="h-4 w-4 mr-2" />
                 {translate("common.actions.clone")}
               </DropdownMenuItem>
@@ -275,7 +291,7 @@ export default function WorkflowsPage() {
 
   const handleSubmit = async () => {
     if (!name.trim()) {
-      alert("Please enter a workflow name");
+      toast.error("Please enter a workflow name");
       return;
     }
 
@@ -303,14 +319,16 @@ export default function WorkflowsPage() {
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (
-      confirm(
-        `Are you sure you want to delete "${name}"? This will detach it from all pages.`
-      )
-    ) {
-      await deleteWorkflow({ variables: { id } });
-    }
+  const handleDelete = (id: string, name: string) => {
+    setDeleteTarget({ id, name });
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    await deleteWorkflow({ variables: { id: deleteTarget.id } });
+    setDeleteDialogOpen(false);
+    setDeleteTarget(null);
   };
 
   return (
@@ -488,6 +506,30 @@ export default function WorkflowsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{translate("common.actions.delete")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget
+                ? `Are you sure you want to delete "${deleteTarget.name}"? This will detach it from all pages.`
+                : "Are you sure you want to delete this workflow? This will detach it from all pages."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteTarget(null)}>
+              {translate("common.actions.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={confirmDelete}
+            >
+              {translate("common.actions.delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

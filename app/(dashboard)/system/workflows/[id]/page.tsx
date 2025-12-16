@@ -12,6 +12,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useI18n } from "@/components/providers/i18n-provider";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -305,6 +316,11 @@ export default function WorkflowDetailPage() {
   const [triggerMethod, setTriggerMethod] = useState("POST");
   const [timeoutMs, setTimeoutMs] = useState("30000");
   const [maxRetries, setMaxRetries] = useState("0");
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<
+    { id: string; label: string } | null
+  >(null);
   
   // Core banking endpoint integration
   const [selectedEndpointId, setSelectedEndpointId] = useState("");
@@ -341,7 +357,7 @@ export default function WorkflowDetailPage() {
       handleCloseDialog();
     },
     onError: (error) => {
-      alert(error.message);
+      toast.error(error.message);
     },
   });
 
@@ -351,7 +367,7 @@ export default function WorkflowDetailPage() {
       handleCloseDialog();
     },
     onError: (error) => {
-      alert(error.message);
+      toast.error(error.message);
     },
   });
 
@@ -361,7 +377,7 @@ export default function WorkflowDetailPage() {
 
   const [reorderSteps] = useMutation(REORDER_STEPS, {
     onError: (error) => {
-      alert("Failed to reorder: " + error.message);
+      toast.error("Failed to reorder: " + error.message);
       refetch();
     },
   });
@@ -372,7 +388,7 @@ export default function WorkflowDetailPage() {
       setWorkflowDialogOpen(false);
     },
     onError: (error) => {
-      alert(error.message);
+      toast.error(error.message);
     },
   });
 
@@ -414,7 +430,7 @@ export default function WorkflowDetailPage() {
 
   const handleUpdateWorkflow = async () => {
     if (!workflowName.trim()) {
-      alert("Please enter a workflow name");
+      toast.error("Please enter a workflow name");
       return;
     }
 
@@ -505,20 +521,20 @@ export default function WorkflowDetailPage() {
 
   const handleSubmit = async () => {
     if (!stepType || !stepLabel) {
-      alert("Please fill in all required fields");
+      toast.error("Please fill in all required fields");
       return;
     }
 
     // Validate form selection for FORM type
     if (stepType === "FORM" && !selectedFormId) {
-      alert("Please select a form");
+      toast.error("Please select a form");
       return;
     }
 
     // Validate endpoint selection for API_CALL type
     if (stepType === "API_CALL" && executionMode !== "CLIENT_ONLY") {
       if (!selectedEndpointId) {
-        alert("Please select a core banking endpoint for API_CALL");
+        toast.error("Please select a core banking endpoint for API_CALL");
         return;
       }
     }
@@ -526,11 +542,11 @@ export default function WorkflowDetailPage() {
     // Validate execution configuration
     if (executionMode !== "CLIENT_ONLY") {
       if (!triggerTiming) {
-        alert("Please select trigger timing for server execution");
+        toast.error("Please select trigger timing for server execution");
         return;
       }
       if (!triggerEndpoint && stepType !== "API_CALL") {
-        alert("Please enter a trigger endpoint for server execution");
+        toast.error("Please enter a trigger endpoint for server execution");
         return;
       }
     }
@@ -541,7 +557,7 @@ export default function WorkflowDetailPage() {
     try {
       parsedConfig = JSON.parse(stepConfig);
     } catch (e) {
-      alert("Invalid JSON in config field");
+      toast.error("Invalid JSON in config field");
       return;
     }
 
@@ -575,7 +591,7 @@ export default function WorkflowDetailPage() {
       try {
         parsedValidation = JSON.parse(stepValidation);
       } catch (e) {
-        alert("Invalid JSON in validation field");
+        toast.error("Invalid JSON in validation field");
         return;
       }
     }
@@ -633,10 +649,16 @@ export default function WorkflowDetailPage() {
     }
   };
 
-  const handleDelete = async (id: string, label: string) => {
-    if (confirm(`Are you sure you want to delete "${label}"?`)) {
-      await deleteStep({ variables: { id } });
-    }
+  const handleDelete = (id: string, label: string) => {
+    setDeleteTarget({ id, label });
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    await deleteStep({ variables: { id: deleteTarget.id } });
+    setDeleteDialogOpen(false);
+    setDeleteTarget(null);
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -1355,6 +1377,30 @@ export default function WorkflowDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{translate("common.actions.delete")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget
+                ? `Are you sure you want to delete "${deleteTarget.label}"?`
+                : "Are you sure you want to delete this step?"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteTarget(null)}>
+              {translate("common.actions.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={confirmDelete}
+            >
+              {translate("common.actions.delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

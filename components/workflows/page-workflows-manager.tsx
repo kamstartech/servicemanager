@@ -8,6 +8,16 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/components/providers/i18n-provider";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -32,6 +42,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Trash2, ExternalLink, GripVertical } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 import {
   DndContext,
   closestCenter,
@@ -176,6 +187,11 @@ export function PageWorkflowsManager({ pageId }: { pageId: string }) {
   const [attachDialogOpen, setAttachDialogOpen] = useState(false);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState("");
 
+  const [detachDialogOpen, setDetachDialogOpen] = useState(false);
+  const [detachTarget, setDetachTarget] = useState<
+    { id: string; name: string } | null
+  >(null);
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -196,7 +212,7 @@ export function PageWorkflowsManager({ pageId }: { pageId: string }) {
       setSelectedWorkflowId("");
     },
     onError: (error) => {
-      alert(error.message);
+      toast.error(error.message);
     },
   });
 
@@ -206,7 +222,7 @@ export function PageWorkflowsManager({ pageId }: { pageId: string }) {
 
   const [reorderWorkflows] = useMutation(REORDER_WORKFLOWS, {
     onError: (error) => {
-      alert("Failed to reorder: " + error.message);
+      toast.error("Failed to reorder: " + error.message);
       refetch();
     },
   });
@@ -222,7 +238,7 @@ export function PageWorkflowsManager({ pageId }: { pageId: string }) {
 
   const handleAttach = async () => {
     if (!selectedWorkflowId) {
-      alert("Please select a workflow");
+      toast.error("Please select a workflow");
       return;
     }
 
@@ -231,19 +247,22 @@ export function PageWorkflowsManager({ pageId }: { pageId: string }) {
         input: {
           pageId,
           workflowId: selectedWorkflowId,
+          order: pageWorkflows.length,
         },
       },
     });
   };
 
-  const handleDetach = async (id: string, name: string) => {
-    if (
-      confirm(
-        `Are you sure you want to detach "${name}" from this page?`
-      )
-    ) {
-      await detachWorkflow({ variables: { id } });
-    }
+  const handleDetach = (id: string, name: string) => {
+    setDetachTarget({ id, name });
+    setDetachDialogOpen(true);
+  };
+
+  const confirmDetach = async () => {
+    if (!detachTarget) return;
+    await detachWorkflow({ variables: { id: detachTarget.id } });
+    setDetachDialogOpen(false);
+    setDetachTarget(null);
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -416,6 +435,30 @@ export function PageWorkflowsManager({ pageId }: { pageId: string }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={detachDialogOpen} onOpenChange={setDetachDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Detach workflow</AlertDialogTitle>
+            <AlertDialogDescription>
+              {detachTarget
+                ? `Are you sure you want to detach "${detachTarget.name}" from this page?`
+                : "Are you sure you want to detach this workflow from this page?"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDetachTarget(null)}>
+              {translate("common.actions.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={confirmDetach}
+            >
+              Detach
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

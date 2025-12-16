@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@apollo/client";
 import { gql } from "@apollo/client";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,12 +62,12 @@ const UPDATE_FORM = gql`
 
 interface FormField {
   id: string;
-  type: "text" | "number" | "date" | "dropdown" | "toggle" | "beneficiary";
+  type: "text" | "number" | "date" | "dropdown" | "toggle" | "beneficiary" | "account";
   label: string;
   required: boolean;
   placeholder?: string;
   options?: string[];
-  beneficiaryType?: "WALLET" | "BANK_INTERNAL" | "BANK_EXTERNAL" | "ALL";
+  beneficiaryType?: "WALLET" | "BANK" | "BANK_INTERNAL" | "BANK_EXTERNAL" | "ALL";
   validation?: {
     minLength?: number;
     maxLength?: number;
@@ -135,6 +136,7 @@ function SortableField({
                   <option value="dropdown">Dropdown</option>
                   <option value="toggle">Toggle</option>
                   <option value="beneficiary">Beneficiary</option>
+                  <option value="account">Account</option>
                 </select>
               </div>
 
@@ -150,7 +152,7 @@ function SortableField({
               </div>
             </div>
 
-            {field.type !== "toggle" && field.type !== "beneficiary" && (
+            {field.type !== "toggle" && field.type !== "beneficiary" && field.type !== "account" && (
               <div className="space-y-2">
                 <Label>Placeholder</Label>
                 <Input
@@ -197,6 +199,7 @@ function SortableField({
                 >
                   <option value="ALL">All Beneficiaries</option>
                   <option value="WALLET">Wallet Only</option>
+                  <option value="BANK">Bank (Internal + External)</option>
                   <option value="BANK_INTERNAL">Bank Internal Only</option>
                   <option value="BANK_EXTERNAL">Bank External Only</option>
                 </select>
@@ -450,7 +453,7 @@ export default function EditFormPage() {
       router.push("/system/forms");
     } catch (err) {
       console.error("Error updating form:", err);
-      alert("Failed to update form");
+      toast.error("Failed to update form");
     }
   };
 
@@ -677,6 +680,17 @@ export default function EditFormPage() {
                                   Filter: {field.beneficiaryType || "All Beneficiaries"}
                                 </p>
                               </div>
+                            )}
+
+                            {field.type === "account" && (
+                              <select
+                                className="w-full rounded-md border border-input bg-background px-3 py-2"
+                                disabled
+                              >
+                                <option value="">Select an account</option>
+                                <option value="sample1">Savings - 1234567890</option>
+                                <option value="sample2">Current - 0987654321</option>
+                              </select>
                             )}
                             {field.validation && (
                               <p className="text-xs text-muted-foreground">

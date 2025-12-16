@@ -23,13 +23,16 @@ export const mobileResolvers = {
       });
 
       // Group sessions by device
-      const sessionsByDevice = sessions.reduce((acc, session) => {
+      const sessionsByDevice = sessions.reduce(
+        (acc: Record<string, any[]>, session: any) => {
         if (!acc[session.deviceId]) acc[session.deviceId] = [];
         acc[session.deviceId].push(session);
         return acc;
-      }, {} as Record<string, any[]>);
+        },
+        {} as Record<string, any[]>
+      );
 
-      return devices.map((device) => ({
+      return devices.map((device: any) => ({
         id: device.id,
         deviceId: device.deviceId,
         name: device.name,
@@ -39,7 +42,7 @@ export const mobileResolvers = {
         isCurrent: device.deviceId === context.deviceId,
         lastUsedAt: device.lastUsedAt?.toISOString(),
         createdAt: device.createdAt.toISOString(),
-        activeSessions: (sessionsByDevice[device.deviceId] || []).map((s) => ({
+        activeSessions: (sessionsByDevice[device.deviceId] || []).map((s: any) => ({
           id: s.id,
           deviceId: s.deviceId,
           lastActivityAt: s.lastActivityAt.toISOString(),
@@ -84,7 +87,7 @@ export const mobileResolvers = {
         orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
       });
 
-      return accounts.map((acc) => ({
+      return accounts.map((acc: any) => ({
         id: acc.id,
         accountNumber: acc.accountNumber,
         accountName: acc.accountName,
@@ -149,7 +152,7 @@ export const mobileResolvers = {
         orderBy: { lastActivityAt: "desc" },
       });
 
-      return sessions.map((session) => ({
+      return sessions.map((session: any) => ({
         id: session.id,
         deviceId: session.deviceId,
         lastActivityAt: session.lastActivityAt.toISOString(),
@@ -173,7 +176,13 @@ export const mobileResolvers = {
 
       const where: any = { mobileUserId: context.userId };
       if (args.type) {
-        where.beneficiaryType = args.type;
+        if (args.type === "BANK") {
+          where.beneficiaryType = {
+            in: ["BANK_INTERNAL", "BANK_EXTERNAL"],
+          };
+        } else {
+          where.beneficiaryType = args.type;
+        }
       }
 
       const beneficiaries = await prisma.beneficiary.findMany({
@@ -181,7 +190,7 @@ export const mobileResolvers = {
         orderBy: { createdAt: "desc" },
       });
 
-      return beneficiaries.map((b) => ({
+      return beneficiaries.map((b: any) => ({
         ...b,
         createdAt: b.createdAt.toISOString(),
         updatedAt: b.updatedAt.toISOString(),

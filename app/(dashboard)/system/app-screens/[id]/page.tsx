@@ -11,6 +11,16 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useI18n } from "@/components/providers/i18n-provider";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -56,6 +66,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { toast } from "sonner";
 
 const APP_SCREEN_QUERY = gql`
   query AppScreen($id: ID!) {
@@ -271,6 +282,11 @@ export default function AppScreenDetailsPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingPage, setEditingPage] = useState<any>(null);
 
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<
+    { id: string; name: string } | null
+  >(null);
+
   const [formData, setFormData] = useState({
     name: "",
     icon: "",
@@ -316,7 +332,7 @@ export default function AppScreenDetailsPage() {
       resetForm();
     },
     onError: (error) => {
-      alert(error.message);
+      toast.error(error.message);
     },
   });
 
@@ -328,7 +344,7 @@ export default function AppScreenDetailsPage() {
       resetForm();
     },
     onError: (error) => {
-      alert(error.message);
+      toast.error(error.message);
     },
   });
 
@@ -338,7 +354,7 @@ export default function AppScreenDetailsPage() {
 
   const [reorderPages] = useMutation(REORDER_PAGES, {
     onError: (error) => {
-      alert("Failed to reorder: " + error.message);
+      toast.error("Failed to reorder: " + error.message);
       refetch();
     },
   });
@@ -390,13 +406,19 @@ export default function AppScreenDetailsPage() {
     });
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (
-      confirm(
-        `Are you sure you want to delete "${name}"? This action cannot be undone.`
-      )
-    ) {
-      await deletePage({ variables: { id } });
+  const handleDelete = (id: string, name: string) => {
+    setDeleteTarget({ id, name });
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deletePage({ variables: { id: deleteTarget.id } });
+      setDeleteDialogOpen(false);
+      setDeleteTarget(null);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to delete page");
     }
   };
 
@@ -778,6 +800,30 @@ export default function AppScreenDetailsPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{translate("common.actions.delete")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget
+                ? `Are you sure you want to delete "${deleteTarget.name}"? This action cannot be undone.`
+                : "Are you sure you want to delete this page? This action cannot be undone."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteTarget(null)}>
+              {translate("common.actions.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={confirmDelete}
+            >
+              {translate("common.actions.delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -10,21 +10,13 @@ import Link from "next/link";
 import { PageWorkflowsManager } from "@/components/workflows/page-workflows-manager";
 
 const PAGE_QUERY = gql`
-  query AppScreenPage($screenId: ID!, $pageId: ID!) {
+  query AppScreenPage($screenId: ID!) {
     appScreen(id: $screenId) {
       id
       name
       context
       icon
-    }
-    pageWorkflows(pageId: $pageId) {
-      id
-      order
-      workflow {
-        id
-        name
-      }
-      page {
+      pages {
         id
         name
         icon
@@ -32,12 +24,6 @@ const PAGE_QUERY = gql`
         isTesting
         createdAt
         updatedAt
-        screen {
-          id
-          name
-          context
-          icon
-        }
       }
     }
   }
@@ -49,7 +35,7 @@ export default function AppScreenPageDetailPage() {
   const pageId = params.pageId as string;
 
   const { data, loading, error } = useQuery(PAGE_QUERY, {
-    variables: { screenId, pageId },
+    variables: { screenId },
   });
 
   if (loading) {
@@ -60,7 +46,7 @@ export default function AppScreenPageDetailPage() {
     );
   }
 
-  if (error || !data?.pageWorkflows?.[0]?.page) {
+  if (error || !data?.appScreen) {
     return (
       <div className="min-h-screen bg-background px-4 py-6">
         <div className="text-center py-8 text-destructive">
@@ -71,7 +57,17 @@ export default function AppScreenPageDetailPage() {
   }
 
   const screen = data.appScreen;
-  const page = data.pageWorkflows[0]?.page;
+  const page = screen.pages?.find((p: any) => p.id === pageId);
+
+  if (!page) {
+    return (
+      <div className="min-h-screen bg-background px-4 py-6">
+        <div className="text-center py-8 text-destructive">
+          Page not found or error loading data
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background px-4 py-6">
