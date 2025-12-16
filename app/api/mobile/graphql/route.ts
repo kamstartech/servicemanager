@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createYoga } from "graphql-yoga";
-import { schema } from "@/lib/graphql/schema";
+import { mobileSchema } from "@/lib/graphql/schema/mobile";
 import { createGraphQLContext } from "@/lib/graphql/context";
 import depthLimit from "graphql-depth-limit";
 import { createComplexityLimitRule } from "graphql-validation-complexity";
@@ -9,17 +9,19 @@ import {
   getClientIdentifier,
 } from "@/lib/utils/rate-limit";
 
-// Rate limit configuration
 const RATE_LIMIT = {
-  // Admin users: 1000 requests per 15 minutes
-  admin: {
-    maxRequests: 1000,
+  mobile: {
+    maxRequests: 200,
     windowMs: 15 * 60 * 1000,
-    identifier: "graphql-admin",
+    identifier: "graphql-mobile",
+  },
+  unauthenticated: {
+    maxRequests: 10,
+    windowMs: 15 * 60 * 1000,
+    identifier: "graphql-unauth",
   },
 };
 
-// Complexity rule: prevent expensive queries
 const complexityRule = createComplexityLimitRule(5000, {
   scalarCost: 1,
   objectCost: 2,
@@ -28,32 +30,23 @@ const complexityRule = createComplexityLimitRule(5000, {
 });
 
 const yoga = createYoga({
-  schema,
-  graphqlEndpoint: "/api/graphql",
+  schema: mobileSchema,
+  graphqlEndpoint: "/api/mobile/graphql",
   context: ({ request }) => createGraphQLContext({ req: request }),
   fetchAPI: {
     Request,
     Response,
     Headers,
   },
-  
-  // Security plugins
   plugins: [
     {
       onValidate: ({ addValidationRule }: any) => {
-        // Limit query depth to 15 levels (increased for nested data)
         addValidationRule(depthLimit(15));
-        
-        // Limit query complexity
         addValidationRule(complexityRule as any);
       },
     },
   ],
-  
-  // Disable introspection in production
   graphiql: process.env.NODE_ENV !== "production",
-  
-  // Performance: disable batching to prevent abuse
   batching: false,
 });
 
@@ -66,16 +59,12 @@ export async function POST(request: NextRequest) {
 }
 
 async function handleGraphQLRequest(request: NextRequest) {
-  // Enforce strict separation:
-  // - /api/graphql is admin-only (cookie based)
-  // - mobile JWT clients must use /api/mobile/graphql
-  const authHeader = request.headers.get("authorization");
-  if (authHeader?.startsWith("Bearer ")) {
+  if (request.cookies.get("admin_token")?.value) {
     return NextResponse.json(
       {
         errors: [
           {
-            message: "Mobile JWT is not allowed on /api/graphql. Use /api/mobile/graphql instead.",
+            message: "Admin cookie is not allowed on the mobile GraphQL endpoint",
             extensions: {
               code: "FORBIDDEN",
             },
@@ -86,32 +75,18 @@ async function handleGraphQLRequest(request: NextRequest) {
     );
   }
 
-  const adminToken = request.cookies.get("admin_token")?.value;
-  if (!adminToken) {
-    return NextResponse.json(
-      {
-        errors: [
-          {
-            message: "Admin authentication required",
-            extensions: {
-              code: "UNAUTHENTICATED",
-            },
-          },
-        ],
-      },
-      { status: 401 }
-    );
-  }
-
-  // Get client identifier
   const clientId = getClientIdentifier(request);
 
-  const rateLimitConfig = RATE_LIMIT.admin;
-  const rateLimitKey = `admin:${clientId}`;
-  
-  // Check rate limit
+  const authHeader = request.headers.get("authorization");
+  const hasMobileBearer = !!authHeader?.startsWith("Bearer ");
+
+  const rateLimitConfig = hasMobileBearer
+    ? RATE_LIMIT.mobile
+    : RATE_LIMIT.unauthenticated;
+  const rateLimitKey = hasMobileBearer ? `mobile:${clientId}` : clientId;
+
   const rateLimitResult = checkRateLimit(rateLimitKey, rateLimitConfig);
-  
+
   if (!rateLimitResult.success) {
     return NextResponse.json(
       {
@@ -140,16 +115,14 @@ async function handleGraphQLRequest(request: NextRequest) {
       }
     );
   }
-  
-  // Process GraphQL request
+
   const response = await yoga(request);
-  
-  // Add rate limit headers to response
+
   const headers = new Headers(response.headers);
   headers.set("X-RateLimit-Limit", String(rateLimitResult.limit));
   headers.set("X-RateLimit-Remaining", String(rateLimitResult.remaining));
   headers.set("X-RateLimit-Reset", String(rateLimitResult.resetAt));
-  
+
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,

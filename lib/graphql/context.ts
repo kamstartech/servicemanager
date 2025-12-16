@@ -1,12 +1,9 @@
-import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { AdminWebUser, MobileUser } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { extractTokenFromHeader, verifyToken, type JWTPayload } from "@/lib/auth/jwt";
 
-const JWT_SECRET = process.env.JWT_SECRET || "change-this-secret";
 const INACTIVITY_TIMEOUT_MS = 5.5 * 60 * 1000; // 5.5 minutes
-
-import { AdminWebUser, MobileUser } from "@prisma/client";
 
 export interface GraphQLContext {
   userId?: number;
@@ -53,14 +50,22 @@ export async function createGraphQLContext({
     return {};
   }
 
-  const decoded = verifyToken(token);
-  if (decoded) {
-    return { auth: decoded, token };
-  }
-
   try {
     // 1. Verify JWT signature and decode
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const decoded = verifyToken(token) as any;
+
+    if (!decoded) {
+      return {};
+    }
+
+    // Admin tokens are validated purely by JWT signature (cookie-based sessions)
+    if (decoded.context === "ADMIN" || decoded.context === "ADMIN_WEB") {
+      return {
+        token,
+        auth: decoded,
+        adminId: decoded.userId,
+      };
+    }
 
     // 2. Hash token and lookup session
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
@@ -73,6 +78,21 @@ export async function createGraphQLContext({
     // 3. Session not found or revoked
     if (!session || !session.isActive) {
       console.log("Session not found or inactive");
+      return {};
+    }
+
+    if (session.sessionId && session.sessionId !== decoded.sessionId) {
+      console.log("Session mismatch");
+      return {};
+    }
+
+    if (session.deviceId && session.deviceId !== decoded.deviceId) {
+      console.log("Device mismatch");
+      return {};
+    }
+
+    if (session.mobileUserId && session.mobileUserId !== decoded.userId) {
+      console.log("User mismatch");
       return {};
     }
 

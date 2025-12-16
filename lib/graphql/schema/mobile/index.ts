@@ -1,0 +1,91 @@
+import { GraphQLObjectType, GraphQLSchema } from "graphql";
+import { schema as baseSchema } from "../index";
+
+const MOBILE_QUERY_FIELDS = new Set([
+  "myDevices",
+  "mySessions",
+  "myProfile",
+  "myAccounts",
+  "myPrimaryAccount",
+  "myBeneficiaries",
+  "myCheckbookRequests",
+  "myCheckbookRequest",
+]);
+
+const MOBILE_MUTATION_FIELDS = new Set([
+  "login",
+  "verifyDeviceOtp",
+  "resendDeviceOtp",
+  "secureRotateUserToken",
+  "initiatePasswordReset",
+  "verifyResetOTP",
+  "completePasswordReset",
+  "updateMyProfile",
+  "revokeMyDevice",
+  "renameMyDevice",
+  "revokeMySession",
+  "revokeAllMyOtherSessions",
+  "createCheckbookRequest",
+  "cancelMyCheckbookRequest",
+  "registerDeviceForPush",
+  "unregisterDeviceFromPush",
+  "testPushNotification",
+]);
+
+function pickRootFields(
+  type: GraphQLObjectType,
+  allowed: Set<string>
+): Record<string, any> {
+  const fields = type.getFields();
+  const result: Record<string, any> = {};
+
+  for (const fieldName of Object.keys(fields)) {
+    if (!allowed.has(fieldName)) continue;
+
+    const field = fields[fieldName];
+
+    const args: Record<string, any> = {};
+    for (const arg of field.args) {
+      args[arg.name] = {
+        type: arg.type,
+        defaultValue: arg.defaultValue,
+        description: arg.description,
+        astNode: arg.astNode,
+        extensions: arg.extensions,
+      };
+    }
+
+    result[fieldName] = {
+      type: field.type,
+      args,
+      resolve: field.resolve,
+      subscribe: field.subscribe,
+      description: field.description,
+      deprecationReason: field.deprecationReason,
+      astNode: field.astNode,
+      extensions: field.extensions,
+    };
+  }
+
+  return result;
+}
+
+const baseQuery = baseSchema.getQueryType();
+const baseMutation = baseSchema.getMutationType();
+
+if (!baseQuery) {
+  throw new Error("Base schema has no Query type");
+}
+
+export const mobileSchema = new GraphQLSchema({
+  query: new GraphQLObjectType({
+    name: baseQuery.name,
+    fields: () => pickRootFields(baseQuery, MOBILE_QUERY_FIELDS),
+  }),
+  mutation: baseMutation
+    ? new GraphQLObjectType({
+        name: baseMutation.name,
+        fields: () => pickRootFields(baseMutation, MOBILE_MUTATION_FIELDS),
+      })
+    : undefined,
+});

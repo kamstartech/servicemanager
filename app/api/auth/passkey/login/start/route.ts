@@ -5,7 +5,7 @@ import {
 } from "@simplewebauthn/server";
 import { redis } from "@/lib/db/redis";
 
-const RP_ID = process.env.NEXT_PUBLIC_RP_ID || "localhost";
+const RP_ID = process.env.NEXT_PUBLIC_RP_ID || "mobile-banking-v2.abakula.com";
 const RP_NAME = "Admin Panel";
 
 /**

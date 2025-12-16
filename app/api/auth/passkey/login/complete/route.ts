@@ -11,9 +11,9 @@ import { isoBase64URL } from "@simplewebauthn/server/helpers";
 import { redis } from "@/lib/db/redis";
 import { generateToken } from "@/lib/auth/jwt";
 
-const RP_ID = process.env.NEXT_PUBLIC_RP_ID || "localhost";
+const RP_ID = process.env.NEXT_PUBLIC_RP_ID || "mobile-banking-v2.abakula.com";
 const EXPECTED_ORIGIN =
-  process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  process.env.NEXT_PUBLIC_APP_URL || "https://mobile-banking-v2.abakula.com";
 
 /**
  * POST /api/auth/passkey/login/complete

@@ -2,7 +2,8 @@ import { prisma } from "@/lib/db/prisma";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 
-const JWT_SECRET = process.env.JWT_SECRET || "change-this-secret";
+const JWT_SECRET =
+  process.env.JWT_SECRET || "your-secret-key-change-in-production";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 
 export const tokenRotationResolvers = {
