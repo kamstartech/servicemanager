@@ -201,6 +201,7 @@ export const deviceVerificationResolvers = {
             accountType: acc.accountType,
             currency: acc.currency,
             holderName: acc.holderName,
+            nickName: acc.nickName,
             balance: acc.balance?.toString(),
             isPrimary: acc.isPrimary,
             isActive: acc.isActive,
@@ -216,6 +217,7 @@ export const deviceVerificationResolvers = {
               accountType: accounts.find((acc: any) => acc.isPrimary)!.accountType,
               currency: accounts.find((acc: any) => acc.isPrimary)!.currency,
               holderName: accounts.find((acc: any) => acc.isPrimary)!.holderName,
+              nickName: accounts.find((acc: any) => acc.isPrimary)!.nickName,
               balance: accounts
                 .find((acc: any) => acc.isPrimary)!
                 .balance?.toString(),
