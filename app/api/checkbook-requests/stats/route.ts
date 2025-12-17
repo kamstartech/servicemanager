@@ -38,10 +38,10 @@ function mapDbStatusToUi(status: string | null | undefined): CheckbookRequestSta
  */
 export async function GET() {
   try {
-    const total = await prisma.cheque_book_requests.count();
+    const total = await prisma.checkbookRequest.count();
 
-    const grouped = await prisma.cheque_book_requests.groupBy({
-      by: ["request_status"],
+    const grouped = await prisma.checkbookRequest.groupBy({
+      by: ["status"],
       _count: {
         _all: true,
       },
@@ -57,7 +57,7 @@ export async function GET() {
     };
 
     for (const row of grouped) {
-      const key = mapDbStatusToUi(row.request_status);
+      const key = mapDbStatusToUi(row.status);
       base[key] += row._count._all;
     }
 
