@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { WalletTierService } from '@/lib/services/wallet-tiers';
+import { ESBSMSService } from '@/lib/services/sms';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 
@@ -113,8 +114,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // TODO: Send OTP via SMS service
-    console.log(`📱 Wallet Registration OTP for ${phoneNumber}: ${otpCode}`);
+    const smsResult = await ESBSMSService.sendOTP(phoneNumber, otpCode, user.id);
+    if (!smsResult.success) {
+      throw new Error(smsResult.error || 'Failed to send OTP');
+    }
 
     const maskedContact = maskContact(phoneNumber, 'SMS');
 

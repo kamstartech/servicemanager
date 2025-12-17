@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db/prisma";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { ESBSMSService } from "@/lib/services/sms";
+import { emailService } from "@/lib/services/email";
 
 const JWT_SECRET = process.env.JWT_SECRET || "change-this-secret";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
@@ -126,11 +128,30 @@ export const passwordResetResolvers = {
           expiresAt: new Date(Date.now() + 5 * 60 * 1000),
         });
 
-        // 5. Send OTP via SMS or Email
-        console.log(`[PASSWORD RESET] OTP for ${username}: ${otp}`);
-        // TODO: Integrate with SMS/Email service
-        // await sendSMS(otpDestination, `Your password reset OTP is: ${otp}`);
-        // await sendEmail(otpDestination, "Password Reset OTP", `Your OTP is: ${otp}`);
+        if (otpMethod === "sms") {
+          const smsResult = await ESBSMSService.sendOTP(otpDestination, otp, user.id);
+          if (!smsResult.success) {
+            otpStorage.delete(resetToken);
+            return {
+              success: false,
+              message: smsResult.error || "Failed to send OTP",
+              resetToken: null,
+              otpSentTo: null,
+            };
+          }
+        } else {
+          try {
+            await emailService.sendOTP(otpDestination, otp, user.username);
+          } catch (e) {
+            otpStorage.delete(resetToken);
+            return {
+              success: false,
+              message: "Failed to send OTP via email",
+              resetToken: null,
+              otpSentTo: null,
+            };
+          }
+        }
 
         // 6. Log attempt
         await prisma.deviceLoginAttempt.create({

@@ -5,15 +5,13 @@ import { logsPubSub } from '@/lib/redis/logs-pubsub';
 export class ESBSMSService {
   private static readonly ESB_URL =
     process.env.ESB_SMS_URL ||
-    process.env.INTERNAL_SMS_URL ||
     'https://fdh-esb.ngrok.dev/esb/sent-messages/v1/sent-messages';
   private static readonly ESB_USERNAME =
-    process.env.ESB_USERNAME || process.env.INTERNAL_SMS_USERNAME || 'admin';
+    process.env.ESB_USERNAME || 'admin';
   private static readonly ESB_PASSWORD =
-    process.env.ESB_PASSWORD || process.env.INTERNAL_SMS_PASSWORD || 'admin';
+    process.env.ESB_PASSWORD || 'admin';
   private static readonly CLIENT_ID =
     process.env.ESB_CLIENT_ID ||
-    process.env.INTERNAL_SMS_CLIENT_ID ||
     'd79b32b5-b9a8-41de-b215-b038a913f619';
 
   /**
@@ -63,12 +61,20 @@ export class ESBSMSService {
         body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
+      const responseText = await response.text();
+      let data: any = null;
+      if (responseText.trim().length > 0) {
+        try {
+          data = JSON.parse(responseText);
+        } catch (_) {
+          data = { raw: responseText };
+        }
+      }
 
       if (response.ok) {
         // Update status to sent
         if (smsId > 0) {
-          await SMSLogger.updateStatus(smsId, 'sent', data);
+          await SMSLogger.updateStatus(smsId, 'sent', data ?? {});
         }
 
         void logsPubSub.publishLog({
@@ -83,7 +89,7 @@ export class ESBSMSService {
           success: true,
           status: 'sent',
           messageId: data?.messageId || data?.id,
-          details: data,
+          details: data ?? {},
           smsId,
         };
       }
@@ -91,8 +97,8 @@ export class ESBSMSService {
       // Update status to failed
       if (smsId > 0) {
         await SMSLogger.updateStatus(smsId, 'failed', {
-          error: data?.message || 'Failed to send SMS',
-          response: data,
+          error: data?.message || responseText || 'Failed to send SMS',
+          response: data ?? responseText,
         });
       }
 
@@ -107,8 +113,8 @@ export class ESBSMSService {
       return {
         success: false,
         status: 'failed',
-        error: data?.message || 'Failed to send SMS',
-        details: data,
+        error: data?.message || responseText || 'Failed to send SMS',
+        details: data ?? responseText,
         smsId,
       };
     } catch (error: any) {

@@ -295,7 +295,7 @@ To configure SMS routing in the ESB:
 
 1. Contact ESB administrator
 2. Request routing rule for destination number pattern (e.g., `26097*`)
-3. Specify SMS provider (Orbit Mobile, BulkSMS, etc.)
+3. Specify the routing/provider configuration (handled inside ESB)
 4. Test with configured number
 
 ## Production Deployment

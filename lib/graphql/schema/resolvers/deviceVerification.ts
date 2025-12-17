@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db/prisma";
 import jwt, { type Secret, type SignOptions } from "jsonwebtoken";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
+import { ESBSMSService } from "@/lib/services/sms";
+import { emailService } from "@/lib/services/email";
 
 const JWT_SECRET: Secret =
   process.env.JWT_SECRET || "your-secret-key-change-in-production";
@@ -328,13 +330,12 @@ export const deviceVerificationResolvers = {
       // Send OTP (integrate with SMS/Email service)
       const sentTo = attempt.otpSentTo!;
       if (sentTo.includes("@")) {
-        // Send email
-        console.log(`📧 Email OTP to ${sentTo}: ${otpCode}`);
-        // await sendEmail(sentTo, "Your Verification Code", `Your code is: ${otpCode}`);
+        await emailService.sendOTP(sentTo, otpCode, attempt.mobileUser.username);
       } else {
-        // Send SMS
-        console.log(`📱 SMS OTP to ${sentTo}: ${otpCode}`);
-        // await sendSMS(sentTo, `Your verification code is: ${otpCode}`);
+        const smsResult = await ESBSMSService.sendOTP(sentTo, otpCode, attempt.mobileUserId!);
+        if (!smsResult.success) {
+          throw new Error(smsResult.error || "Failed to send OTP");
+        }
       }
 
       return true;

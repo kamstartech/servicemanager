@@ -9,7 +9,7 @@ Successfully integrated **FDH ESB SMS Gateway** into Next.js application. The in
 ## What Was Done
 
 ### 1. Simplified SMS Service ✅
-- Removed unnecessary providers (Orbit, BulkSMS)
+- Removed unnecessary direct provider integrations
 - Created streamlined `ESBSMSService` 
 - Direct integration with FDH ESB Gateway
 - Matches Elixir backend implementation exactly

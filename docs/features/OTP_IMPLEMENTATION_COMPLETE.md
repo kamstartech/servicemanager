@@ -162,7 +162,7 @@ curl -X POST https://sm.kamstar.tech/api/graphql \
 
 ## TODO / Future Enhancements
 
-1. **SMS Integration** - Connect to real SMS provider (Twilio, etc.)
+1. **SMS Integration** - Wire OTP generation to `ESBSMSService.sendOTP()` in the GraphQL login flow
 2. **Email Integration** - Use existing Swoosh mailer
 3. **Admin Panel UI** - Show pending devices and login attempts
 4. **Mobile App** - Build OTP input screen
@@ -180,10 +180,11 @@ OTP_MAX_ATTEMPTS=5
 # App URL for verification links
 NEXT_PUBLIC_APP_URL=https://app.example.com
 
-# SMS Provider (TODO)
-TWILIO_ACCOUNT_SID=...
-TWILIO_AUTH_TOKEN=...
-TWILIO_FROM_NUMBER=...
+# SMS (ESB Gateway)
+ESB_SMS_URL=https://fdh-esb.ngrok.dev/esb/sent-messages/v1/sent-messages
+ESB_USERNAME=admin
+ESB_PASSWORD=admin
+ESB_CLIENT_ID=d79b32b5-b9a8-41de-b215-b038a913f619
 ```
 
 ---

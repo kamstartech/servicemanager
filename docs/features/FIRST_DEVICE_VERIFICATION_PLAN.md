@@ -295,10 +295,10 @@ function maskContact(contact: string, type: 'SMS' | 'EMAIL'): string {
   }
 }
 
-// Send SMS (integrate with existing SMS service)
+// Send SMS (ESB Gateway)
 async function sendSMS(phoneNumber: string, message: string): Promise<void> {
-  // Use existing SMS worker or service
-  // await SMSWorker.send({ to: phoneNumber, body: message });
+  // Use ESB SMS service
+  // await ESBSMSService.sendSMS(phoneNumber, message);
 }
 
 // Send Email (integrate with Swoosh mailer)
@@ -468,11 +468,11 @@ OTP_EXPIRY_MINUTES=10
 OTP_MAX_ATTEMPTS=5
 OTP_RATE_LIMIT_PER_HOUR=3
 
-# SMS Provider
-SMS_PROVIDER=twilio
-TWILIO_ACCOUNT_SID=...
-TWILIO_AUTH_TOKEN=...
-TWILIO_FROM_NUMBER=...
+# SMS (ESB Gateway)
+ESB_SMS_URL=https://fdh-esb.ngrok.dev/esb/sent-messages/v1/sent-messages
+ESB_USERNAME=admin
+ESB_PASSWORD=admin
+ESB_CLIENT_ID=d79b32b5-b9a8-41de-b215-b038a913f619
 
 # Email Provider (already exists via Swoosh)
 SMTP_HOST=...

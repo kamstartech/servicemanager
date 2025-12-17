@@ -718,11 +718,11 @@ OTP_EXPIRY_MINUTES=10
 OTP_MAX_ATTEMPTS=5
 OTP_RESEND_COOLDOWN_SECONDS=60
 
-# SMS Provider (TODO: Integrate)
-SMS_PROVIDER=twilio
-TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxx
-TWILIO_AUTH_TOKEN=your_auth_token
-TWILIO_FROM_NUMBER=+1234567890
+# SMS (ESB Gateway)
+ESB_SMS_URL=https://fdh-esb.ngrok.dev/esb/sent-messages/v1/sent-messages
+ESB_USERNAME=admin
+ESB_PASSWORD=admin
+ESB_CLIENT_ID=d79b32b5-b9a8-41de-b215-b038a913f619
 
 # Email Provider (TODO: Integrate with Swoosh)
 SMTP_HOST=smtp.example.com
@@ -735,7 +735,7 @@ SMTP_PASSWORD=your_password
 
 ## Future Enhancements
 
-1. **SMS Integration**: Connect to real SMS provider (Twilio, Nexmo)
+1. **SMS Integration**: Improve ESB routing, monitoring, and delivery reporting
 2. **Email Fallback**: Send OTP via email if SMS fails
 3. **Biometric Bypass**: Allow biometric verification for returning users
 4. **OTP Hashing**: Hash OTP codes before storing in database

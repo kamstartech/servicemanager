@@ -10,7 +10,7 @@
 
 ### 1. Code Integration ✅
 - [x] SMS service library created
-- [x] Three provider implementations (Orbit, BulkSMS, Internal ESB)
+- [x] ESB SMS service implementation (`ESBSMSService`)
 - [x] API endpoint created at `/api/sms/send`
 - [x] Test scripts created
 - [x] Documentation completed
@@ -18,19 +18,7 @@
 
 ### 2. Provider Tests
 
-#### Orbit Mobile (Zambian Provider)
-- **Status**: ❌ Connection Failed
-- **Error**: `fetch failed`
-- **Credentials Used**: 
-  - Username: `oxylane_ds`
-  - API Key: `1DgvtfRcsjNErxNluIpC`
-  - URL: `https://bms.orbitmobile.co.zm/json.php`
-- **Issue**: Unable to reach Orbit Mobile API endpoint
-- **Possible Causes**:
-  - Network connectivity from Docker container
-  - Orbit Mobile API may be temporarily down
-  - May require VPN or specific network access
-  - Firewall blocking outgoing connections
+The Next.js application sends SMS **only** via the ESB gateway. Routing/provider selection is configured in the ESB, not in this application.
 
 #### Internal ESB (Development)
 - **Status**: ⚠️  Connected but No Routing
@@ -42,10 +30,9 @@
 - **Issue**: ESB responded but has no routing rule for test phone number
 - **Note**: This confirms the integration code works correctly - ESB is responding
 
-#### BulkSMS (International)
-- **Status**: ⏭️  Not Tested
-- **Reason**: Focused on primary providers first
-- **Credentials Available**: Ready to test
+#### Direct Provider Testing
+
+Not applicable at the application level (handled by ESB routing rules).
 
 ## Test Results Details
 
@@ -67,9 +54,9 @@
 
 ### What This Means
 
-The integration is **complete and functional**. The test failures are related to:
-1. **Network connectivity** to Orbit Mobile's production API
-2. **ESB routing configuration** (not the code)
+The integration is **complete and functional**. Any delivery failures are related to:
+1. **ESB routing configuration** (number patterns)
+2. **ESB/provider connectivity** (outside this app)
 
 The Internal ESB provider successfully:
 - ✅ Accepted credentials
@@ -83,8 +70,7 @@ The Internal ESB provider successfully:
 ### For Production Use
 
 1. **Verify Network Access**
-   - Ensure Docker container can reach external SMS gateways
-   - Check if VPN or whitelisting is required for Orbit Mobile
+   - Ensure the deployment environment can reach the ESB gateway
    - Test from production environment
 
 2. **Configure ESB Routing**
@@ -103,7 +89,7 @@ The Internal ESB provider successfully:
 4. **Alternative Testing**
    - Test with a phone number that has existing ESB routing
    - Run tests from outside Docker (host machine)
-   - Test from the Elixir backend to verify Orbit credentials
+   - Test from the Elixir backend to verify ESB routing/provider configuration
 
 ### Quick Validation Steps
 
@@ -116,28 +102,18 @@ The Internal ESB provider successfully:
 2. **Test with Known Working Number**:
    ```bash
    # If you have a phone number with ESB routing:
-   docker exec service_manager_adminpanel npx tsx -e "
-     import {InternalSMSProvider} from './lib/services/sms/internal-provider.js';
-     const p = new InternalSMSProvider({...});
-     p.send('YOUR_ROUTED_NUMBER', 'Test').then(console.log);
-   "
+   docker exec service_manager_adminpanel npx tsx scripts/test-esb-sms.ts YOUR_ROUTED_NUMBER
    ```
 
-3. **Test Orbit from Elixir Backend**:
-   ```elixir
-   # In Elixir console:
-   ServiceManager.Services.Notification.OrbitSms.send_message("260977396223", "Test")
-   ```
+3. **Test from Elixir Backend (optional)**:
+   Use the Elixir backend to validate ESB routing/provider configuration.
 
 ## Files Created
 
 ```
 ✅ lib/services/sms/
    ├── types.ts                 # TypeScript interfaces
-   ├── orbit-provider.ts        # Orbit Mobile provider
-   ├── bulksms-provider.ts      # BulkSMS provider  
-   ├── internal-provider.ts     # Internal ESB provider
-   ├── sms-service.ts           # Main service class
+   ├── sms-service.ts           # ESB SMS service
    └── index.ts                 # Exports
 
 ✅ app/api/sms/send/route.ts    # REST API endpoint
@@ -155,17 +131,17 @@ The Internal ESB provider successfully:
 
 ### From Code
 ```typescript
-import { SMSService } from '@/lib/services/sms';
+import { ESBSMSService } from '@/lib/services/sms';
 
 // Send SMS
-await SMSService.sendSMS('+260977396223', 'Hello!');
+await ESBSMSService.sendSMS('+260977396223', 'Hello!');
 ```
 
 ### From API
 ```bash
 curl -X POST http://localhost:3000/api/sms/send \
   -H "Content-Type: application/json" \
-  -d '{"to": "+260977396223", "message": "Test"}'
+  -d '{"phoneNumber": "+260977396223", "message": "Test"}'
 ```
 
 ### Direct Provider Test
@@ -182,7 +158,6 @@ docker exec service_manager_adminpanel npx tsx scripts/test-sms-direct.ts
 **Next Steps**:
 1. Test from production environment with proper network access
 2. Configure ESB routing for test phone number
-3. Verify Orbit Mobile API access from deployment environment
-4. Consider testing with BulkSMS as backup provider
+3. Verify ESB routing/provider configuration for production numbers
 
 **The SMS integration is production-ready** pending network/routing configuration!

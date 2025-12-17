@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db/prisma";
 import bcrypt from "bcryptjs";
 import jwt, { type Secret, type SignOptions } from "jsonwebtoken";
 import crypto from "crypto";
+import { ESBSMSService } from "@/lib/services/sms";
+import { emailService } from "@/lib/services/email";
 
 type LoginInput = {
   username: string;
@@ -350,8 +352,17 @@ export const authResolvers = {
         const verificationToken = crypto.randomUUID();
 
         // Determine verification method
+        const profile = await prisma.mobileUserProfile.findUnique({
+          where: { mobileUserId: user.id },
+        });
+
+        const email = profile?.email;
         const verificationMethod = user.phoneNumber ? "SMS" : "EMAIL";
-        const sentTo = user.phoneNumber || "user@example.com"; // TODO: Get email from user
+        const sentTo = verificationMethod === "SMS" ? user.phoneNumber : email;
+
+        if (!sentTo) {
+          throw new Error("No phone number or email associated with this account");
+        }
 
         // Create login attempt with OTP
         await prisma.deviceLoginAttempt.create({
@@ -376,8 +387,14 @@ export const authResolvers = {
           },
         });
 
-        // TODO: Send OTP via SMS/Email service
-        console.log(`📱 OTP Code for ${sentTo}: ${otpCode}`);
+        if (verificationMethod === "SMS") {
+          const smsResult = await ESBSMSService.sendOTP(sentTo, otpCode, user.id);
+          if (!smsResult.success) {
+            throw new Error(smsResult.error || "Failed to send OTP");
+          }
+        } else {
+          await emailService.sendOTP(sentTo, otpCode, user.username);
+        }
 
         // Mask contact
         const maskedContact = maskContact(sentTo, verificationMethod);

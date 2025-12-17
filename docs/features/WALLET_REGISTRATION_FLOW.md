@@ -241,8 +241,9 @@ DeviceSession
 
 1. **SMS Integration**
    ```typescript
-   // Replace console.log with actual SMS service
-   await sendSMS(phoneNumber, `Your verification code: ${otpCode}`);
+   import { ESBSMSService } from '@/lib/services/sms';
+
+   await ESBSMSService.sendOTP(phoneNumber, otpCode);
    ```
 
 2. **Email Fallback** (optional)
@@ -262,7 +263,10 @@ DeviceSession
    JWT_SECRET=your-production-secret-here
    JWT_EXPIRES_IN=24h
    OTP_EXPIRY_MINUTES=10
-   SMS_PROVIDER_API_KEY=...
+   ESB_SMS_URL=https://fdh-esb.ngrok.dev/esb/sent-messages/v1/sent-messages
+   ESB_USERNAME=admin
+   ESB_PASSWORD=admin
+   ESB_CLIENT_ID=d79b32b5-b9a8-41de-b215-b038a913f619
    ```
 
 ---
