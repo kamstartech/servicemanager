@@ -1039,6 +1039,10 @@ model MobileUser {
   // Token versioning for rotation
   tokenVersion Int @default(0) @map("token_version")
 
+  smsNotifications   Boolean @default(true) @map("sms_notifications")
+  emailNotifications Boolean @default(true) @map("email_notifications")
+  pushNotifications  Boolean @default(true) @map("push_notifications")
+
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

@@ -76,6 +76,42 @@ export const mobileResolvers = {
       };
     },
 
+    async updateMyNotificationSettings(
+      _: unknown,
+      { input }: { input: { smsNotifications?: boolean; emailNotifications?: boolean; pushNotifications?: boolean } },
+      context: GraphQLContext
+    ) {
+      if (!context.userId) {
+        throw new Error("Authentication required");
+      }
+
+      const updated = await prisma.mobileUser.update({
+        where: { id: context.userId },
+        data: {
+          ...(input.smsNotifications !== undefined && {
+            smsNotifications: input.smsNotifications,
+          }),
+          ...(input.emailNotifications !== undefined && {
+            emailNotifications: input.emailNotifications,
+          }),
+          ...(input.pushNotifications !== undefined && {
+            pushNotifications: input.pushNotifications,
+          }),
+        },
+        select: {
+          smsNotifications: true,
+          emailNotifications: true,
+          pushNotifications: true,
+        },
+      });
+
+      return {
+        smsNotifications: updated.smsNotifications,
+        emailNotifications: updated.emailNotifications,
+        pushNotifications: updated.pushNotifications,
+      };
+    },
+
     // Get current user's accounts
     async myAccounts(_: unknown, __: unknown, context: GraphQLContext) {
       if (!context.userId) {

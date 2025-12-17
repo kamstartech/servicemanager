@@ -222,6 +222,18 @@ export const typeDefs = /* GraphQL */ `
     updatedAt: String!
   }
 
+  type NotificationSettings {
+    smsNotifications: Boolean!
+    emailNotifications: Boolean!
+    pushNotifications: Boolean!
+  }
+
+  input NotificationSettingsInput {
+    smsNotifications: Boolean
+    emailNotifications: Boolean
+    pushNotifications: Boolean
+  }
+
   input CreateMobileUserInput {
     context: MobileUserContext!
     username: String
@@ -1425,6 +1437,8 @@ export const typeDefs = /* GraphQL */ `
       limit: Int
       offset: Int
     ): [SuspiciousActivityLog!]!
+
+    myNotificationSettings: NotificationSettings!
   }
 
   extend type Mutation {
@@ -1445,6 +1459,8 @@ export const typeDefs = /* GraphQL */ `
       action: ResolutionAction!
       adminNotes: String
     ): Boolean!
+
+    updateMyNotificationSettings(input: NotificationSettingsInput!): NotificationSettings!
   }
 
   # ==========================================

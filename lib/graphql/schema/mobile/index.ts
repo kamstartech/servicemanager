@@ -7,6 +7,7 @@ const MOBILE_QUERY_FIELDS = new Set([
   "myProfile",
   "myAccounts",
   "myPrimaryAccount",
+  "myNotificationSettings",
   "myBeneficiaries",
   "accountAlertSettings",
   "accountAlerts",
@@ -26,6 +27,7 @@ const MOBILE_MUTATION_FIELDS = new Set([
   "initiatePasswordReset",
   "verifyResetOTP",
   "completePasswordReset",
+  "updateMyNotificationSettings",
   "updateAccountAlertSettings",
   "acknowledgeAlert",
   "updateMyProfile",
@@ -42,6 +44,7 @@ const MOBILE_MUTATION_FIELDS = new Set([
   "freezeAccount",
   "unfreezeAccount",
   "hideAccount",
+  "unhideAccount",
 ]);
 
 function pickRootFields(
