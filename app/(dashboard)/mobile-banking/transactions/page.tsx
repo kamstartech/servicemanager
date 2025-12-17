@@ -355,30 +355,61 @@ export default function MobileBankingTransactionsPage() {
     {
       id: "actions",
       header: COMMON_TABLE_HEADERS.actions,
-      accessor: (row) => (
-        <div className="flex justify-center">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-7 text-xs">
-                <MoreVertical className="h-4 w-4 mr-2" />
-                {translate("common.actions.actions")}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => {
-                  setHistoryTransactionId(row.id);
-                  setHistoryOpen(true);
-                  void loadHistory({ variables: { id: row.id } });
-                }}
-              >
-                <History className="h-4 w-4 mr-2" />
-                {translate("common.actions.history")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      ),
+      accessor: (row) => {
+        const actions = [
+          {
+            key: "history",
+            label: translate("common.actions.history"),
+            icon: <History className="h-4 w-4" />,
+            onClick: () => {
+              setHistoryTransactionId(row.id);
+              setHistoryOpen(true);
+              void loadHistory({ variables: { id: row.id } });
+            },
+          },
+        ];
+
+        if (actions.length <= 3) {
+          return (
+            <div className="flex justify-center gap-2">
+              {actions.map((action) => (
+                <Button
+                  key={action.key}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
+                  onClick={action.onClick}
+                >
+                  <span className="mr-2">{action.icon}</span>
+                  {action.label}
+                </Button>
+              ))}
+            </div>
+          );
+        }
+
+        return (
+          <div className="flex justify-center">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-7 text-xs">
+                  <MoreVertical className="h-4 w-4 mr-2" />
+                  {translate("common.actions.actions")}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {actions.map((action) => (
+                  <DropdownMenuItem key={action.key} onClick={action.onClick}>
+                    {action.icon}
+                    {action.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        );
+      },
       alignCenter: true,
     },
   ];
