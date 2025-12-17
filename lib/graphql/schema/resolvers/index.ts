@@ -107,6 +107,7 @@ export const resolvers = {
     ...appScreenResolvers.Mutation,
     ...mobileResolvers.Mutation,
     ...passwordResetResolvers.Mutation,
+    ...transactionResolvers.Mutation,
     ...accountAlertResolvers.Mutation,
     ...workflowResolvers.Mutation,
     ...workflowStepResolvers.Mutation,

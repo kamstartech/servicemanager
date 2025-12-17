@@ -36,14 +36,21 @@ export async function createGraphQLContext({
   const authHeader = getHeader("authorization");
 
   const cookieHeader: string | undefined = getHeader("cookie");
-  const adminToken = cookieHeader
+  const adminTokenFromCookies: string | undefined =
+    typeof req?.cookies?.get === "function"
+      ? req.cookies.get("admin_token")?.value
+      : undefined;
+  const adminTokenFromHeader: string | undefined = cookieHeader
     ?.split(";")
     .map((c: string) => c.trim())
     .find((c: string) => c.startsWith("admin_token="))
     ?.split("=")[1];
+  const adminToken = adminTokenFromCookies || adminTokenFromHeader;
 
   const tokenFromHeader = extractTokenFromHeader(authHeader);
   const token = adminToken || tokenFromHeader;
+
+  const deviceSession = (prisma as unknown as { deviceSession: any }).deviceSession;
 
   // No token = unauthenticated context
   if (!token) {
@@ -60,17 +67,27 @@ export async function createGraphQLContext({
 
     // Admin tokens are validated purely by JWT signature (cookie-based sessions)
     if (decoded.context === "ADMIN" || decoded.context === "ADMIN_WEB") {
+      const adminUser = await prisma.adminWebUser.findUnique({
+        where: { id: decoded.userId },
+      });
+
+      if (!adminUser || !adminUser.isActive) {
+        return {};
+      }
+
       return {
         token,
         auth: decoded,
         adminId: decoded.userId,
+        adminUser,
+        user: adminUser,
       };
     }
 
     // 2. Hash token and lookup session
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
 
-    const session = await prisma.deviceSession.findUnique({
+    const session = await deviceSession.findUnique({
       where: { tokenHash },
       include: { mobileUser: true },
     });
@@ -110,7 +127,7 @@ export async function createGraphQLContext({
       console.log("Session expired due to inactivity");
 
       // Auto-revoke inactive session
-      await prisma.deviceSession.update({
+      await deviceSession.update({
         where: { id: session.id },
         data: {
           isActive: false,
@@ -122,12 +139,12 @@ export async function createGraphQLContext({
     }
 
     // 6. Update last activity (async, don't block request)
-    prisma.deviceSession
+    deviceSession
       .update({
         where: { id: session.id },
         data: { lastActivityAt: now },
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         console.error("Failed to update lastActivityAt:", err);
       });
 

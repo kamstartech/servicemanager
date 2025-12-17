@@ -21,6 +21,7 @@ export const mobileUserAccountResolvers = {
 
         return accounts.map(account => ({
           id: account.id.toString(),
+          context: account.context,
           accountNumber: account.accountNumber,
           accountName: account.accountName,
           accountType: account.accountType,
@@ -52,6 +53,7 @@ export const mobileUserAccountResolvers = {
 
         return accounts.map(account => ({
           id: account.id.toString(),
+          context: account.context,
           accountNumber: account.accountNumber,
           accountName: account.accountName,
           accountType: account.accountType,
@@ -89,6 +91,7 @@ export const mobileUserAccountResolvers = {
 
         return {
           id: account.id.toString(),
+          context: account.context,
           accountNumber: account.accountNumber,
           accountName: account.accountName,
           accountType: account.accountType,

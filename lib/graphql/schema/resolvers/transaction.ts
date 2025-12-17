@@ -53,7 +53,6 @@ export const transactionResolvers = {
     proxyTransactionByReference: proxyTransactionResolvers.Query.transactionByReference,
     proxyTransactions: proxyTransactionResolvers.Query.transactions,
     proxyAccountTransactions: proxyTransactionResolvers.Query.accountTransactions,
-    walletTransactions: proxyTransactionResolvers.Query.walletTransactions,
     retryableTransactions: proxyTransactionResolvers.Query.retryableTransactions,
     transactionRetryStats: proxyTransactionResolvers.Query.transactionRetryStats,
   },

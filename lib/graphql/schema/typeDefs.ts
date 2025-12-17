@@ -159,6 +159,7 @@ export const typeDefs = /* GraphQL */ `
 
   type Account {
     id: ID!
+    context: MobileUserContext!
     accountNumber: String!
     accountName: String
     accountType: String
@@ -1830,6 +1831,9 @@ export const typeDefs = /* GraphQL */ `
     type: TransactionType!
     source: TransactionSource!
     status: TransactionStatus!
+
+    transferType: TransferType
+    transferContext: MobileUserContext
     
     amount: Decimal!
     currency: String!
@@ -1837,13 +1841,9 @@ export const typeDefs = /* GraphQL */ `
     
     fromAccountId: Int
     fromAccountNumber: String
-    fromWalletId: Int
-    fromWalletNumber: String
     
     toAccountId: Int
     toAccountNumber: String
-    toWalletId: Int
-    toWalletNumber: String
     
     t24Reference: String
     t24Response: JSON
@@ -1873,36 +1873,54 @@ export const typeDefs = /* GraphQL */ `
     createdAt: DateTime!
   }
 
+  enum TransferType {
+    FDH_BANK
+    EXTERNAL_BANK
+    FDH_WALLET
+    EXTERNAL_WALLET
+    SELF
+  }
+
   input CreateTransactionInput {
     type: TransactionType!
     source: TransactionSource
+    context: MobileUserContext
+    transferType: TransferType
     amount: Decimal!
     description: String!
     currency: String
     
     fromAccountId: Int
     fromAccountNumber: String
-    fromWalletId: Int
-    fromWalletNumber: String
     
     toAccountId: Int
     toAccountNumber: String
-    toWalletId: Int
-    toWalletNumber: String
     
     maxRetries: Int
+  }
+
+  input CreateTransferInput {
+    type: TransferType!
+    context: MobileUserContext!
+    amount: Decimal!
+    currency: String
+    description: String
+
+    # Account-based transfers
+    fromAccountId: Int
+    toAccountNumber: String
   }
 
   input TransactionFilterInput {
     status: TransactionStatus
     type: TransactionType
     source: TransactionSource
+    context: MobileUserContext
     dateFrom: DateTime
     dateTo: DateTime
     minAmount: Decimal
     maxAmount: Decimal
     accountId: Int
-    walletId: Int
     search: String
   }
 
@@ -1949,18 +1967,13 @@ export const typeDefs = /* GraphQL */ `
       limit: Int = 20
     ): TransactionConnection!
     
-    walletTransactions(
-      walletId: Int!
-      page: Int = 1
-      limit: Int = 20
-    ): TransactionConnection!
-    
     retryableTransactions(limit: Int = 100): [Transaction!]!
     transactionRetryStats: RetryStats!
   }
 
   extend type Mutation {
     createTransaction(input: CreateTransactionInput!): CreateTransactionResponse!
+    createTransfer(input: CreateTransferInput!): CreateTransactionResponse!
     retryTransaction(id: ID!): CreateTransactionResponse!
     reverseTransaction(id: ID!, reason: String!): CreateTransactionResponse!
   }

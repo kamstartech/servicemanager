@@ -205,6 +205,14 @@ enum TransactionType {
   WALLET_TO_ACCOUNT
 }
 
+enum TransferType {
+  FDH_BANK
+  EXTERNAL_BANK
+  FDH_WALLET
+  EXTERNAL_WALLET
+  SELF
+}
+
 enum TriggerTiming {
   BEFORE_STEP // Execute before showing step
   AFTER_STEP // Execute after user completes step
@@ -819,6 +827,10 @@ model FdhTransaction {
   type      TransactionType
   source    TransactionSource @default(API)
   status    TransactionStatus @default(PENDING)
+
+  // Transfer routing
+  transferType    TransferType?      @map("transfer_type")
+  transferContext MobileUserContext? @map("transfer_context")
   
   // Amount
   amount    Decimal  @db.Decimal(19, 4)
@@ -828,17 +840,9 @@ model FdhTransaction {
   fromAccountId     Int?  @map("from_account_id")
   fromAccountNumber String?  @map("from_account_number") @db.VarChar(50)
   
-  // Sender (From) - Wallet (MobileUser with context=WALLET)
-  fromWalletId      Int?  @map("from_wallet_id")
-  fromWalletNumber  String?  @map("from_wallet_number") @db.VarChar(20)
-  
   // Receiver (To) - Mobile Banking
   toAccountId       Int?  @map("to_account_id")
   toAccountNumber   String?  @map("to_account_number") @db.VarChar(50)
-  
-  // Receiver (To) - Wallet
-  toWalletId        Int?  @map("to_wallet_id")
-  toWalletNumber    String?  @map("to_wallet_number") @db.VarChar(20)
   
   // Description
   description       String   @db.Text
@@ -874,10 +878,6 @@ model FdhTransaction {
   fromAccount MobileUserAccount? @relation("FromAccount", fields: [fromAccountId], references: [id], onDelete: SetNull)
   toAccount   MobileUserAccount? @relation("ToAccount", fields: [toAccountId], references: [id], onDelete: SetNull)
   
-  // Relationships - Wallets (MobileUser with context=WALLET)
-  fromWallet  MobileUser? @relation("FromWallet", fields: [fromWalletId], references: [id], onDelete: SetNull)
-  toWallet    MobileUser? @relation("ToWallet", fields: [toWalletId], references: [id], onDelete: SetNull)
-  
   // User who initiated
   initiatedByUserId Int? @map("initiated_by_user_id")
   initiatedBy       MobileUser? @relation("InitiatedBy", fields: [initiatedByUserId], references: [id], onDelete: SetNull)
@@ -888,11 +888,11 @@ model FdhTransaction {
   // Indexes
   @@index([status, nextRetryAt])
   @@index([status, type])
+  @@index([transferType])
+  @@index([transferContext])
   @@index([reference])
   @@index([fromAccountId])
   @@index([toAccountId])
-  @@index([fromWalletId])
-  @@index([toWalletId])
   @@index([t24Reference])
   @@index([createdAt])
   @@map("fdh_transactions")
@@ -1062,9 +1062,7 @@ model MobileUser {
   checkbookRequests    CheckbookRequest[]
   kyc                  MobileUserKYC?
   
-  // Transaction relationships (for wallet context)
-  outgoingWalletTransactions FdhTransaction[] @relation("FromWallet")
-  incomingWalletTransactions FdhTransaction[] @relation("ToWallet")
+  // Transaction relationships
   initiatedTransactions      FdhTransaction[] @relation("InitiatedBy")
 
   @@map("fdh_mobile_users")

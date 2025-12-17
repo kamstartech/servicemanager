@@ -1,7 +1,14 @@
 import { GraphQLError } from "graphql";
 import { GraphQLContext } from "../context";
 import { prisma } from "@/lib/db/prisma";
-import { Prisma, TransactionStatus, TransactionType } from "@prisma/client";
+import {
+  MobileUserContext,
+  Prisma,
+  TransferType,
+  TransactionSource,
+  TransactionStatus,
+  TransactionType,
+} from "@prisma/client";
 import { generateTransactionReference } from "@/lib/utils/reference-generator";
 import { Decimal } from "@prisma/client/runtime/library";
 
@@ -23,8 +30,6 @@ export const transactionResolvers = {
         include: {
           fromAccount: true,
           toAccount: true,
-          fromWallet: true,
-          toWallet: true,
           initiatedBy: true,
           statusHistory: true,
         },
@@ -39,9 +44,9 @@ export const transactionResolvers = {
       // Authorization: mobile users can only see their own transactions
       if (context.mobileUser) {
         const hasAccess =
-          transaction.fromWalletId === context.mobileUser.id ||
-          transaction.toWalletId === context.mobileUser.id ||
-          transaction.initiatedByUserId === context.mobileUser.id;
+          transaction.initiatedByUserId === context.mobileUser.id ||
+          transaction.fromAccount?.mobileUserId === context.mobileUser.id ||
+          transaction.toAccount?.mobileUserId === context.mobileUser.id;
 
         if (!hasAccess) {
           throw new GraphQLError("Forbidden", {
@@ -69,8 +74,6 @@ export const transactionResolvers = {
         include: {
           fromAccount: true,
           toAccount: true,
-          fromWallet: true,
-          toWallet: true,
           initiatedBy: true,
           statusHistory: true,
         },
@@ -90,7 +93,7 @@ export const transactionResolvers = {
       },
       context: GraphQLContext
     ) => {
-      if (!context.adminUser) {
+      if (!context.adminUser && !context.adminId) {
         throw new GraphQLError("Admin access required", {
           extensions: { code: "FORBIDDEN" },
         });
@@ -102,6 +105,7 @@ export const transactionResolvers = {
         if (filter.status) where.status = filter.status;
         if (filter.type) where.type = filter.type;
         if (filter.source) where.source = filter.source;
+        if (filter.context) where.transferContext = filter.context;
         if (filter.dateFrom || filter.dateTo) {
           where.createdAt = {};
           if (filter.dateFrom) where.createdAt.gte = new Date(filter.dateFrom);
@@ -120,12 +124,6 @@ export const transactionResolvers = {
             { toAccountId: filter.accountId },
           ];
         }
-        if (filter.walletId) {
-          where.OR = [
-            { fromWalletId: filter.walletId },
-            { toWalletId: filter.walletId },
-          ];
-        }
         if (filter.search) {
           where.OR = [
             { reference: { contains: filter.search, mode: "insensitive" } },
@@ -139,15 +137,6 @@ export const transactionResolvers = {
             {
               toAccountNumber: { contains: filter.search, mode: "insensitive" },
             },
-            {
-              fromWalletNumber: {
-                contains: filter.search,
-                mode: "insensitive",
-              },
-            },
-            {
-              toWalletNumber: { contains: filter.search, mode: "insensitive" },
-            },
           ];
         }
       }
@@ -158,8 +147,6 @@ export const transactionResolvers = {
           include: {
             fromAccount: true,
             toAccount: true,
-            fromWallet: true,
-            toWallet: true,
             statusHistory: true,
           },
           orderBy: { createdAt: "desc" },
@@ -219,63 +206,6 @@ export const transactionResolvers = {
           include: {
             fromAccount: true,
             toAccount: true,
-            fromWallet: true,
-            toWallet: true,
-            statusHistory: true,
-          },
-          orderBy: { createdAt: "desc" },
-          skip: (page - 1) * limit,
-          take: limit,
-        }),
-        prisma.fdhTransaction.count({ where }),
-      ]);
-
-      return {
-        transactions,
-        totalCount,
-        pageInfo: {
-          hasNextPage: page * limit < totalCount,
-          hasPreviousPage: page > 1,
-          currentPage: page,
-          totalPages: Math.ceil(totalCount / limit),
-        },
-      };
-    },
-
-    walletTransactions: async (
-      _: any,
-      {
-        walletId,
-        page = 1,
-        limit = 20,
-      }: { walletId: number; page?: number; limit?: number },
-      context: GraphQLContext
-    ) => {
-      if (!context.adminUser && !context.mobileUser) {
-        throw new GraphQLError("Unauthorized", {
-          extensions: { code: "UNAUTHENTICATED" },
-        });
-      }
-
-      // Verify wallet ownership for mobile users
-      if (context.mobileUser && context.mobileUser.id !== walletId) {
-        throw new GraphQLError("Forbidden", {
-          extensions: { code: "FORBIDDEN" },
-        });
-      }
-
-      const where: Prisma.FdhTransactionWhereInput = {
-        OR: [{ fromWalletId: walletId }, { toWalletId: walletId }],
-      };
-
-      const [transactions, totalCount] = await Promise.all([
-        prisma.fdhTransaction.findMany({
-          where,
-          include: {
-            fromAccount: true,
-            toAccount: true,
-            fromWallet: true,
-            toWallet: true,
             statusHistory: true,
           },
           orderBy: { createdAt: "desc" },
@@ -321,8 +251,6 @@ export const transactionResolvers = {
         include: {
           fromAccount: true,
           toAccount: true,
-          fromWallet: true,
-          toWallet: true,
           statusHistory: true,
         },
       });
@@ -376,18 +304,197 @@ export const transactionResolvers = {
   },
 
   Mutation: {
-    createTransaction: async (
-      _: any,
-      { input }: { input: any },
+    createTransfer: async (
+      _: unknown,
+      {
+        input,
+      }: {
+        input: {
+          type: TransferType;
+          context: MobileUserContext;
+          amount: string | number;
+          currency?: string | null;
+          description?: string | null;
+          fromAccountId?: number | null;
+          toAccountNumber?: string | null;
+        };
+      },
       context: GraphQLContext
     ) => {
-      if (!context.adminUser && !context.mobileUser) {
+      if (!context.mobileUser) {
         throw new GraphQLError("Unauthorized", {
           extensions: { code: "UNAUTHENTICATED" },
         });
       }
 
       try {
+        const amount = new Decimal(input.amount);
+        if (amount.lte(0)) {
+          throw new Error("Amount must be greater than zero");
+        }
+
+        if (!input.fromAccountId) {
+          throw new Error("fromAccountId is required for account transfers");
+        }
+
+        const toAccountNumber = (input.toAccountNumber || "").trim();
+        if (!toAccountNumber) {
+          throw new Error("toAccountNumber is required for account transfers");
+        }
+
+        const fromAccount = await prisma.mobileUserAccount.findUnique({
+          where: { id: input.fromAccountId },
+          select: {
+            id: true,
+            mobileUserId: true,
+            context: true,
+            accountNumber: true,
+            isActive: true,
+          },
+        });
+
+        if (!fromAccount) {
+          throw new GraphQLError("Source account not found", {
+            extensions: { code: "NOT_FOUND" },
+          });
+        }
+
+        if (fromAccount.mobileUserId !== context.mobileUser.id) {
+          throw new GraphQLError("Forbidden", {
+            extensions: { code: "FORBIDDEN" },
+          });
+        }
+
+        if (!fromAccount.isActive) {
+          throw new GraphQLError("Source account is not active", {
+            extensions: { code: "BAD_REQUEST" },
+          });
+        }
+
+        if (fromAccount.context !== input.context) {
+          throw new GraphQLError("Source account context mismatch", {
+            extensions: { code: "BAD_REQUEST" },
+          });
+        }
+
+        if (fromAccount.accountNumber === toAccountNumber) {
+          throw new GraphQLError("Cannot transfer to the same account", {
+            extensions: { code: "BAD_REQUEST" },
+          });
+        }
+
+        const toAccount = await prisma.mobileUserAccount.findFirst({
+          where: {
+            accountNumber: toAccountNumber,
+            context: input.context,
+            isActive: true,
+          },
+          select: {
+            id: true,
+            accountNumber: true,
+            mobileUserId: true,
+          },
+        });
+
+        if (input.type === TransferType.SELF) {
+          if (!toAccount) {
+            throw new GraphQLError("Destination account not found for SELF transfer", {
+              extensions: { code: "NOT_FOUND" },
+            });
+          }
+
+          if (toAccount.mobileUserId !== context.mobileUser.id) {
+            throw new GraphQLError("SELF transfer destination must belong to the same user", {
+              extensions: { code: "FORBIDDEN" },
+            });
+          }
+        }
+
+        const reference = generateTransactionReference();
+        const currency = input.currency || "MWK";
+        const description = input.description || "Transfer";
+
+        const transaction = await prisma.fdhTransaction.create({
+          data: {
+            type: TransactionType.TRANSFER,
+            source:
+              input.context === MobileUserContext.WALLET
+                ? TransactionSource.WALLET
+                : TransactionSource.MOBILE_BANKING,
+            reference,
+            status: TransactionStatus.PENDING,
+            transferType: input.type,
+            transferContext: input.context,
+            amount,
+            currency,
+            description,
+            fromAccountId: fromAccount.id,
+            fromAccountNumber: fromAccount.accountNumber,
+            toAccountId: toAccount?.id,
+            toAccountNumber: toAccount?.accountNumber || toAccountNumber,
+            t24RequestBody: {
+              type: input.type,
+              context: input.context,
+              fromAccount: fromAccount.accountNumber,
+              toAccount: toAccount?.accountNumber || toAccountNumber,
+              amount: amount.toString(),
+              currency,
+              reference,
+              description,
+            },
+            maxRetries: 3,
+            initiatedByUserId: context.mobileUser.id,
+          },
+          include: {
+            fromAccount: true,
+            toAccount: true,
+            initiatedBy: true,
+            statusHistory: true,
+          },
+        });
+
+        await prisma.fdhTransactionStatusHistory.create({
+          data: {
+            transactionId: transaction.id,
+            fromStatus: TransactionStatus.PENDING,
+            toStatus: TransactionStatus.PENDING,
+            reason: `Transfer created (type=${input.type})`,
+          },
+        });
+
+        return {
+          success: true,
+          transaction,
+          message: "Transfer created successfully",
+          errors: [],
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        console.error("Create transfer error:", error);
+        return {
+          success: false,
+          transaction: null,
+          message: "Failed to create transfer",
+          errors: [message],
+        };
+      }
+    },
+
+    createTransaction: async (
+      _: any,
+      { input }: { input: any },
+      context: GraphQLContext
+    ) => {
+      try {
+        if (!context.adminUser && !context.adminId && !context.mobileUser) {
+          return {
+            success: false,
+            transaction: null,
+            message: "Unauthorized",
+            errors: ["Unauthorized"],
+          };
+        }
+
         // Generate unique reference
         const reference = generateTransactionReference();
 
@@ -397,32 +504,56 @@ export const transactionResolvers = {
           throw new Error("Amount must be greater than zero");
         }
 
+        if (input.type === TransactionType.TRANSFER && !input.transferType) {
+          throw new Error("transferType is required when creating a TRANSFER transaction");
+        }
+
+        let resolvedFromAccountNumber: string | null = input.fromAccountNumber || null;
+        let resolvedTransferContext = input.context || null;
+
+        if (input.fromAccountId && !resolvedFromAccountNumber) {
+          const fromAccount = await prisma.mobileUserAccount.findUnique({
+            where: { id: input.fromAccountId },
+            select: { accountNumber: true, context: true },
+          });
+
+          if (!fromAccount) {
+            throw new Error("fromAccountId not found");
+          }
+
+          resolvedFromAccountNumber = fromAccount.accountNumber;
+
+          if (!resolvedTransferContext) {
+            resolvedTransferContext = fromAccount.context;
+          }
+
+          if (input.context && fromAccount.context !== input.context) {
+            throw new Error("Source account context mismatch");
+          }
+        }
+
         // Create transaction
         const transaction = await prisma.fdhTransaction.create({
           data: {
             type: input.type,
-            source: input.source || "API",
+            source: input.source || (context.adminId ? TransactionSource.ADMIN : TransactionSource.API),
             reference,
             status: TransactionStatus.PENDING,
+            transferType: input.transferType || null,
+            transferContext: resolvedTransferContext,
             amount,
             currency: input.currency || "MWK",
             description: input.description,
             fromAccountId: input.fromAccountId,
-            fromAccountNumber: input.fromAccountNumber,
-            fromWalletId: input.fromWalletId,
-            fromWalletNumber: input.fromWalletNumber,
+            fromAccountNumber: resolvedFromAccountNumber,
             toAccountId: input.toAccountId,
             toAccountNumber: input.toAccountNumber,
-            toWalletId: input.toWalletId,
-            toWalletNumber: input.toWalletNumber,
             maxRetries: input.maxRetries || 3,
             initiatedByUserId: context.mobileUser?.id,
           },
           include: {
             fromAccount: true,
             toAccount: true,
-            fromWallet: true,
-            toWallet: true,
             statusHistory: true,
           },
         });
@@ -499,8 +630,6 @@ export const transactionResolvers = {
         include: {
           fromAccount: true,
           toAccount: true,
-          fromWallet: true,
-          toWallet: true,
           statusHistory: true,
         },
       });
@@ -540,8 +669,6 @@ export const transactionResolvers = {
         include: {
           fromAccount: true,
           toAccount: true,
-          fromWallet: true,
-          toWallet: true,
         },
       });
 
@@ -579,11 +706,6 @@ export const transactionResolvers = {
           fromAccountNumber: originalTransaction.toAccountNumber,
           toAccountId: originalTransaction.fromAccountId,
           toAccountNumber: originalTransaction.fromAccountNumber,
-          // Swap wallets
-          fromWalletId: originalTransaction.toWalletId,
-          fromWalletNumber: originalTransaction.toWalletNumber,
-          toWalletId: originalTransaction.fromWalletId,
-          toWalletNumber: originalTransaction.fromWalletNumber,
           isReversal: true,
           originalTxnId: originalTransaction.id,
           reversalReason: reason,
@@ -592,8 +714,6 @@ export const transactionResolvers = {
         include: {
           fromAccount: true,
           toAccount: true,
-          fromWallet: true,
-          toWallet: true,
           statusHistory: true,
         },
       });
@@ -639,24 +759,6 @@ export const transactionResolvers = {
         parent.toAccount ||
         (await prisma.mobileUserAccount.findUnique({
           where: { id: parent.toAccountId },
-        }))
-      );
-    },
-    fromWallet: async (parent: any) => {
-      if (!parent.fromWalletId) return null;
-      return (
-        parent.fromWallet ||
-        (await prisma.mobileUser.findUnique({
-          where: { id: parent.fromWalletId },
-        }))
-      );
-    },
-    toWallet: async (parent: any) => {
-      if (!parent.toWalletId) return null;
-      return (
-        parent.toWallet ||
-        (await prisma.mobileUser.findUnique({
-          where: { id: parent.toWalletId },
         }))
       );
     },

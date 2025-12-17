@@ -24,6 +24,7 @@ const errorLink = onError(({ graphQLErrors, networkError }) => {
 
 const httpLink = new HttpLink({
   uri: "/api/graphql",
+  credentials: "include",
   // Enable batching to combine multiple queries into one request
   fetchOptions: {
     next: { revalidate: 0 }, // Disable Next.js cache for real-time data

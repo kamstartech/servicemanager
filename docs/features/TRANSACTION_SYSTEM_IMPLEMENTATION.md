@@ -255,6 +255,9 @@ model FdhTransactionStatusHistory {
 }
 ```
 
+Admin UI:
+- Admin users can create transfer transactions from the Admin Panel at `Mobile banking` -> `Transactions` using the `Add` button.
+
 #### 1.2 Update Existing Models
 
 Add transaction relationships to existing models:
@@ -1735,12 +1738,13 @@ mutation CreateTransaction {
   createTransaction(
     input: {
       type: TRANSFER
+      context: MOBILE_BANKING
+      transferType: FDH_BANK
       amount: "100.50"
+      currency: "MWK"
       description: "Transfer to savings"
-      fromAccountId: "account-123"
-      toAccountId: "account-456"
-      senderAccount: "ACC001"
-      receiverAccount: "ACC002"
+      fromAccountNumber: "ACC001"
+      toAccountNumber: "ACC002"
     }
   ) {
     success
@@ -1755,6 +1759,51 @@ mutation CreateTransaction {
   }
 }
 ```
+
+### Creating a Transfer (Unified API)
+
+Use `createTransfer` when you want a single mutation to support multiple transfer types.
+
+Types:
+- `FDH_BANK`: Internal/FDH bank account-to-account transfer
+- `EXTERNAL_BANK`: Bank-to-other-bank (external beneficiary) transfer
+- `FDH_WALLET`: Internal wallet-to-wallet transfer (wallet accounts are represented by account numbers)
+- `EXTERNAL_WALLET`: Wallet-to-external-wallet transfer
+- `SELF`: Transfer between two accounts owned by the same user
+
+```graphql
+mutation CreateTransfer {
+  createTransfer(
+    input: {
+      type: FDH_BANK
+      context: MOBILE_BANKING
+      fromAccountId: 123
+      toAccountNumber: "0987654321"
+      amount: "100.50"
+      currency: "MWK"
+      description: "Funds transfer"
+    }
+  ) {
+    success
+    message
+    transaction {
+      id
+      reference
+      status
+    }
+    errors
+  }
+}
+```
+
+Notes:
+- The system creates a `PENDING` `TRANSFER` transaction and the processor will execute it asynchronously.
+- For `SELF`, the destination account must exist and belong to the same authenticated user.
+
+Implementation notes:
+- `FdhTransaction` persists routing fields `transferType` and `transferContext`.
+- Wallet transfers are represented using `MobileUserAccount` with `context = WALLET` (wallet-specific transaction columns were removed).
+- The transaction processor routes execution based on `transferType` (wallet types handled by wallet handler, bank types sent to T24).
 
 ### Querying Transactions
 

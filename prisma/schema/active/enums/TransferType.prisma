@@ -1,0 +1,7 @@
+enum TransferType {
+  FDH_BANK
+  EXTERNAL_BANK
+  FDH_WALLET
+  EXTERNAL_WALLET
+  SELF
+}

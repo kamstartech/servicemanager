@@ -19,7 +19,8 @@
     "lint": "eslint",
     "init-minio": "npx ts-node scripts/init-minio.ts",
     "test-email": "npx ts-node test-email.ts",
-    "seed:admin": "npx tsx prisma/seed/admin-user.ts"
+    "seed:admin": "npx tsx prisma/seed/admin-user.ts",
+    "seed:all": "npx tsx prisma/seed-all.ts"
   },
   "dependencies": {
     "@apollo/client": "^3.11.0",

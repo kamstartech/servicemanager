@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { MobileUserContext, PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
@@ -128,6 +128,105 @@ async function seedWalletTiers() {
   console.log("   ✅ Wallet tiers created");
 }
 
+async function seedMobileUsers() {
+  console.log("🌱 Seeding mobile users...");
+
+  const mobileBankingPhoneNumber = "+265991000001";
+  const walletPhoneNumber = "+265991000002";
+  const password = "Password123!";
+  const passwordHash = await bcrypt.hash(password, 10);
+
+  const existingMobileBankingUser = await prisma.mobileUser.findFirst({
+    where: { phoneNumber: mobileBankingPhoneNumber },
+    select: { id: true },
+  });
+
+  const mobileBankingUser =
+    existingMobileBankingUser ||
+    (await prisma.mobileUser.create({
+      data: {
+        context: MobileUserContext.MOBILE_BANKING,
+        phoneNumber: mobileBankingPhoneNumber,
+        username: "demo.mobile",
+        customerNumber: "35042058",
+        passwordHash,
+        isActive: true,
+      },
+      select: { id: true },
+    }));
+
+  await prisma.mobileUserAccount.createMany({
+    data: [
+      {
+        mobileUserId: mobileBankingUser.id,
+        context: MobileUserContext.MOBILE_BANKING,
+        accountNumber: "1520000114607",
+        accountName: "Demo Mobile Banking",
+        accountType: "CURRENT",
+        currency: "MWK",
+        isPrimary: true,
+        isActive: true,
+      },
+    ],
+    skipDuplicates: true,
+  });
+
+  const existingWalletUser = await prisma.mobileUser.findFirst({
+    where: { phoneNumber: walletPhoneNumber },
+    select: { id: true },
+  });
+
+  const walletUser =
+    existingWalletUser ||
+    (await prisma.mobileUser.create({
+      data: {
+        context: MobileUserContext.WALLET,
+        phoneNumber: walletPhoneNumber,
+        username: "demo.wallet",
+        passwordHash,
+        isActive: true,
+      },
+      select: { id: true },
+    }));
+
+  await prisma.mobileUserAccount.createMany({
+    data: [
+      {
+        mobileUserId: walletUser.id,
+        context: MobileUserContext.WALLET,
+        accountNumber: "265991000002",
+        accountName: "Demo Wallet",
+        accountType: "WALLET",
+        currency: "MWK",
+        isPrimary: true,
+        isActive: true,
+      },
+    ],
+    skipDuplicates: true,
+  });
+
+  const defaultWalletTier = await prisma.walletTier.findFirst({
+    where: { isDefault: true },
+    select: { id: true },
+  });
+
+  if (defaultWalletTier) {
+    await prisma.mobileUserKYC.upsert({
+      where: { mobileUserId: walletUser.id },
+      update: { walletTierId: defaultWalletTier.id },
+      create: {
+        mobileUserId: walletUser.id,
+        walletTierId: defaultWalletTier.id,
+      },
+    });
+  }
+
+  console.log("   ✅ Mobile users seeded");
+  console.log("      Demo MOBILE_BANKING phone:", mobileBankingPhoneNumber);
+  console.log("      Demo WALLET phone:", walletPhoneNumber);
+  console.log("      Demo password:", password);
+}
+
 // Seed biller configs
 async function seedBillerConfigs() {
   console.log("🌱 Seeding biller configurations...");
@@ -209,6 +308,7 @@ async function main() {
   try {
     await seedAdminUser();
     await seedWalletTiers();
+    await seedMobileUsers();
     await seedBillerConfigs();
 
     console.log("\n✨ Database seeding completed successfully!\n");

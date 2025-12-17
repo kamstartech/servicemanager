@@ -6,7 +6,7 @@
  */
 
 import { prisma } from "@/lib/db/prisma";
-import { TransactionStatus, TransactionType } from "@prisma/client";
+import { TransactionStatus, TransactionType, TransferType } from "@prisma/client";
 import { t24Service } from "./t24-service";
 
 export async function processTransaction(transactionId: string): Promise<void> {
@@ -15,8 +15,6 @@ export async function processTransaction(transactionId: string): Promise<void> {
     include: {
       fromAccount: true,
       toAccount: true,
-      fromWallet: true,
-      toWallet: true,
     },
   });
 
@@ -45,15 +43,18 @@ export async function processTransaction(transactionId: string): Promise<void> {
     // Determine transaction type and process accordingly
     let t24Response;
 
-    if (isAccountTransaction(transaction)) {
-      // Account-based transaction (send to T24)
-      t24Response = await processAccountTransaction(transaction);
-    } else if (isWalletTransaction(transaction)) {
-      // Wallet transaction (handle locally or via wallet service)
-      t24Response = await processWalletTransaction(transaction);
-    } else if (isCrossPlatformTransaction(transaction)) {
-      // Cross-platform (account ↔ wallet)
-      t24Response = await processCrossPlatformTransaction(transaction);
+    if (transaction.type === TransactionType.TRANSFER && transaction.transferType) {
+      if (
+        transaction.transferType === TransferType.FDH_WALLET ||
+        transaction.transferType === TransferType.EXTERNAL_WALLET
+      ) {
+        t24Response = await processWalletTransfer(transaction);
+      } else {
+        t24Response = await processBankTransfer(transaction);
+      }
+    } else if (isAccountTransaction(transaction)) {
+      // Fallback for non-transfer transaction types
+      t24Response = await processBankTransfer(transaction);
     } else {
       throw new Error("Invalid transaction configuration");
     }
@@ -94,8 +95,8 @@ export async function processTransaction(transactionId: string): Promise<void> {
 /**
  * Process account-to-account transaction (via T24)
  */
-async function processAccountTransaction(transaction: any): Promise<any> {
-  console.log(`[TransactionProcessor] Processing account transaction ${transaction.id}`);
+async function processBankTransfer(transaction: any): Promise<any> {
+  console.log(`[TransactionProcessor] Processing bank transfer ${transaction.id}`);
 
   const fromAccount = transaction.fromAccountNumber || transaction.fromAccount?.accountNumber;
   const toAccount = transaction.toAccountNumber || transaction.toAccount?.accountNumber;
@@ -118,36 +119,18 @@ async function processAccountTransaction(transaction: any): Promise<any> {
 }
 
 /**
- * Process wallet-to-wallet transaction (local or wallet service)
+ * Process wallet transfer (local ledger / wallet service)
  */
-async function processWalletTransaction(transaction: any): Promise<any> {
-  console.log(`[TransactionProcessor] Processing wallet transaction ${transaction.id}`);
+async function processWalletTransfer(transaction: any): Promise<any> {
+  console.log(`[TransactionProcessor] Processing wallet transfer ${transaction.id}`);
 
   // TODO: Implement wallet-specific logic
-  // This could update local wallet balances or call a wallet service
-
-  // For now, simulate success
+  // This should update local wallet balances or call a wallet service.
+  // For now, simulate success.
   return {
     success: true,
     t24Reference: `WALLET-${Date.now()}`,
     message: "Wallet transaction processed",
-  };
-}
-
-/**
- * Process cross-platform transaction (account ↔ wallet)
- */
-async function processCrossPlatformTransaction(transaction: any): Promise<any> {
-  console.log(`[TransactionProcessor] Processing cross-platform transaction ${transaction.id}`);
-
-  // TODO: Implement cross-platform logic
-  // This might involve both T24 API and local wallet updates
-
-  // For now, simulate success
-  return {
-    success: true,
-    t24Reference: `CROSS-${Date.now()}`,
-    message: "Cross-platform transaction processed",
   };
 }
 
@@ -243,33 +226,6 @@ function isAccountTransaction(transaction: any): boolean {
   return (
     (transaction.fromAccountId || transaction.fromAccountNumber) &&
     (transaction.toAccountId || transaction.toAccountNumber) &&
-    !transaction.fromWalletId &&
-    !transaction.toWalletId
+    true
   );
-}
-
-/**
- * Check if transaction involves only wallets
- */
-function isWalletTransaction(transaction: any): boolean {
-  return (
-    (transaction.fromWalletId || transaction.fromWalletNumber) &&
-    (transaction.toWalletId || transaction.toWalletNumber) &&
-    !transaction.fromAccountId &&
-    !transaction.toAccountId
-  );
-}
-
-/**
- * Check if transaction is cross-platform (account ↔ wallet)
- */
-function isCrossPlatformTransaction(transaction: any): boolean {
-  const hasAccount =
-    transaction.fromAccountId || transaction.toAccountId ||
-    transaction.fromAccountNumber || transaction.toAccountNumber;
-  const hasWallet =
-    transaction.fromWalletId || transaction.toWalletId ||
-    transaction.fromWalletNumber || transaction.toWalletNumber;
-
-  return hasAccount && hasWallet;
 }

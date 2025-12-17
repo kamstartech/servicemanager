@@ -87,6 +87,12 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
       },
       {
         kind: "link",
+        href: "/mobile-banking/transactions",
+        icon: ArrowLeftRight,
+        labelKey: "sidebar.transactions",
+      },
+      {
+        kind: "link",
         href: "/mobile-banking/account-categories",
         icon: Tag,
         labelKey: "sidebar.accountCategories",
