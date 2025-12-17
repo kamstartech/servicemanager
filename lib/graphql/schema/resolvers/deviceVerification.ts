@@ -369,7 +369,7 @@ export const deviceVerificationResolvers = {
       // Send OTP (integrate with SMS/Email service)
       const sentTo = attempt.otpSentTo!;
       if (sentTo.includes("@")) {
-        await emailService.sendOTP(sentTo, otpCode, attempt.mobileUser.username);
+        await emailService.sendOTP(sentTo, otpCode, attempt.mobileUser.username ?? "");
       } else {
         const smsResult = await ESBSMSService.sendOTP(sentTo, otpCode, attempt.mobileUserId!);
         if (!smsResult.success) {

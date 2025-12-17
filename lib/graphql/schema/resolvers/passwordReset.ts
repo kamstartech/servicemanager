@@ -141,7 +141,7 @@ export const passwordResetResolvers = {
           }
         } else {
           try {
-            await emailService.sendOTP(otpDestination, otp, user.username);
+            await emailService.sendOTP(otpDestination, otp, user.username ?? username);
           } catch (e) {
             otpStorage.delete(resetToken);
             return {

@@ -1,6 +1,30 @@
 import { workflowExecutor } from '@/lib/services/workflow/workflow-executor';
 import { prisma } from '@/lib/db/prisma';
 import type { TriggerTiming } from '@prisma/client';
+import crypto from 'crypto';
+
+function requireAuthenticatedUserId(context: any): string {
+  const userId = context?.userId;
+  if (userId === null || userId === undefined) {
+    throw new Error('Unauthorized');
+  }
+  return String(userId);
+}
+
+async function assertExecutionOwnership(executionId: string, userId: string) {
+  const execution = await prisma.workflowExecution.findUnique({
+    where: { id: executionId },
+    select: { userId: true },
+  });
+
+  if (!execution) {
+    throw new Error('Workflow execution not found');
+  }
+
+  if (execution.userId !== userId) {
+    throw new Error('Forbidden');
+  }
+}
 
 export const workflowExecutionResolvers = {
   Query: {
@@ -63,8 +87,7 @@ export const workflowExecutionResolvers = {
       },
       context: any
     ) {
-      // Get userId from context (assumes auth middleware sets this)
-      const userId = context.userId || 'anonymous';
+      const userId = requireAuthenticatedUserId(context);
       
       // Generate session ID if not provided
       const sessionId = context.sessionId || crypto.randomUUID();
@@ -100,8 +123,12 @@ export const workflowExecutionResolvers = {
         stepId: string;
         input?: any;
         timing: string;
-      }
+      },
+      context: any
     ) {
+      const userId = requireAuthenticatedUserId(context);
+      await assertExecutionOwnership(args.executionId, userId);
+
       const timing = args.timing as TriggerTiming;
 
       const result = await workflowExecutor.executeStep(
@@ -122,8 +149,12 @@ export const workflowExecutionResolvers = {
 
     async completeWorkflowExecution(
       _parent: unknown,
-      args: { executionId: string }
+      args: { executionId: string },
+      context: any
     ) {
+      const userId = requireAuthenticatedUserId(context);
+      await assertExecutionOwnership(args.executionId, userId);
+
       const result = await workflowExecutor.completeWorkflow(args.executionId);
 
       return {

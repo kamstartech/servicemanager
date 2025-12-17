@@ -1,5 +1,14 @@
 import { prisma } from "@/lib/db/prisma";
 
+function requireAuthenticatedContext(context: any) {
+  const hasMobileUser = context?.userId !== null && context?.userId !== undefined;
+  const hasAdminUser = context?.adminId !== null && context?.adminId !== undefined;
+
+  if (!hasMobileUser && !hasAdminUser) {
+    throw new Error('Unauthorized');
+  }
+}
+
 type CreateWorkflowInput = {
   name: string;
   description?: string;
@@ -151,7 +160,9 @@ export const workflowResolvers = {
       };
     },
 
-    async pageWorkflows(_parent: unknown, args: { pageId: string }) {
+    async pageWorkflows(_parent: unknown, args: { pageId: string }, context: any) {
+      requireAuthenticatedContext(context);
+
       const workflows = await prisma.appScreenPageWorkflow.findMany({
         where: { pageId: args.pageId },
         include: {

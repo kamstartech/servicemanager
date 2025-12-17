@@ -426,7 +426,7 @@ export const authResolvers = {
             throw new Error(smsResult.error || "Failed to send OTP");
           }
         } else {
-          await emailService.sendOTP(sentTo, otpCode, user.username);
+          await emailService.sendOTP(sentTo, otpCode, user.username ?? username ?? "");
         }
 
         // Mask contact
