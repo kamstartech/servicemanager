@@ -111,7 +111,13 @@ export const workflowExecutionResolvers = {
         timing
       );
 
-      return result;
+      // workflowExecutor returns { output }, but GraphQL schema exposes this as { result }
+      return {
+        success: result.success,
+        result: (result as any).output,
+        shouldProceed: result.shouldProceed,
+        error: result.error,
+      };
     },
 
     async completeWorkflowExecution(

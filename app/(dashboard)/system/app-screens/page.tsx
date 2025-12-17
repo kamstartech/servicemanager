@@ -502,14 +502,27 @@ export default function AppScreensPage() {
               Define screens for each app context
             </p>
           </div>
-          <Button
-            onClick={handleCreateOpen}
-            size="sm"
-            className="bg-[#f59e0b] text-white hover:bg-[#d97706] w-full sm:w-auto"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {`${translate("common.actions.new")} ${translate("common.entities.screen")}`}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto"
+            >
+              <Link href="/system/app-screens/preview">
+                <Smartphone className="h-4 w-4 mr-2" />
+                Preview
+              </Link>
+            </Button>
+            <Button
+              onClick={handleCreateOpen}
+              size="sm"
+              className="bg-[#f59e0b] text-white hover:bg-[#d97706] w-full sm:w-auto"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {`${translate("common.actions.new")} ${translate("common.entities.screen")}`}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <Tabs
