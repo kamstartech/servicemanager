@@ -7,8 +7,11 @@ export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();
 
+    const normalizedEmail =
+      typeof email === "string" ? email.trim().toLowerCase() : "";
+
     // Validate input
-    if (!email || !password) {
+    if (!normalizedEmail || typeof password !== "string" || !password) {
       return NextResponse.json(
         { error: "Email and password are required" },
         { status: 400 }
@@ -16,11 +19,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Find the admin user
-    const user = await prisma.adminWebUser.findUnique({
-      where: { email: email.toLowerCase() },
+    const user = await prisma.adminWebUser.findFirst({
+      where: {
+        email: {
+          equals: normalizedEmail,
+          mode: "insensitive",
+        },
+      },
     });
 
     if (!user) {
+      console.warn("Admin login failed: user not found", {
+        email: normalizedEmail,
+      });
       return NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 }
@@ -29,6 +40,10 @@ export async function POST(request: NextRequest) {
 
     // Check if user is active
     if (!user.isActive) {
+      console.warn("Admin login failed: user inactive", {
+        userId: user.id,
+        email: user.email,
+      });
       return NextResponse.json(
         { error: "Account is not active" },
         { status: 401 }
@@ -39,6 +54,10 @@ export async function POST(request: NextRequest) {
     const isValidPassword = await bcrypt.compare(password, user.passwordHash);
 
     if (!isValidPassword) {
+      console.warn("Admin login failed: invalid password", {
+        userId: user.id,
+        email: user.email,
+      });
       return NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 }

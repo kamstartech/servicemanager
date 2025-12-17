@@ -202,3 +202,61 @@
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1);
 }
+
+.fdh-nav-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  transform-origin: left;
+  transform: scaleX(0);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: linear-gradient(90deg, #f59e0b, #1e62c7);
+  transition: opacity 120ms ease;
+}
+
+.fdh-nav-progress--visible {
+  opacity: 1;
+}
+
+.fdh-nav-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+  z-index: 9998;
+}
+
+.fdh-nav-overlay--visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.fdh-nav-overlay__content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fdh-nav-overlay__gif {
+  width: 140px;
+  height: auto;
+}
+
+#fdh-app-shell {
+  transition: filter 120ms ease;
+}
+
+#fdh-app-shell.fdh-app-shell--loading {
+  filter: blur(6px);
+}

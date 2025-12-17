@@ -4,6 +4,7 @@ import "./globals.css";
 import { GraphQLProvider } from "@/components/providers/graphql-provider";
 import { I18nProvider } from "@/components/providers/i18n-provider";
 import { AppToaster } from "@/components/ui/app-toaster";
+import { NavigationProgress } from "@/components/navigation-progress";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,8 +33,11 @@ export default function RootLayout({
       >
         <I18nProvider>
           <GraphQLProvider>
-            {children}
-            <AppToaster />
+            <NavigationProgress />
+            <div id="fdh-app-shell">
+              {children}
+              <AppToaster />
+            </div>
           </GraphQLProvider>
         </I18nProvider>
       </body>
