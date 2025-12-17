@@ -252,14 +252,25 @@ export default function ServicesMonitorPage() {
 
     setTestLoading(true);
     try {
+      const payload: Record<string, any> = {
+        [selectedService.testConfig!.paramName]:
+          selectedService.testConfig!.paramName === "userId"
+            ? parseInt(testParam)
+            : testParam,
+      };
+
+      if (
+        selectedService.serviceKey === "sms" &&
+        selectedService.testConfig?.endpoint === "/api/sms/send"
+      ) {
+        payload.message = "Test message from Services Overview";
+        payload.type = "generic";
+      }
+
       const response = await fetch(selectedService.testConfig!.endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          [selectedService.testConfig!.paramName]: selectedService.testConfig!.paramName === "userId" 
-            ? parseInt(testParam) 
-            : testParam,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();

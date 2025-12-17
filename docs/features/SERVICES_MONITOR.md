@@ -9,6 +9,8 @@ The application has multiple background services, T24 integrations, and core ser
 ## Solution
 Implemented a comprehensive Services Overview Table that displays all 10 services in the application with their type, description, status, interval, and details. Removed manual testing section to keep the page focused on monitoring.
 
+The Services Overview table also supports an on-demand **Test** action for select services.
+
 ## Implementation Details
 
 ### Services Displayed (10 Total)
@@ -53,6 +55,14 @@ interface ServiceRow {
   variant: BadgeVariant;  // Badge color variant
 }
 ```
+
+### Service Test Endpoints
+
+Some services expose a test endpoint that can be triggered from the Services Overview table.
+
+**SMS Test** (`/api/sms/send`)
+- Required payload: `phoneNumber` and `message`
+- The Services Overview test sends a default `message` for convenience
 
 ### Status Badges
 - **default** (blue) - Active/Processing/Discovering
