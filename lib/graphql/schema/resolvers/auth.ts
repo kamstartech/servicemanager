@@ -258,9 +258,13 @@ export const authResolvers = {
               accountName: acc.accountName,
               accountType: acc.accountType,
               currency: acc.currency,
+              accountStatus: acc.accountStatus,
               holderName: acc.holderName,
               nickName: acc.nickName,
               balance: acc.balance?.toString(),
+              workingBalance: acc.workingBalance?.toString(),
+              frozen: acc.frozen,
+              isHidden: acc.isHidden,
               isPrimary: acc.isPrimary,
               isActive: acc.isActive,
               createdAt: acc.createdAt.toISOString(),
@@ -276,11 +280,18 @@ export const authResolvers = {
                 accountType: accounts.find((acc) => acc.isPrimary)!
                   .accountType,
                 currency: accounts.find((acc) => acc.isPrimary)!.currency,
+                accountStatus: accounts.find((acc) => acc.isPrimary)!
+                  .accountStatus,
                 holderName: accounts.find((acc) => acc.isPrimary)!.holderName,
                 nickName: accounts.find((acc) => acc.isPrimary)!.nickName,
                 balance: accounts
                   .find((acc) => acc.isPrimary)!
                   .balance?.toString(),
+                workingBalance: accounts
+                  .find((acc) => acc.isPrimary)!
+                  .workingBalance?.toString(),
+                frozen: accounts.find((acc) => acc.isPrimary)!.frozen,
+                isHidden: accounts.find((acc) => acc.isPrimary)!.isHidden,
                 isPrimary: true,
                 isActive: accounts.find((acc) => acc.isPrimary)!.isActive,
                 createdAt: accounts

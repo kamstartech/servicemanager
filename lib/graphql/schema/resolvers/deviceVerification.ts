@@ -200,9 +200,13 @@ export const deviceVerificationResolvers = {
             accountName: acc.accountName,
             accountType: acc.accountType,
             currency: acc.currency,
+            accountStatus: acc.accountStatus,
             holderName: acc.holderName,
             nickName: acc.nickName,
             balance: acc.balance?.toString(),
+            workingBalance: acc.workingBalance?.toString(),
+            frozen: acc.frozen,
+            isHidden: acc.isHidden,
             isPrimary: acc.isPrimary,
             isActive: acc.isActive,
             createdAt: acc.createdAt.toISOString(),
@@ -216,11 +220,18 @@ export const deviceVerificationResolvers = {
               accountName: accounts.find((acc: any) => acc.isPrimary)!.accountName,
               accountType: accounts.find((acc: any) => acc.isPrimary)!.accountType,
               currency: accounts.find((acc: any) => acc.isPrimary)!.currency,
+              accountStatus: accounts.find((acc: any) => acc.isPrimary)!
+                .accountStatus,
               holderName: accounts.find((acc: any) => acc.isPrimary)!.holderName,
               nickName: accounts.find((acc: any) => acc.isPrimary)!.nickName,
               balance: accounts
                 .find((acc: any) => acc.isPrimary)!
                 .balance?.toString(),
+              workingBalance: accounts
+                .find((acc: any) => acc.isPrimary)!
+                .workingBalance?.toString(),
+              frozen: accounts.find((acc: any) => acc.isPrimary)!.frozen,
+              isHidden: accounts.find((acc: any) => acc.isPrimary)!.isHidden,
               isPrimary: true,
               isActive: accounts.find((acc: any) => acc.isPrimary)!.isActive,
               createdAt: accounts
