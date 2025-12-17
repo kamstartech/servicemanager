@@ -4,6 +4,7 @@ import jwt, { type Secret, type SignOptions } from "jsonwebtoken";
 import crypto from "crypto";
 import { ESBSMSService } from "@/lib/services/sms";
 import { emailService } from "@/lib/services/email";
+import type { Prisma } from "@prisma/client";
 
 type LoginInput = {
   username: string;
@@ -151,14 +152,33 @@ export const authResolvers = {
 
       if (existingDevice && existingDevice.isActive) {
         // 3a. Known active device - allow login
-        await prisma.mobileDevice.update({
-          where: { id: existingDevice.id },
-          data: {
-            name: deviceName ?? existingDevice.name,
-            lastUsedAt: new Date(),
-            lastLoginIp: ipAddress,
-            loginCount: { increment: 1 },
-          },
+        await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+          await tx.mobileDevice.update({
+            where: { id: existingDevice.id },
+            data: {
+              name: deviceName ?? existingDevice.name,
+              lastUsedAt: new Date(),
+              lastLoginIp: ipAddress,
+              loginCount: { increment: 1 },
+            },
+          });
+
+          // Backfill primary device if none exists (important for users created before isPrimary)
+          const primary = await tx.mobileDevice.findFirst({
+            where: { mobileUserId: user.id, isPrimary: true },
+            select: { id: true },
+          });
+
+          if (!primary) {
+            await tx.mobileDevice.updateMany({
+              where: { mobileUserId: user.id },
+              data: { isPrimary: false },
+            });
+            await tx.mobileDevice.update({
+              where: { id: existingDevice.id },
+              data: { isPrimary: true },
+            });
+          }
         });
 
         // Log successful login
@@ -424,22 +444,52 @@ export const authResolvers = {
       }
 
       // 3c. Second+ device - Requires admin approval
-      await prisma.deviceLoginAttempt.create({
-        data: {
-          mobileUserId: user.id,
-          username,
-          context,
-          deviceId,
-          deviceName,
-          deviceModel,
-          deviceOs,
-          ipAddress,
-          location,
-          attemptType: "PASSWORD_LOGIN",
-          status: "PENDING_APPROVAL",
-          attemptedAt: new Date(),
-        },
-      });
+      await prisma.$transaction([
+        prisma.mobileDevice.upsert({
+          where: {
+            mobileUserId_deviceId: {
+              mobileUserId: user.id,
+              deviceId,
+            },
+          },
+          create: {
+            mobileUserId: user.id,
+            deviceId,
+            name: deviceName || "Mobile Device",
+            model: deviceModel,
+            os: deviceOs,
+            isActive: false,
+            isPrimary: false,
+            lastLoginIp: ipAddress,
+            verificationIp: ipAddress,
+            verificationLocation: location,
+          },
+          update: {
+            name: deviceName,
+            model: deviceModel,
+            os: deviceOs,
+            isActive: false,
+            isPrimary: false,
+            lastLoginIp: ipAddress,
+          },
+        }),
+        prisma.deviceLoginAttempt.create({
+          data: {
+            mobileUserId: user.id,
+            username,
+            context,
+            deviceId,
+            deviceName,
+            deviceModel,
+            deviceOs,
+            ipAddress,
+            location,
+            attemptType: "PASSWORD_LOGIN",
+            status: "PENDING_APPROVAL",
+            attemptedAt: new Date(),
+          },
+        }),
+      ]);
 
       return {
         success: true,

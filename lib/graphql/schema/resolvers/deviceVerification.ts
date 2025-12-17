@@ -80,33 +80,59 @@ export const deviceVerificationResolvers = {
       // ✅ OTP VERIFIED - Create device!
       const verifiedVia = attempt.otpSentTo?.includes("@") ? "OTP_EMAIL" : "OTP_SMS";
 
-      const device = await prisma.mobileDevice.upsert({
-        where: {
-          mobileUserId_deviceId: {
-            mobileUserId: attempt.mobileUserId,
-            deviceId: attempt.deviceId,
+      const device = await prisma.$transaction(async (tx) => {
+        const existingPrimary = await tx.mobileDevice.findFirst({
+          where: {
+            mobileUserId: attempt.mobileUserId!,
+            isPrimary: true,
           },
-        },
-        create: {
-          mobileUserId: attempt.mobileUserId,
-          deviceId: attempt.deviceId,
-          name: attempt.deviceName || "Mobile Device",
-          model: attempt.deviceModel,
-          os: attempt.deviceOs,
-          verifiedVia,
-          verificationIp: attempt.ipAddress,
-          verificationLocation: attempt.location,
-          isActive: true,
-        },
-        update: {
-          name: attempt.deviceName || "Mobile Device",
-          model: attempt.deviceModel,
-          os: attempt.deviceOs,
-          verifiedVia,
-          verificationIp: attempt.ipAddress,
-          verificationLocation: attempt.location,
-          isActive: true,
-        },
+          select: { id: true },
+        });
+
+        const shouldBePrimary = !existingPrimary;
+
+        const upserted = await tx.mobileDevice.upsert({
+          where: {
+            mobileUserId_deviceId: {
+              mobileUserId: attempt.mobileUserId!,
+              deviceId: attempt.deviceId!,
+            },
+          },
+          create: {
+            mobileUserId: attempt.mobileUserId!,
+            deviceId: attempt.deviceId!,
+            name: attempt.deviceName || "Mobile Device",
+            model: attempt.deviceModel,
+            os: attempt.deviceOs,
+            verifiedVia,
+            verificationIp: attempt.ipAddress,
+            verificationLocation: attempt.location,
+            isActive: true,
+            isPrimary: shouldBePrimary,
+          },
+          update: {
+            name: attempt.deviceName || "Mobile Device",
+            model: attempt.deviceModel,
+            os: attempt.deviceOs,
+            verifiedVia,
+            verificationIp: attempt.ipAddress,
+            verificationLocation: attempt.location,
+            isActive: true,
+            ...(shouldBePrimary ? { isPrimary: true } : {}),
+          },
+        });
+
+        if (shouldBePrimary) {
+          await tx.mobileDevice.updateMany({
+            where: {
+              mobileUserId: attempt.mobileUserId!,
+              id: { not: upserted.id },
+            },
+            data: { isPrimary: false },
+          });
+        }
+
+        return upserted;
       });
 
       // Update attempt status

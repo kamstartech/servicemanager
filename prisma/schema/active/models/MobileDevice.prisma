@@ -27,6 +27,7 @@ model MobileDevice {
 
   // Status
   isActive    Boolean   @default(true) @map("is_active")
+  isPrimary   Boolean   @default(false) @map("is_primary")
   lastUsedAt  DateTime? @map("last_used_at")
   loginCount  Int       @default(0) @map("login_count")
   lastLoginIp String?   @map("last_login_ip")

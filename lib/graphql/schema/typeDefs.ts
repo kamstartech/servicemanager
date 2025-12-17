@@ -525,6 +525,7 @@ export const typeDefs = /* GraphQL */ `
     credentialId: String!
     transports: [String!]
     isActive: Boolean!
+    isPrimary: Boolean!
     lastUsedAt: String
     createdAt: String!
     updatedAt: String!
@@ -1158,6 +1159,7 @@ export const typeDefs = /* GraphQL */ `
     model: String
     os: String
     isActive: Boolean!
+    isPrimary: Boolean!
     isCurrent: Boolean!
     lastUsedAt: String
     createdAt: String!

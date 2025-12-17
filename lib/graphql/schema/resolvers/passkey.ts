@@ -9,6 +9,7 @@ import { isoUint8Array } from "@simplewebauthn/server/helpers";
 import jwt, { Secret, SignOptions } from "jsonwebtoken";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
+import type { Prisma } from "@prisma/client";
 
 // Constants
 const RP_ID = process.env.RP_ID || "service-manager.local";
@@ -137,18 +138,37 @@ export const passkeyResolvers = {
                 const counter = registrationInfo.credential.counter;
 
                 // Ensure we save credentialId as base64url string
-                const newDevice = await prisma.mobileDevice.create({
-                    data: {
-                        mobileUserId: user.id,
-                        credentialId: credentialID,
-                        publicKey: credentialPublicKey,
-                        counter: BigInt(counter),
-                        transports: responseJson.response.transports || ["internal"],
-                        name: deviceInfo.name || "Mobile Device",
-                        model: deviceInfo.model,
-                        os: deviceInfo.os,
-                        deviceId: deviceInfo.deviceId,
-                    },
+                const newDevice = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+                    const existingPrimary = await tx.mobileDevice.findFirst({
+                        where: { mobileUserId: user.id, isPrimary: true },
+                        select: { id: true },
+                    });
+
+                    const shouldBePrimary = !existingPrimary;
+
+                    const created = await tx.mobileDevice.create({
+                        data: {
+                            mobileUserId: user.id,
+                            credentialId: credentialID,
+                            publicKey: credentialPublicKey,
+                            counter: BigInt(counter),
+                            transports: responseJson.response.transports || ["internal"],
+                            name: deviceInfo.name || "Mobile Device",
+                            model: deviceInfo.model,
+                            os: deviceInfo.os,
+                            deviceId: deviceInfo.deviceId,
+                            isPrimary: shouldBePrimary,
+                        },
+                    });
+
+                    if (shouldBePrimary) {
+                        await tx.mobileDevice.updateMany({
+                            where: { mobileUserId: user.id, id: { not: created.id } },
+                            data: { isPrimary: false },
+                        });
+                    }
+
+                    return created;
                 });
 
                 challengeStore.delete(`reg-${user.id}`);
@@ -249,12 +269,30 @@ export const passkeyResolvers = {
             const { verified, authenticationInfo } = verification;
 
             if (verified) {
-                await prisma.mobileDevice.update({
-                    where: { id: device.id },
-                    data: {
-                        counter: BigInt(authenticationInfo.newCounter),
-                        lastUsedAt: new Date(),
-                    },
+                await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+                    await tx.mobileDevice.update({
+                        where: { id: device.id },
+                        data: {
+                            counter: BigInt(authenticationInfo.newCounter),
+                            lastUsedAt: new Date(),
+                        },
+                    });
+
+                    const primary = await tx.mobileDevice.findFirst({
+                        where: { mobileUserId: user.id, isPrimary: true },
+                        select: { id: true },
+                    });
+
+                    if (!primary) {
+                        await tx.mobileDevice.updateMany({
+                            where: { mobileUserId: user.id },
+                            data: { isPrimary: false },
+                        });
+                        await tx.mobileDevice.update({
+                            where: { id: device.id },
+                            data: { isPrimary: true },
+                        });
+                    }
                 });
 
                 challengeStore.delete(`auth-${user.id}`);
@@ -422,9 +460,28 @@ export const passkeyResolvers = {
         },
 
         async approveDevice(_parent: unknown, args: { deviceId: string }) {
-            await prisma.mobileDevice.update({
-                where: { id: args.deviceId },
-                data: { isActive: true },
+            await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+                const updated = await tx.mobileDevice.update({
+                    where: { id: args.deviceId },
+                    data: { isActive: true },
+                    select: { id: true, mobileUserId: true },
+                });
+
+                const primary = await tx.mobileDevice.findFirst({
+                    where: { mobileUserId: updated.mobileUserId, isPrimary: true },
+                    select: { id: true },
+                });
+
+                if (!primary) {
+                    await tx.mobileDevice.updateMany({
+                        where: { mobileUserId: updated.mobileUserId },
+                        data: { isPrimary: false },
+                    });
+                    await tx.mobileDevice.update({
+                        where: { id: updated.id },
+                        data: { isPrimary: true },
+                    });
+                }
             });
             return true;
         },
