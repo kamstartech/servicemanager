@@ -1,5 +1,6 @@
 import { messaging } from '@/lib/firebase/admin';
 import { prisma } from '@/lib/db/prisma';
+import crypto from 'crypto';
 
 export interface SendPushNotificationParams {
   userId: number;

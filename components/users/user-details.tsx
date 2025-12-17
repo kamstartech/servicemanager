@@ -4,12 +4,13 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { gql, useMutation, useQuery } from "@apollo/client";
 import Link from "next/link";
+import { toast } from "sonner";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { COMMON_TABLE_HEADERS, DataTable, type DataTableColumn } from "@/components/data-table";
-import { Calendar, Plus, ExternalLink, Link2Off, Star, CheckCircle, Clock, XCircle } from "lucide-react";
+import { Calendar, Plus, ExternalLink, Link2Off, Star, CheckCircle, Clock, XCircle, Bell } from "lucide-react";
 
 const USER_DETAILS_QUERY = gql`
   query UserDetails($context: MobileUserContext!) {
@@ -37,6 +38,12 @@ const USER_DETAILS_QUERY = gql`
         updatedAt
       }
     }
+  }
+`;
+
+const ADMIN_TEST_PUSH_NOTIFICATION_MUTATION = gql`
+  mutation AdminTestPushNotification($userId: ID!, $deviceId: String) {
+    adminTestPushNotification(userId: $userId, deviceId: $deviceId)
   }
 `;
 
@@ -149,6 +156,7 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
   const id = params.id as string;
 
   const [lastTempPassword, setLastTempPassword] = useState<string | null>(null);
+  const [testingPushForDeviceId, setTestingPushForDeviceId] = useState<string | null>(null);
   const [showLinkAccount, setShowLinkAccount] = useState(false);
   const [newAccountNumber, setNewAccountNumber] = useState("");
   const [newAccountName, setNewAccountName] = useState("");
@@ -189,6 +197,15 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
     {
       onCompleted: () => {
         void refetchDevices();
+      },
+    }
+  );
+
+  const [adminTestPushNotification, { loading: testingPush }] = useMutation(
+    ADMIN_TEST_PUSH_NOTIFICATION_MUTATION,
+    {
+      onError: (err) => {
+        toast.error(err.message || "Failed to send test push");
       },
     }
   );
@@ -256,6 +273,32 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
     await setPrimaryAccount({
       variables: { userId: id, accountId },
     });
+  };
+
+  const handleTestPush = async (device: any) => {
+    if (!device?.deviceId) {
+      toast.error("Device ID missing");
+      return;
+    }
+
+    try {
+      setTestingPushForDeviceId(device.deviceId);
+      const result = await adminTestPushNotification({
+        variables: {
+          userId: id,
+          deviceId: device.deviceId,
+        },
+      });
+
+      const ok = result?.data?.adminTestPushNotification;
+      if (ok) {
+        toast.success("Test push sent");
+      } else {
+        toast.error("Test push was not sent (no active token or Firebase not configured)");
+      }
+    } finally {
+      setTestingPushForDeviceId(null);
+    }
   };
 
   const user = (data?.mobileUsers ?? []).find(
@@ -483,7 +526,23 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
       id: "actions",
       header: COMMON_TABLE_HEADERS.actions,
       accessor: (row) => (
-        <>
+        <div className="flex flex-wrap justify-center gap-2">
+          {row.isActive && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-indigo-700 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-800 border-indigo-200"
+              onClick={() => handleTestPush(row)}
+              disabled={
+                testingPush ||
+                !row.deviceId ||
+                testingPushForDeviceId === row.deviceId
+              }
+            >
+              <Bell className="h-4 w-4 mr-2" />
+              Test Push
+            </Button>
+          )}
           {!row.isActive && (
             <Button
               size="sm"
@@ -496,7 +555,7 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
               Approve
             </Button>
           )}
-        </>
+        </div>
       ),
     },
   ];

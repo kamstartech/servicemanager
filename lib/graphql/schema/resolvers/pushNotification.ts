@@ -90,5 +90,42 @@ export const pushNotificationResolvers = {
 
       return true;
     },
+
+    // Admin-only: test push notification for a specific user/device
+    async adminTestPushNotification(
+      _: unknown,
+      args: { userId: string; deviceId?: string },
+      context: GraphQLContext
+    ) {
+      if (!context.adminId) {
+        throw new Error("Forbidden");
+      }
+
+      const userId = Number(args.userId);
+      if (!Number.isFinite(userId)) {
+        throw new Error("Invalid userId");
+      }
+
+      if (args.deviceId) {
+        const device = await prisma.mobileDevice.findFirst({
+          where: {
+            mobileUserId: userId,
+            deviceId: args.deviceId,
+          },
+          select: { id: true },
+        });
+
+        if (!device) {
+          throw new Error("Device not found for user");
+        }
+      }
+
+      const result = await PushNotificationService.sendTestNotification(
+        userId,
+        args.deviceId
+      );
+
+      return !!result?.success;
+    },
   },
 };

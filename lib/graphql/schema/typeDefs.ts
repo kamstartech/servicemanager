@@ -2088,6 +2088,7 @@ export const typeDefs = /* GraphQL */ `
     testPushNotification(deviceId: String): Boolean!
     
     # Admin mutations
+    adminTestPushNotification(userId: ID!, deviceId: String): Boolean!
     updateCheckbookRequest(id: ID!, input: UpdateCheckbookRequestInput!): CheckbookRequest!
     deleteCheckbookRequest(id: ID!): Boolean!
   }
