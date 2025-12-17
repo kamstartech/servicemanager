@@ -8,6 +8,7 @@ const MOBILE_QUERY_FIELDS = new Set([
   "myAccounts",
   "myPrimaryAccount",
   "myNotificationSettings",
+  "appScreens",
   "myBeneficiaries",
   "accountAlertSettings",
   "accountAlerts",
