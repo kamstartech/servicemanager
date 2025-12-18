@@ -3,10 +3,9 @@ import { prisma } from "@/lib/db/prisma";
 import {
   generateAuthenticationOptions,
 } from "@simplewebauthn/server";
-import { redis } from "@/lib/db/redis";
+import { getRedis } from "@/lib/db/redis";
 
 const RP_ID = process.env.NEXT_PUBLIC_RP_ID || "mobile-banking-v2.abakula.com";
-const RP_NAME = "Admin Panel";
 
 /**
  * POST /api/auth/passkey/login/start
@@ -15,6 +14,8 @@ const RP_NAME = "Admin Panel";
 export async function POST(request: NextRequest) {
   try {
     const { email } = await request.json();
+
+    console.log("[PasskeyLoginStart] request", { email: email ? String(email) : null });
 
     if (!email) {
       return NextResponse.json(
@@ -65,6 +66,7 @@ export async function POST(request: NextRequest) {
     const allowCredentials = user.passkeys.map(
       (passkey) => ({
         id: passkey.credentialId,
+        type: "public-key" as const,
         transports: passkey.transports as AuthenticatorTransport[],
       })
     );
@@ -79,6 +81,7 @@ export async function POST(request: NextRequest) {
 
     // Store challenge in Redis with 5-minute expiry
     const challengeKey = `passkey:challenge:${user.id}`;
+    const redis = await getRedis();
     await redis.setex(challengeKey, 300, options.challenge); // 5 minutes
 
     // Also store user ID for the challenge for lookup

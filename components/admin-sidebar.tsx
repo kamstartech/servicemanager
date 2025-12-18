@@ -3,10 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, PanelLeft, type LucideIcon } from "lucide-react";
+import { ChevronDown, PanelLeft, LogOut, type LucideIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/providers/i18n-provider";
+import { useAuth } from "@/components/providers/auth-provider";
 import { CheckbookRequestsMenu } from "@/components/checkbook/checkbook-requests-menu";
 import {
   SIDEBAR_DASHBOARD,
@@ -126,6 +127,7 @@ function SectionHeader({
 export function AdminSidebar() {
   const { locale, translate, setLocale } = useI18n();
   const pathname = usePathname();
+  const { logout } = useAuth();
 
   const activeSectionById = React.useMemo(() => {
     const result = {} as Record<SidebarSectionId, boolean>;
@@ -330,6 +332,19 @@ export function AdminSidebar() {
               <span className="truncate">{translate(SIDEBAR_PROFILE.labelKey)}</span>
             )}
           </Link>
+        </Button>
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={logout}
+          className={`mt-1 w-full text-white transition-all duration-300 hover:bg-white/20 hover:translate-x-1 ${
+            collapsed ? "justify-center px-2" : "justify-start gap-2"
+          }`}
+        >
+          <LogOut className="h-4 w-4 shrink-0 text-fdh-orange" />
+          {!collapsed && <span className="truncate">Logout</span>}
         </Button>
       </div>
     </aside>

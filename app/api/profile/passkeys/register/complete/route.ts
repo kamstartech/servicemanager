@@ -7,7 +7,7 @@ import type {
   VerifiedRegistrationResponse,
 } from "@simplewebauthn/server";
 import { isoBase64URL } from "@simplewebauthn/server/helpers";
-import { redis } from "@/lib/db/redis";
+import { getRedis } from "@/lib/db/redis";
 
 const RP_ID = process.env.NEXT_PUBLIC_RP_ID || "mobile-banking-v2.abakula.com";
 const EXPECTED_ORIGIN =
@@ -26,6 +26,7 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
 
     // Get stored challenge from Redis
     const challengeKey = `passkey:reg:challenge:${user.userId}`;
+    const redis = await getRedis();
     const expectedChallenge = await redis.get(challengeKey);
 
     if (!expectedChallenge) {

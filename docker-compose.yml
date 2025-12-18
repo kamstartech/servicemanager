@@ -124,6 +124,8 @@ services:
       - service_manager_network
     environment:
       NODE_ENV: development
+      NEXT_PUBLIC_APP_URL: "https://mobile-banking-v2.abakula.com"
+      NEXT_PUBLIC_RP_ID: "mobile-banking-v2.abakula.com"
       DATABASE_URL: "postgresql://postgres:${POSTGRES_PASSWORD:-Z761HPjTU6li}@db:5432/${POSTGRES_DB:-fdh_service_manager}"
       JWT_SECRET: "${JWT_SECRET:-change-this-to-a-secure-random-string-in-production}"
       JWT_EXPIRES_IN: "${JWT_EXPIRES_IN:-24h}"

@@ -9,6 +9,8 @@ const publicRoutes = [
   "/reset-password",
   "/setup-password",
   "/api/auth/login",
+  "/api/auth/passkey/login/start",
+  "/api/auth/passkey/login/complete",
   "/api/auth/logout",
   "/api/auth/forgot-password",
   "/api/auth/reset-password",

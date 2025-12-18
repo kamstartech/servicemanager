@@ -8,7 +8,7 @@ import type {
   VerifiedAuthenticationResponse,
 } from "@simplewebauthn/server";
 import { isoBase64URL } from "@simplewebauthn/server/helpers";
-import { redis } from "@/lib/db/redis";
+import { getRedis } from "@/lib/db/redis";
 import { generateToken } from "@/lib/auth/jwt";
 
 const RP_ID = process.env.NEXT_PUBLIC_RP_ID || "mobile-banking-v2.abakula.com";
@@ -23,6 +23,12 @@ export async function POST(request: NextRequest) {
   try {
     const { credential, userId } = await request.json();
 
+    console.log("[PasskeyLoginComplete] request", {
+      userId,
+      credentialId: credential?.id,
+      origin: request.headers.get("origin"),
+    });
+
     if (!credential || !userId) {
       return NextResponse.json(
         { error: "Credential and user ID are required" },
@@ -32,7 +38,13 @@ export async function POST(request: NextRequest) {
 
     // Get stored challenge from Redis
     const challengeKey = `passkey:challenge:${userId}`;
+    const redis = await getRedis();
     const expectedChallenge = await redis.get(challengeKey);
+
+    console.log("[PasskeyLoginComplete] challenge", {
+      userId,
+      hasChallenge: !!expectedChallenge,
+    });
 
     if (!expectedChallenge) {
       return NextResponse.json(
@@ -50,6 +62,12 @@ export async function POST(request: NextRequest) {
       include: {
         user: true,
       },
+    });
+
+    console.log("[PasskeyLoginComplete] passkeyLookup", {
+      userId,
+      credentialId: credential?.id,
+      found: !!passkey,
     });
 
     if (!passkey) {
@@ -85,7 +103,19 @@ export async function POST(request: NextRequest) {
       console.error("Verification failed:", error);
 
       return NextResponse.json(
-        { error: "Authentication verification failed" },
+        {
+          error: "Authentication verification failed",
+          ...(process.env.NODE_ENV !== "production"
+            ? {
+                details:
+                  error?.message ||
+                  error?.toString?.() ||
+                  "Unknown verification error",
+                expectedOrigin: EXPECTED_ORIGIN,
+                expectedRPID: RP_ID,
+              }
+            : {}),
+        },
         { status: 401 }
       );
     }
