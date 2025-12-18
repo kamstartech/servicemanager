@@ -10,7 +10,14 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { COMMON_TABLE_HEADERS, DataTable, type DataTableColumn } from "@/components/data-table";
-import { Calendar, Plus, ExternalLink, Link2Off, Star, CheckCircle, Clock, XCircle, Bell } from "lucide-react";
+import { Calendar, Plus, ExternalLink, Link2Off, Star, CheckCircle, Clock, XCircle, Bell, List } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const USER_DETAILS_QUERY = gql`
   query UserDetails($context: MobileUserContext!) {
@@ -162,6 +169,12 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
   const [newAccountName, setNewAccountName] = useState("");
   const [newAccountType, setNewAccountType] = useState("");
 
+  const [transactionsDialogOpen, setTransactionsDialogOpen] = useState(false);
+  const [transactionsAccountNumber, setTransactionsAccountNumber] = useState<string | null>(null);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
+  const [transactionsError, setTransactionsError] = useState<string | null>(null);
+  const [transactions, setTransactions] = useState<any[]>([]);
+
   const { data, loading, error, refetch } = useQuery(USER_DETAILS_QUERY, {
     variables: { context },
   });
@@ -273,6 +286,35 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
     await setPrimaryAccount({
       variables: { userId: id, accountId },
     });
+  };
+
+  const openTransactions = async (accountNumber: string) => {
+    setTransactionsDialogOpen(true);
+    setTransactionsAccountNumber(accountNumber);
+    setTransactionsError(null);
+    setTransactions([]);
+    setTransactionsLoading(true);
+
+    try {
+      const res = await fetch("/api/services/t24-transactions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ accountNumber }),
+      });
+
+      const payload = await res.json();
+      if (!res.ok || !payload?.success) {
+        throw new Error(payload?.error || `Failed to load transactions (${res.status})`);
+      }
+
+      setTransactions(Array.isArray(payload?.data) ? payload.data : []);
+    } catch (e) {
+      setTransactionsError(e instanceof Error ? e.message : "Failed to load transactions");
+    } finally {
+      setTransactionsLoading(false);
+    }
   };
 
   const handleTestPush = async (device: any) => {
@@ -440,6 +482,15 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
       header: COMMON_TABLE_HEADERS.actions,
       accessor: (row) => (
         <div className="flex flex-wrap justify-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-indigo-700 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-800 border-indigo-200"
+            onClick={() => openTransactions(row.accountNumber)}
+          >
+            <List className="h-4 w-4 mr-2" />
+            Transactions
+          </Button>
           {!row.isPrimary && row.isActive && (
             <Button
               size="sm"
@@ -614,6 +665,84 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
   return (
     <div className="min-h-screen bg-background px-4 py-6">
       <div className="max-w-full mx-auto space-y-6">
+        <Dialog
+          open={transactionsDialogOpen}
+          onOpenChange={(open) => {
+            setTransactionsDialogOpen(open);
+            if (!open) {
+              setTransactionsAccountNumber(null);
+              setTransactionsError(null);
+              setTransactions([]);
+              setTransactionsLoading(false);
+            }
+          }}
+        >
+          <DialogContent className="sm:max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>Account Transactions</DialogTitle>
+              <DialogDescription>
+                {transactionsAccountNumber
+                  ? `Account: ${transactionsAccountNumber}`
+                  : "Select an account to view transactions"}
+              </DialogDescription>
+            </DialogHeader>
+
+            {transactionsLoading && (
+              <p className="text-sm text-muted-foreground">Loading transactions...</p>
+            )}
+            {!transactionsLoading && transactionsError && (
+              <p className="text-sm text-destructive">Error: {transactionsError}</p>
+            )}
+            {!transactionsLoading && !transactionsError && transactions.length === 0 && (
+              <p className="text-sm text-muted-foreground">No transactions found.</p>
+            )}
+
+            {!transactionsLoading && !transactionsError && transactions.length > 0 && (
+              <div className="rounded-md border overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/30">
+                      <th className="text-left p-2 font-medium">Date</th>
+                      <th className="text-left p-2 font-medium">Value Date</th>
+                      <th className="text-left p-2 font-medium">Description</th>
+                      <th className="text-left p-2 font-medium">Reference</th>
+                      <th className="text-right p-2 font-medium">Amount</th>
+                      <th className="text-right p-2 font-medium">Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transactions.map((t: any, idx: number) => {
+                      const date = t?.transactionDate || t?.date || "-";
+                      const valueDate = t?.valueDate || "-";
+                      const desc = t?.description || t?.narrative || "-";
+                      const ref = t?.reference || t?.transRef || "-";
+                      const ccy = t?.currency || "";
+                      const amountRaw = t?.debitAmount ?? t?.creditAmount ?? t?.amount;
+                      const amount = amountRaw != null ? String(amountRaw) : "-";
+                      const bal = t?.balance != null ? String(t.balance) : "-";
+
+                      return (
+                        <tr key={t?.transactionId || t?.id || `${ref}-${idx}`} className="border-b">
+                          <td className="p-2 whitespace-nowrap font-mono">{date}</td>
+                          <td className="p-2 whitespace-nowrap font-mono">{valueDate}</td>
+                          <td className="p-2 min-w-[280px]">{desc}</td>
+                          <td className="p-2 whitespace-nowrap font-mono">{ref}</td>
+                          <td className="p-2 whitespace-nowrap text-right font-mono">
+                            {ccy} {amount}
+                          </td>
+                          <td className="p-2 whitespace-nowrap text-right font-mono">
+                            {ccy} {bal}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">{title}</h1>

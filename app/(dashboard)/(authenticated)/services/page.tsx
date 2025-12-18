@@ -566,23 +566,6 @@ export default function ServicesMonitorPage() {
       },
     },
     {
-      serviceKey: "airtel-airtime",
-      name: "Airtel Airtime Topup (ESB)",
-      type: "Integration Service",
-      description: "Posts an Airtel airtime topup request via ESB",
-      status: "Available",
-      interval: "On-demand",
-      details: "Endpoint: /api/esb/topup/airtel/v1/C2SReceiver",
-      variant: "outline" as const,
-      testable: true,
-      testConfig: {
-        endpoint: "/api/services/airtel-airtime-test",
-        paramName: "phoneNumber",
-        paramLabel: "Phone Number",
-        paramPlaceholder: "0991234567",
-      },
-    },
-    {
       serviceKey: "tnm-airtime",
       name: "TNM Airtime/Bundle Topup (ESB)",
       type: "Integration Service",
@@ -594,9 +577,9 @@ export default function ServicesMonitorPage() {
       testable: true,
       testConfig: {
         endpoint: "/api/services/tnm-airtime-test",
-        paramName: "json",
-        paramLabel: "JSON Payload",
-        paramPlaceholder: '{"phoneNumber":"+265888537597","bundleId":"YOUR_BUNDLE_ID"}',
+        paramName: "phoneNumber",
+        paramLabel: "Phone Number",
+        paramPlaceholder: "0881234567",
       },
     },
     {

@@ -4,7 +4,7 @@ import { DashboardStatsCards } from "@/components/dashboard/stats-cards";
 
 export default function DashboardPage() {
   return (
-    <main className="min-h-screen bg-gray-100 px-6 py-8">
+    <main className="h-screen bg-gray-100 px-6 py-8">
       <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
       
       {/* Statistics Cards */}

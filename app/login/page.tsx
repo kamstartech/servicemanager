@@ -77,7 +77,7 @@ function LoginForm() {
           <h1 className="text-2xl font-bold text-[#154E9E]">FDH Bank</h1>
         </div>
 
-        <div className="mx-auto max-w-sm flex-1 flex flex-col justify-center">
+        <div className="mx-auto max-w-lg flex-1 flex flex-col justify-center">
           <div className="text-center mb-10">
             <h2 className="text-4xl font-bold text-[#154E9E]">Sign In</h2>
           </div>

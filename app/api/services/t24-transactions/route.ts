@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { withContextAuth } from "@/lib/auth/middleware";
 import { t24TransactionsService } from "@/lib/services/t24/transactions";
 
-export async function POST(request: Request) {
+export const POST = withContextAuth(["ADMIN"], async (request: NextRequest) => {
   try {
     const { accountNumber } = await request.json();
 
@@ -12,7 +13,7 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log(`🔄 Testing T24 transactions API for account: ${accountNumber}`);
+    console.log(`🔄 Fetching T24 transactions for account: ${accountNumber}`);
 
     const result = await t24TransactionsService.getAccountTransactions(accountNumber);
 
@@ -30,10 +31,10 @@ export async function POST(request: Request) {
       message: `Found ${result.transactions?.length || 0} transactions`,
     });
   } catch (error: any) {
-    console.error("❌ T24 transactions test failed:", error);
+    console.error("❌ T24 transactions fetch failed:", error);
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 500 }
     );
   }
-}
+});
