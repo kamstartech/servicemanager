@@ -46,13 +46,18 @@ async function hydrateFormStepsForClient(
     formById.set(form.id, form);
   }
 
-  return steps.map((step) => {
-    if (step?.type !== 'FORM') return step;
+  const hydratedSteps = [];
+  for (const step of steps) {
+    if (step?.type !== 'FORM') {
+      hydratedSteps.push(step);
+      continue;
+    }
 
     const formId = step?.config?.formId;
     const form = typeof formId === 'string' ? formById.get(formId) : undefined;
     if (!form) {
-      return step;
+      hydratedSteps.push(step);
+      continue;
     }
 
     const { formId: _formId, ...restConfig } = (step.config ?? {}) as Record<string, any>;
@@ -65,36 +70,79 @@ async function hydrateFormStepsForClient(
       const schema = form.schema as any;
 
       const hasAccountField = schema.fields.some((f: any) => f.type === "account");
+      const hasBeneficiaryField = schema.fields.some((f: any) => f.type === "beneficiary");
 
-      if (hasAccountField) {
-        // Use the same logic as myAccounts in mobile.ts
-        const hiddenCategoryIds = await getHiddenAccountCategoryIds();
-        const accounts = await prisma.mobileUserAccount.findMany({
-          where: {
-            mobileUserId: userIdInt,
-            ...(hiddenCategoryIds.length > 0
-              ? {
-                OR: [
-                  { categoryId: null },
-                  { categoryId: { notIn: hiddenCategoryIds } },
-                ],
+      if (hasAccountField || hasBeneficiaryField) {
+        let accountOptions: any[] = [];
+        let beneficiaryOptionsMap = new Map<string, any[]>();
+
+        // Fetch accounts if needed
+        if (hasAccountField) {
+          const hiddenCategoryIds = await getHiddenAccountCategoryIds();
+          const accounts = await prisma.mobileUserAccount.findMany({
+            where: {
+              mobileUserId: userIdInt,
+              ...(hiddenCategoryIds.length > 0
+                ? {
+                  OR: [
+                    { categoryId: null },
+                    { categoryId: { notIn: hiddenCategoryIds } },
+                  ],
+                }
+                : {}),
+            },
+            orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+          });
+
+          accountOptions = accounts.map(acc => ({
+            label: `${acc.accountName || acc.accountType} - ${acc.accountNumber} (${acc.balance?.toString() || "0"} ${acc.currency})`,
+            value: acc.accountNumber
+          }));
+        }
+
+        // Fetch beneficiaries if needed
+        if (hasBeneficiaryField) {
+          const typeFilters = Array.from(new Set(schema.fields
+            .filter((f: any) => f.type === "beneficiary")
+            .map((f: any) => f.beneficiaryType || "ALL")
+          )) as string[];
+
+          for (const type of typeFilters) {
+            const where: any = { mobileUserId: userIdInt };
+            if (type !== "ALL") {
+              if (type === "BANK") {
+                where.beneficiaryType = { in: ["BANK_INTERNAL", "BANK_EXTERNAL"] };
+              } else {
+                where.beneficiaryType = type as any;
               }
-              : {}),
-          },
-          orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
-        });
+            }
 
-        const accountOptions = accounts.map(acc => ({
-          label: `${acc.accountName || acc.accountType} - ${acc.accountNumber} (${acc.balance?.toString() || "0"} ${acc.currency})`,
-          value: acc.accountNumber
-        }));
+            const beneficiaries = await prisma.beneficiary.findMany({
+              where,
+              orderBy: { createdAt: "desc" },
+            });
 
-        // Inject options into account fields
+            const options = beneficiaries.map(b => ({
+              label: `${b.name} - ${b.accountNumber || b.phoneNumber} (${b.beneficiaryType})`,
+              value: b.accountNumber || b.phoneNumber,
+              data: b
+            }));
+
+            beneficiaryOptionsMap.set(type, options);
+          }
+        }
+
+        // Inject options into fields
         hydratedSchema = {
           ...schema,
           fields: schema.fields.map((f: any) => {
             if (f.type === "account") {
               return { ...f, options: accountOptions.map(opt => opt.label), accountOptions };
+            }
+            if (f.type === "beneficiary") {
+              const type = f.beneficiaryType || "ALL";
+              const options = beneficiaryOptionsMap.get(type) || [];
+              return { ...f, options: options.map(opt => opt.label), beneficiaryOptions: options };
             }
             return f;
           })
@@ -116,11 +164,13 @@ async function hydrateFormStepsForClient(
       nextConfig.formId = formId;
     }
 
-    return {
+    hydratedSteps.push({
       ...step,
       config: nextConfig,
-    };
-  });
+    });
+  }
+
+  return hydratedSteps;
 }
 
 function requireAuthenticatedUserId(context: any): string {
