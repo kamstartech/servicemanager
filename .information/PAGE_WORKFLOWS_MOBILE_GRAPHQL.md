@@ -16,11 +16,20 @@ To support page workflows on mobile, the following fields are enabled on the mob
 
 ### Queries
 - `pageWorkflows(pageId: ID!): [AppScreenPageWorkflow!]!`
+- `workflowExecution(id: ID!): WorkflowExecution`
+- `accountTransactions(accountNumber: String!): T24TransactionConnection!`
+- `proxyTransaction(id: ID!): Transaction`
+- `proxyTransactionByReference(reference: String!): Transaction`
+- `proxyAccountTransactions(accountId: Int!, page: Int, limit: Int): TransactionConnection!`
 
 ### Mutations
 - `startWorkflowExecution(workflowId: ID!, pageId: ID!, initialContext: JSON): WorkflowExecution!`
 - `executeWorkflowStep(executionId: ID!, stepId: ID!, input: JSON, timing: TriggerTiming!): StepExecutionResponse!`
 - `completeWorkflowExecution(executionId: ID!): WorkflowCompletionResult!`
+- `createTransaction(input: CreateTransactionInput!): CreateTransactionResponse!`
+- `createTransfer(input: CreateTransferInput!): CreateTransactionResponse!`
+- `retryTransaction(id: ID!): CreateTransactionResponse!`
+- `reverseTransaction(id: ID!, reason: String!): CreateTransactionResponse!`
 
 ## Authorization / Security
 - `pageWorkflows` requires an authenticated context (mobile user or admin).

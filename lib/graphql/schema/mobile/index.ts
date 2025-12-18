@@ -10,11 +10,16 @@ const MOBILE_QUERY_FIELDS = new Set([
   "myNotificationSettings",
   "appScreens",
   "pageWorkflows",
+  "workflowExecution",
   "myBeneficiaries",
   "accountAlertSettings",
   "accountAlerts",
   "myCheckbookRequests",
   "myCheckbookRequest",
+  "accountTransactions",
+  "proxyTransactionByReference",
+  "proxyTransaction",
+  "proxyAccountTransactions",
 ]);
 
 const MOBILE_MUTATION_FIELDS = new Set([
@@ -50,6 +55,10 @@ const MOBILE_MUTATION_FIELDS = new Set([
   "unfreezeAccount",
   "hideAccount",
   "unhideAccount",
+  "createTransaction",
+  "createTransfer",
+  "retryTransaction",
+  "reverseTransaction",
 ]);
 
 function pickRootFields(
