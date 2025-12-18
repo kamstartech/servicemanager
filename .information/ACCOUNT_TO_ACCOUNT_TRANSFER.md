@@ -58,6 +58,30 @@ Types:
   - `PENDING -> PROCESSING -> COMPLETED` on success
   - `PENDING -> PROCESSING -> FAILED` with retry schedule on failure
 
+## T24 / ESB Posting
+
+When processing account-based transfers, the backend posts to the FDH ESB which routes the request to T24.
+
+Routing is based on `transferType`:
+
+- `FDH_BANK`, `SELF`: Internal account-to-account transfer
+  - `POST {T24_ESB_URL}/api/esb/transaction/1.0/initiate/transaction`
+- `EXTERNAL_BANK`: External bank transfer
+  - `POST {T24_ESB_URL}/api/esb/transfers/other/1.0/bank`
+
+Authentication is Basic Auth:
+
+- `T24_USERNAME`
+- `T24_PASSWORD`
+
+Base URL selection:
+
+- `T24_ESB_URL` (preferred)
+- `T24_BASE_URL`
+- `T24_API_URL`
+
+The transfer client implementation is in `lib/services/t24-service.ts`.
+
 ## Viewing Created Transfers (Admin UI)
 - Navigate to `Mobile banking` -> `Transactions`.
 - This view lists the `fdhTransaction` records created by the `createTransfer` mutation.

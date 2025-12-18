@@ -5,6 +5,9 @@
  * for processing financial transactions.
  */
 
+import { TransferType } from "@prisma/client";
+import { fetchIPv4 } from "@/lib/utils/fetch-ipv4";
+
 interface T24TransferRequest {
   fromAccount: string;
   toAccount: string;
@@ -12,22 +15,34 @@ interface T24TransferRequest {
   currency: string;
   reference: string;
   description: string;
+  transferType?: TransferType;
 }
 
 interface T24TransferResponse {
   success: boolean;
   t24Reference?: string;
+  externalReference?: string;
   message: string;
   errorCode?: string;
 }
 
 export class T24Service {
   private baseUrl: string;
-  private apiKey: string;
+  private username: string;
+  private password: string;
+  private credentials: string;
 
   constructor() {
-    this.baseUrl = process.env.T24_API_URL || "http://localhost:9090/api/v1";
-    this.apiKey = process.env.T24_API_KEY || "";
+    this.baseUrl =
+      process.env.T24_ESB_URL ||
+      process.env.T24_BASE_URL ||
+      process.env.T24_API_URL ||
+      "https://fdh-esb.ngrok.dev";
+    this.username = process.env.T24_USERNAME || "";
+    this.password = process.env.T24_PASSWORD || "";
+    this.credentials = Buffer.from(
+      `${this.username}:${this.password}`
+    ).toString("base64");
   }
 
   /**
@@ -35,45 +50,88 @@ export class T24Service {
    */
   async transfer(request: T24TransferRequest): Promise<T24TransferResponse> {
     try {
-      // TODO: Implement actual T24 API call
-      // For now, this is a stub that simulates T24 response
-      
-      console.log("[T24Service] Transfer request:", request);
+      const transferType = request.transferType;
+      const isExternalBankTransfer = transferType === TransferType.EXTERNAL_BANK;
 
-      // Simulate API call delay
-      await this.delay(1000);
+      const endpointPath = isExternalBankTransfer
+        ? "/api/esb/transfers/other/1.0/bank"
+        : "/api/esb/transaction/1.0/initiate/transaction";
 
-      // Simulate T24 response (replace with actual API call)
-      const mockResponse: T24TransferResponse = {
-        success: true,
-        t24Reference: `T24-${Date.now()}`,
-        message: "Transfer successful",
-      };
+      const url = `${this.baseUrl}${endpointPath}`;
 
-      return mockResponse;
+      const body = this.buildTransferBody(request, isExternalBankTransfer);
 
-      // Actual implementation would look like:
-      /*
-      const response = await fetch(`${this.baseUrl}/transfers`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${this.apiKey}`,
-        },
-        body: JSON.stringify(request),
+      console.log("[T24Service] Posting transfer to T24 ESB", {
+        url,
+        transferType,
+        fromAccount: request.fromAccount,
+        toAccount: request.toAccount,
+        amount: request.amount,
+        currency: request.currency,
+        reference: request.reference,
       });
 
-      if (!response.ok) {
-        throw new Error(`T24 API error: ${response.statusText}`);
+      const response = await fetchIPv4(url, {
+        method: "POST",
+        headers: {
+          Accept: "*/*",
+          "Content-Type": "application/json",
+          Authorization: `Basic ${this.credentials}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      const responseText = await response.text();
+      let responseJson: any = null;
+
+      try {
+        responseJson = responseText ? JSON.parse(responseText) : null;
+      } catch (e) {
+        responseJson = null;
       }
 
-      const data = await response.json();
+      if (!response.ok) {
+        const errorCode =
+          responseJson?.code ||
+          responseJson?.errorCode ||
+          responseJson?.error?.code ||
+          "T24_API_ERROR";
+        const message =
+          responseJson?.message ||
+          responseJson?.error ||
+          responseJson?.error_description ||
+          response.statusText ||
+          "T24 transfer failed";
+
+        console.error("[T24Service] T24 ESB transfer failed", {
+          status: response.status,
+          errorCode,
+          message,
+          response: responseJson ?? responseText,
+        });
+
+        return {
+          success: false,
+          message,
+          errorCode,
+        };
+      }
+
+      const t24Reference =
+        responseJson?.body?.header?.id ||
+        responseJson?.header?.id ||
+        responseJson?.id;
+
+      const externalReference =
+        responseJson?.body?.header?.uniqueIdentifier ||
+        responseJson?.header?.uniqueIdentifier;
+
       return {
-        success: data.success,
-        t24Reference: data.transactionId,
-        message: data.message,
+        success: true,
+        t24Reference,
+        externalReference,
+        message: "Transfer initiated successfully",
       };
-      */
     } catch (error) {
       console.error("[T24Service] Transfer error:", error);
       return {
@@ -82,6 +140,28 @@ export class T24Service {
         errorCode: "T24_ERROR",
       };
     }
+  }
+
+  private buildTransferBody(
+    request: T24TransferRequest,
+    isExternalBankTransfer: boolean
+  ): Record<string, unknown> {
+    const commonBody: Record<string, unknown> = {
+      transactionType: "AC",
+      debitAccountNumber: request.fromAccount,
+      debitAmount: request.amount,
+      debitCurrency: request.currency,
+      creditAccountNumber: request.toAccount,
+    };
+
+    if (!isExternalBankTransfer) {
+      commonBody.creditCurrencyId = request.currency;
+    }
+
+    return {
+      header: {},
+      body: commonBody,
+    };
   }
 
   /**

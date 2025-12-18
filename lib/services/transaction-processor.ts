@@ -113,6 +113,7 @@ async function processBankTransfer(transaction: any): Promise<any> {
     currency: transaction.currency,
     reference: transaction.reference,
     description: transaction.description,
+    transferType: transaction.transferType,
   });
 
   return t24Response;
