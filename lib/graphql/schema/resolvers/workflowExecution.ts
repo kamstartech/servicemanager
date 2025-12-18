@@ -3,6 +3,70 @@ import { prisma } from '@/lib/db/prisma';
 import type { TriggerTiming } from '@prisma/client';
 import crypto from 'crypto';
 
+async function hydrateFormStepsForClient(
+  steps: any[],
+  options: { stripFormId: boolean }
+): Promise<any[]> {
+  if (!Array.isArray(steps) || steps.length === 0) {
+    return steps;
+  }
+
+  const formIds = new Set<string>();
+
+  for (const step of steps) {
+    if (step?.type !== 'FORM') continue;
+    const formId = step?.config?.formId;
+    if (typeof formId === 'string' && formId.length > 0) {
+      formIds.add(formId);
+    }
+  }
+
+  if (formIds.size === 0) {
+    return steps;
+  }
+
+  const forms = await prisma.form.findMany({
+    where: { id: { in: Array.from(formIds) } },
+    select: { id: true, schema: true, name: true, description: true, version: true },
+  });
+
+  const formById = new Map<string, (typeof forms)[number]>();
+  for (const form of forms) {
+    formById.set(form.id, form);
+  }
+
+  return steps.map((step) => {
+    if (step?.type !== 'FORM') return step;
+
+    const formId = step?.config?.formId;
+    const form = typeof formId === 'string' ? formById.get(formId) : undefined;
+    if (!form) {
+      return step;
+    }
+
+    const { formId: _formId, ...restConfig } = (step.config ?? {}) as Record<string, any>;
+
+    const nextConfig: Record<string, any> = {
+      ...(restConfig ?? {}),
+      schema: form.schema,
+      formMeta: {
+        name: form.name,
+        description: form.description,
+        version: form.version,
+      },
+    };
+
+    if (!options.stripFormId) {
+      nextConfig.formId = formId;
+    }
+
+    return {
+      ...step,
+      config: nextConfig,
+    };
+  });
+}
+
 function requireAuthenticatedUserId(context: any): string {
   const userId = context?.userId;
   if (userId === null || userId === undefined) {
@@ -99,6 +163,12 @@ export const workflowExecutionResolvers = {
         args.initialContext || {}
       );
 
+      const isAdminRequest = !!context?.adminUser || !!context?.adminId;
+      const hydratedSteps = await hydrateFormStepsForClient(
+        execution.workflow.steps,
+        { stripFormId: !isAdminRequest }
+      );
+
       return {
         ...execution,
         startedAt: execution.startedAt.toISOString(),
@@ -107,7 +177,7 @@ export const workflowExecutionResolvers = {
           ...execution.workflow,
           createdAt: execution.workflow.createdAt.toISOString(),
           updatedAt: execution.workflow.updatedAt.toISOString(),
-          steps: execution.workflow.steps.map(step => ({
+          steps: hydratedSteps.map(step => ({
             ...step,
             createdAt: step.createdAt.toISOString(),
             updatedAt: step.updatedAt.toISOString(),

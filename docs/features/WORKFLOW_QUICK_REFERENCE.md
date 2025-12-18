@@ -10,7 +10,7 @@
 
 | Type | Icon | Purpose | Key Config |
 |------|------|---------|------------|
-| `FORM` | 📝 | Collect user input | `formId`, `fields` |
+| `FORM` | 📝 | Collect user input | Authoring: `formId`; Runtime (mobile): `schema` |
 | `API_CALL` | 🌐 | Backend request | `endpoint`, `method`, `mapping` |
 | `VALIDATION` | ✅ | Validate data | `rules`, `operator` |
 | `CONFIRMATION` | ⚠️ | User confirmation | `template`, `showSummary` |
