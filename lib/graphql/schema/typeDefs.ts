@@ -960,6 +960,8 @@ export const typeDefs = /* GraphQL */ `
     CONFIRMATION
     DISPLAY
     REDIRECT
+    OTP
+    POST_TRANSACTION
   }
 
   enum StepExecutionMode {

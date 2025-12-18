@@ -4,6 +4,7 @@ import { gql, useQuery, useMutation } from "@apollo/client";
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { VariableExplorer } from "@/components/workflows/variable-explorer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -119,6 +120,7 @@ const FORMS_QUERY = gql`
         description
         category
         isActive
+        schema
       }
       total
     }
@@ -199,6 +201,74 @@ const STEP_TYPES = [
   { value: "CONFIRMATION", label: "⚠️ Confirmation", description: "Ask for confirmation" },
   { value: "DISPLAY", label: "📄 Display", description: "Show information" },
   { value: "REDIRECT", label: "🔄 Redirect", description: "Navigate to another screen" },
+  { value: "OTP", label: "🔐 OTP", description: "Send and validate One-Time Password" },
+  { value: "POST_TRANSACTION", label: "💸 Post Transaction", description: "Post transaction to core banking" },
+];
+
+const TRANSACTION_TYPES = [
+  { value: "DEBIT", label: "Debit", description: "Debit an account" },
+  { value: "CREDIT", label: "Credit", description: "Credit an account" },
+  { value: "TRANSFER", label: "Transfer", description: "Transfer between accounts" },
+  { value: "WALLET_TRANSFER", label: "Wallet Transfer", description: "Transfer between wallets" },
+];
+
+const SYSTEM_SERVICES = [
+  {
+    id: "t24",
+    name: "T24 Core Banking",
+    methods: [
+      {
+        id: "validate_account",
+        name: "Validate Account",
+        description: "Verify account existence and status",
+        params: [
+          { name: "accountNumber", label: "Account Number", type: "string", required: true },
+          { name: "accountType", label: "Account Type", type: "string" }
+        ],
+        output: ["accountName", "currency", "status", "balance"]
+      },
+      {
+        id: "get_balance",
+        name: "Get Balance",
+        description: "Retrieve account balance",
+        params: [
+          { name: "accountNumber", label: "Account Number", type: "string", required: true }
+        ],
+        output: ["workingBalance", "ledgerBalance", "currency"]
+      }
+    ]
+  },
+  {
+    id: "account_enrichment",
+    name: "Account Enrichment",
+    methods: [
+      {
+        id: "enrich_profile",
+        name: "Enrich Profile",
+        description: "Get full customer profile from KYU",
+        params: [
+          { name: "customerId", label: "Customer ID", type: "string", required: true }
+        ],
+        output: ["fullName", "kycLevel", "riskRating", "segment"]
+      }
+    ]
+  },
+  {
+    id: "airtime",
+    name: "Airtime Service",
+    methods: [
+      {
+        id: "validate_number",
+        name: "Validate Phone Number",
+        description: "Check if number is valid for topup",
+        params: [
+          { name: "msisdn", label: "Phone Number", type: "string", required: true },
+          { name: "provider", label: "Provider (AIRTEL/TNM)", type: "string" }
+        ],
+        output: ["isValid", "provider", "isPrepaid"]
+      }
+    ]
+  }
 ];
 
 function SortableStepRow({ step, onEdit, onDelete, rowIndex, translate }: any) {
@@ -315,7 +385,11 @@ export default function WorkflowDetailPage() {
   const [triggerEndpoint, setTriggerEndpoint] = useState("");
   const [triggerMethod, setTriggerMethod] = useState("POST");
   const [timeoutMs, setTimeoutMs] = useState("30000");
+
   const [maxRetries, setMaxRetries] = useState("0");
+
+  // OTP specific state
+  const [otpValidationEndpoint, setOtpValidationEndpoint] = useState("");
 
   // Confirmation step configuration
   const [confirmationMessage, setConfirmationMessage] = useState("");
@@ -331,6 +405,15 @@ export default function WorkflowDetailPage() {
   // Core banking endpoint integration
   const [selectedEndpointId, setSelectedEndpointId] = useState("");
   const [parameterMapping, setParameterMapping] = useState<Record<string, string>>({});
+
+  // Validation step state
+  const [selectedServiceId, setSelectedServiceId] = useState<string>("");
+  const [selectedMethodId, setSelectedMethodId] = useState<string>("");
+  const [successMessage, setSuccessMessage] = useState<string>("");
+  const [failureMessage, setFailureMessage] = useState<string>("");
+  const [popEnabled, setPopEnabled] = useState<boolean>(false);
+  const [popButtonName, setPopButtonName] = useState<string>("");
+  const [selectedTransactionType, setSelectedTransactionType] = useState<string>("");
 
   // Workflow edit dialog state
   const [workflowDialogOpen, setWorkflowDialogOpen] = useState(false);
@@ -408,6 +491,7 @@ export default function WorkflowDetailPage() {
           setTriggerTiming("AFTER_STEP");
           break;
         case "VALIDATION":
+        case "POST_TRANSACTION":
           setExecutionMode("SERVER_VALIDATION");
           setTriggerTiming("BEFORE_STEP");
           break;
@@ -417,6 +501,11 @@ export default function WorkflowDetailPage() {
         case "REDIRECT":
           setExecutionMode("CLIENT_ONLY");
           setTriggerTiming("");
+          break;
+
+        case "OTP":
+          setExecutionMode("SERVER_SYNC");
+          setTriggerTiming("BOTH"); // OTP needs trigger (send) and validation (after)
           break;
         default:
           break;
@@ -433,6 +522,8 @@ export default function WorkflowDetailPage() {
       setWorkflowDialogOpen(true);
     }
   };
+
+
 
   const handleUpdateWorkflow = async () => {
     if (!workflowName.trim()) {
@@ -488,6 +579,37 @@ export default function WorkflowDetailPage() {
         setDeclineButtonLabel(step.config?.declineLabel || "Cancel");
         setDeclineAction(step.config?.declineAction || "CANCEL");
       }
+
+      // Load OTP specific config
+      if (step.type === "OTP") {
+        setOtpValidationEndpoint(step.config?.validationEndpoint || "");
+      }
+
+      // Load Validation config
+      if (step.type === "VALIDATION") {
+        setSelectedServiceId(step.config?.serviceId || "");
+        setSelectedMethodId(step.config?.methodId || "");
+        setSuccessMessage(step.config?.successMessage || "");
+        setFailureMessage(step.config?.failureMessage || "");
+        setPopEnabled(step.config?.popEnabled || false);
+        setPopButtonName(step.config?.popButtonName || "");
+        if (step.config?.parameterMapping) {
+          setParameterMapping(step.config.parameterMapping);
+        }
+      }
+
+      // Load Post Transaction config
+      if (step.type === "POST_TRANSACTION") {
+        setSelectedTransactionType(step.config?.transactionType || "");
+        if (step.config?.parameterMapping) {
+          setParameterMapping(step.config.parameterMapping);
+        }
+        // Load messages if they exist for POST_TRANSACTION too
+        setSuccessMessage(step.config?.successMessage || "");
+        setFailureMessage(step.config?.failureMessage || "");
+        setPopEnabled(step.config?.popEnabled || false);
+        setPopButtonName(step.config?.popButtonName || "");
+      }
     } else {
       setEditingStep(null);
       setStepType("");
@@ -507,6 +629,16 @@ export default function WorkflowDetailPage() {
       // Reset core banking endpoint
       setSelectedEndpointId("");
       setParameterMapping({});
+
+      // Reset Validation config
+      setSelectedServiceId("");
+      setSelectedMethodId("");
+      setSuccessMessage("");
+      setFailureMessage("");
+      setPopEnabled(false);
+      setPopEnabled(false);
+      setPopButtonName("");
+      setSelectedTransactionType("");
     }
     setDialogOpen(true);
   };
@@ -520,11 +652,25 @@ export default function WorkflowDetailPage() {
     setStepValidation("");
     setSelectedFormId("");
 
+    // Reset Validation config
+    setSelectedServiceId("");
+    setSelectedMethodId("");
+    setSuccessMessage("");
+    setFailureMessage("");
+    setPopEnabled(false);
+    setPopButtonName("");
+    setSelectedTransactionType("");
+
     // Reset confirmation configuration
     setConfirmationMessage("");
     setConfirmButtonLabel("Confirm");
     setDeclineButtonLabel("Cancel");
+    setConfirmButtonLabel("Confirm");
+    setDeclineButtonLabel("Cancel");
     setDeclineAction("CANCEL");
+
+    // Reset OTP specific state
+    setOtpValidationEndpoint("");
 
     // Reset execution configuration
     setExecutionMode("CLIENT_ONLY");
@@ -560,13 +706,38 @@ export default function WorkflowDetailPage() {
     }
 
     // Validate execution configuration
-    if (executionMode !== "CLIENT_ONLY") {
+    if (executionMode !== "CLIENT_ONLY" && stepType !== "OTP") {
       if (!triggerTiming) {
         toast.error("Please select trigger timing for server execution");
         return;
       }
-      if (!triggerEndpoint && stepType !== "API_CALL") {
+      // VALIDATION and POST_TRANSACTION types don't need an explicit trigger endpoint
+      if (!triggerEndpoint && stepType !== "API_CALL" && stepType !== "VALIDATION" && stepType !== "POST_TRANSACTION") {
         toast.error("Please enter a trigger endpoint for server execution");
+        return;
+      }
+    }
+
+    // Validate OTP configuration
+    if (stepType === "OTP") {
+      // Configuration is simplified, no specific validation needed
+    }
+
+    // Validate Validation and Post Transaction configuration
+    if (stepType === "VALIDATION") {
+      if (!selectedServiceId) {
+        toast.error("Please select a service");
+        return;
+      }
+      if (!selectedMethodId) {
+        toast.error("Please select a validation method");
+        return;
+      }
+    }
+
+    if (stepType === "POST_TRANSACTION") {
+      if (!selectedTransactionType) {
+        toast.error("Please select a transaction type");
         return;
       }
     }
@@ -615,6 +786,41 @@ export default function WorkflowDetailPage() {
         confirmLabel: confirmButtonLabel,
         declineLabel: declineButtonLabel,
         declineAction: declineAction,
+      };
+    }
+
+    // Merge OTP config
+    if (stepType === "OTP") {
+      parsedConfig = {
+        ...parsedConfig,
+        validationEndpoint: otpValidationEndpoint,
+      };
+    }
+
+    // Merge config for POST_TRANSACTION
+    if (stepType === "POST_TRANSACTION") {
+      parsedConfig = {
+        ...parsedConfig,
+        transactionType: selectedTransactionType,
+        parameterMapping,
+        successMessage,
+        failureMessage,
+        popEnabled,
+        popButtonName,
+      };
+    }
+
+    // Merge Validation config
+    if (stepType === "VALIDATION") {
+      parsedConfig = {
+        ...parsedConfig,
+        serviceId: selectedServiceId,
+        methodId: selectedMethodId,
+        parameterMapping,
+        successMessage,
+        failureMessage,
+        popEnabled,
+        popButtonName: popEnabled ? popButtonName : undefined,
       };
     }
 
@@ -735,6 +941,11 @@ export default function WorkflowDetailPage() {
 
   const workflow = data.workflow;
   const steps = workflow.steps || [];
+
+  // Calculate previous steps for VariableExplorer
+  const availableSteps = editingStep
+    ? steps.filter((s: any) => s.order < editingStep.order)
+    : steps; // If adding new step, all existing steps are previous
 
   return (
     <div className="min-h-screen bg-background px-4 py-6">
@@ -985,8 +1196,8 @@ export default function WorkflowDetailPage() {
 
       {/* Add/Edit Step Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-[90vw] w-[90vw] sm:max-w-[90vw] max-h-[90vh] h-[90vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="p-6 pb-2">
             <DialogTitle>
               {editingStep ? "Edit Step" : "Add New Step"}
             </DialogTitle>
@@ -997,451 +1208,521 @@ export default function WorkflowDetailPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            {/* Step Type */}
-            <div className="space-y-2">
-              <Label htmlFor="type">Step Type *</Label>
-              <Select value={stepType} onValueChange={setStepType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select step type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {STEP_TYPES.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      <div>
-                        <p className="font-medium">{type.label}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {type.description}
-                        </p>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
 
-            {/* Form Selector - Only show when step type is FORM */}
-            {stepType === "FORM" && (
-              <div className="space-y-2">
-                <Label htmlFor="form">Select Form *</Label>
-                <Select value={selectedFormId} onValueChange={setSelectedFormId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a form" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {formsLoading ? (
-                      <div className="p-2 text-sm text-muted-foreground">Loading forms...</div>
-                    ) : formsData?.forms?.forms?.length === 0 ? (
-                      <div className="p-2 text-sm text-muted-foreground">No forms available</div>
-                    ) : (
-                      formsData?.forms?.forms?.map((form: any) => (
-                        <SelectItem key={form.id} value={form.id}>
-                          <div>
-                            <p className="font-medium">{form.name}</p>
-                            {form.description && (
-                              <p className="text-xs text-muted-foreground">
-                                {form.description}
-                              </p>
-                            )}
-                            {form.category && (
-                              <Badge variant="outline" className="text-xs mt-1">
-                                {form.category}
-                              </Badge>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  The form that will be displayed to the user
-                </p>
+          <div className="flex-1 overflow-hidden flex gap-4 p-6 pt-2">
+
+            {/* Left Column: Variable Explorer (if available) */}
+            {availableSteps.length > 0 && (
+              <div className="w-1/3 min-w-[300px] border-r pr-4 overflow-y-auto">
+                <VariableExplorer
+                  previousSteps={availableSteps}
+                  forms={formsData?.forms?.forms || []}
+                />
               </div>
             )}
 
-            {/* Confirmation Configuration - Only show when step type is CONFIRMATION */}
-            {stepType === "CONFIRMATION" && (
-              <div className="space-y-4 border rounded-md p-4 bg-amber-50/50 border-amber-100">
+            {/* Right Column: Step Configuration Form */}
+            <div className="flex-1 overflow-y-auto pr-2">
+              <div className="space-y-4">
+                {/* Step Type */}
                 <div className="space-y-2">
-                  <Label htmlFor="confirmationMessage">Confirmation Message Template *</Label>
-                  <Textarea
-                    id="confirmationMessage"
-                    placeholder="e.g. Do you want to pay {{ step_0_result.amount }} to {{ step_0_result.recipient }}?"
-                    value={confirmationMessage}
-                    onChange={(e) => setConfirmationMessage(e.target.value)}
-                    rows={4}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Use <code className="bg-amber-100 px-1 rounded">{"{{ variable_name }}"}</code> as placeholders.
-                    Available variables: <code className="bg-amber-100 px-1 rounded">step_N_result.field</code>
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmLabel">Confirm Button Label</Label>
-                    <Input
-                      id="confirmLabel"
-                      placeholder="e.g. Proceed"
-                      value={confirmButtonLabel}
-                      onChange={(e) => setConfirmButtonLabel(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="declineLabel">Decline Button Label</Label>
-                    <Input
-                      id="declineLabel"
-                      placeholder="e.g. Cancel"
-                      value={declineButtonLabel}
-                      onChange={(e) => setDeclineButtonLabel(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="declineAction">Decline Action</Label>
-                  <Select value={declineAction} onValueChange={setDeclineAction}>
+                  <Label htmlFor="type">Step Type *</Label>
+                  <Select value={stepType} onValueChange={setStepType}>
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select step type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="CANCEL">Cancel Workflow</SelectItem>
-                      <SelectItem value="PREVIOUS_STEP">Go to Previous Step</SelectItem>
+                      {STEP_TYPES.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          <div>
+                            <p className="font-medium">{type.label}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {type.description}
+                            </p>
+                          </div>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Action to take when the user declines the confirmation
-                  </p>
                 </div>
-              </div>
-            )}
 
-            {/* Core Banking Endpoint Selector - Only show when step type is API_CALL */}
-            {stepType === "API_CALL" && executionMode !== "CLIENT_ONLY" && (
-              <div className="space-y-2">
-                <Label htmlFor="endpoint">Select Core Banking Endpoint *</Label>
-                <Select value={selectedEndpointId} onValueChange={(value) => {
-                  setSelectedEndpointId(value);
-                  // Auto-populate trigger endpoint and method
-                  const selectedEndpoint = endpointsData?.coreBankingConnections
-                    ?.flatMap((conn: any) => conn.endpoints)
-                    ?.find((endpoint: any) => endpoint.id === value);
-                  if (selectedEndpoint) {
-                    setTriggerEndpoint(selectedEndpoint.path);
-                    setTriggerMethod(selectedEndpoint.method);
-                  }
-                }}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select an endpoint" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {endpointsLoading ? (
-                      <div className="p-2 text-sm text-muted-foreground">Loading endpoints...</div>
-                    ) : !endpointsData?.coreBankingConnections?.length ? (
-                      <div className="p-2 text-sm text-muted-foreground">No endpoints available</div>
-                    ) : (
-                      endpointsData.coreBankingConnections.map((connection: any) => (
-                        connection.endpoints?.length > 0 && (
-                          <div key={connection.id}>
-                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                              {connection.name}
-                            </div>
-                            {connection.endpoints.map((endpoint: any) => (
-                              <SelectItem key={endpoint.id} value={endpoint.id}>
-                                <div>
-                                  <p className="font-medium">{endpoint.name}</p>
+                {/* Form Selector - Only show when step type is FORM */}
+                {stepType === "FORM" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="form">Select Form *</Label>
+                    <Select value={selectedFormId} onValueChange={setSelectedFormId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a form" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {formsLoading ? (
+                          <div className="p-2 text-sm text-muted-foreground">Loading forms...</div>
+                        ) : formsData?.forms?.forms?.length === 0 ? (
+                          <div className="p-2 text-sm text-muted-foreground">No forms available</div>
+                        ) : (
+                          formsData?.forms?.forms?.map((form: any) => (
+                            <SelectItem key={form.id} value={form.id}>
+                              <div>
+                                <p className="font-medium">{form.name}</p>
+                                {form.description && (
                                   <p className="text-xs text-muted-foreground">
-                                    {endpoint.method} {endpoint.path}
+                                    {form.description}
                                   </p>
+                                )}
+                                {form.category && (
+                                  <Badge variant="outline" className="text-xs mt-1">
+                                    {form.category}
+                                  </Badge>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      The form that will be displayed to the user
+                    </p>
+                  </div>
+                )}
+
+                {/* Confirmation Configuration - Only show when step type is CONFIRMATION */}
+                {stepType === "CONFIRMATION" && (
+                  <div className="space-y-4 border rounded-md p-4 bg-amber-50/50 border-amber-100">
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmationMessage">Confirmation Message Template *</Label>
+                      <Textarea
+                        id="confirmationMessage"
+                        placeholder="e.g. Do you want to pay {{ step_0_result.amount }} to {{ step_0_result.recipient }}?"
+                        value={confirmationMessage}
+                        onChange={(e) => setConfirmationMessage(e.target.value)}
+                        rows={4}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Use <code className="bg-amber-100 px-1 rounded">{"{{ variable_name }}"}</code> as placeholders.
+                        Available variables: <code className="bg-amber-100 px-1 rounded">step_N_result.field</code>
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="confirmLabel">Confirm Button Label</Label>
+                        <Input
+                          id="confirmLabel"
+                          placeholder="e.g. Proceed"
+                          value={confirmButtonLabel}
+                          onChange={(e) => setConfirmButtonLabel(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="declineLabel">Decline Button Label</Label>
+                        <Input
+                          id="declineLabel"
+                          placeholder="e.g. Cancel"
+                          value={declineButtonLabel}
+                          onChange={(e) => setDeclineButtonLabel(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="declineAction">Decline Action</Label>
+                      <Select value={declineAction} onValueChange={setDeclineAction}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="CANCEL">Cancel Workflow</SelectItem>
+                          <SelectItem value="PREVIOUS_STEP">Go to Previous Step</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Action to take when the user declines the confirmation
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Core Banking Endpoint Selector - Only show when step type is API_CALL */}
+                {stepType === "API_CALL" && executionMode !== "CLIENT_ONLY" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="endpoint">Select Core Banking Endpoint *</Label>
+                    <Select value={selectedEndpointId} onValueChange={(value) => {
+                      setSelectedEndpointId(value);
+                      // Auto-populate trigger endpoint and method
+                      const selectedEndpoint = endpointsData?.coreBankingConnections
+                        ?.flatMap((conn: any) => conn.endpoints)
+                        ?.find((endpoint: any) => endpoint.id === value);
+                      if (selectedEndpoint) {
+                        setTriggerEndpoint(selectedEndpoint.path);
+                        setTriggerMethod(selectedEndpoint.method);
+                      }
+                    }}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select an endpoint" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {endpointsLoading ? (
+                          <div className="p-2 text-sm text-muted-foreground">Loading endpoints...</div>
+                        ) : !endpointsData?.coreBankingConnections?.length ? (
+                          <div className="p-2 text-sm text-muted-foreground">No endpoints available</div>
+                        ) : (
+                          endpointsData.coreBankingConnections.map((connection: any) => (
+                            connection.endpoints?.length > 0 && (
+                              <div key={connection.id}>
+                                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                                  {connection.name}
                                 </div>
-                              </SelectItem>
+                                {connection.endpoints.map((endpoint: any) => (
+                                  <SelectItem key={endpoint.id} value={endpoint.id}>
+                                    <div>
+                                      <p className="font-medium">{endpoint.name}</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {endpoint.method} {endpoint.path}
+                                      </p>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </div>
+                            )
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Select the core banking API endpoint to call
+                    </p>
+                  </div>
+                )}
+
+                {/* Parameter Mapping - Show when endpoint is selected */}
+                {stepType === "API_CALL" && selectedEndpointId && (
+                  <div className="space-y-2">
+                    <Label>Parameter Mapping</Label>
+                    <div className="border rounded-md p-3 space-y-2 bg-muted/50">
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Map endpoint parameters to data collected in previous steps.
+                        Use dot notation for nested fields (e.g., "step_0.amount").
+                      </p>
+                      {(() => {
+                        const selectedEndpoint = endpointsData?.coreBankingConnections
+                          ?.flatMap((conn: any) => conn.endpoints)
+                          ?.find((endpoint: any) => endpoint.id === selectedEndpointId);
+
+                        if (!selectedEndpoint?.bodyTemplate) {
+                          return (
+                            <p className="text-xs text-muted-foreground">
+                              No parameters defined for this endpoint
+                            </p>
+                          );
+                        }
+
+                        let parameters: string[] = [];
+                        try {
+                          // Check if bodyTemplate is a string before parsing
+                          const templateStr = typeof selectedEndpoint.bodyTemplate === 'string'
+                            ? selectedEndpoint.bodyTemplate
+                            : JSON.stringify(selectedEndpoint.bodyTemplate);
+
+                          const template = JSON.parse(templateStr);
+                          // Extract parameter names from template (simple heuristic)
+                          const extractParams = (obj: any, prefix = ''): void => {
+                            Object.keys(obj).forEach(key => {
+                              const fullKey = prefix ? `${prefix}.${key}` : key;
+                              if (typeof obj[key] === 'string' && obj[key].startsWith('{{') && obj[key].endsWith('}}')) {
+                                parameters.push(fullKey);
+                              } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+                                extractParams(obj[key], fullKey);
+                              }
+                            });
+                          };
+                          extractParams(template);
+                        } catch (e) {
+                          console.error('Failed to parse bodyTemplate:', e);
+                        }
+
+                        if (parameters.length === 0) {
+                          return (
+                            <p className="text-xs text-muted-foreground">
+                              No parameters found in endpoint template
+                            </p>
+                          );
+                        }
+
+                        return (
+                          <div className="space-y-2">
+                            {parameters.map((param) => (
+                              <div key={param} className="flex items-center gap-2">
+                                <Label className="text-xs min-w-[120px]">{param}</Label>
+                                <Input
+                                  placeholder="e.g., step_0.amount"
+                                  value={parameterMapping[param] || ""}
+                                  onChange={(e) => {
+                                    setParameterMapping({
+                                      ...parameterMapping,
+                                      [param]: e.target.value
+                                    });
+                                  }}
+                                  className="text-xs"
+                                />
+                              </div>
                             ))}
                           </div>
-                        )
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Select the core banking API endpoint to call
-                </p>
-              </div>
-            )}
+                        );
+                      })()}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Available data keys: step_0, step_1, step_2, etc. (based on step order)
+                    </p>
+                  </div>
+                )}
 
-            {/* Parameter Mapping - Show when endpoint is selected */}
-            {stepType === "API_CALL" && selectedEndpointId && (
-              <div className="space-y-2">
-                <Label>Parameter Mapping</Label>
-                <div className="border rounded-md p-3 space-y-2 bg-muted/50">
-                  <p className="text-xs text-muted-foreground mb-2">
-                    Map endpoint parameters to data collected in previous steps.
-                    Use dot notation for nested fields (e.g., "step_0.amount").
-                  </p>
-                  {(() => {
-                    const selectedEndpoint = endpointsData?.coreBankingConnections
-                      ?.flatMap((conn: any) => conn.endpoints)
-                      ?.find((endpoint: any) => endpoint.id === selectedEndpointId);
 
-                    if (!selectedEndpoint?.bodyTemplate) {
-                      return (
-                        <p className="text-xs text-muted-foreground">
-                          No parameters defined for this endpoint
-                        </p>
-                      );
-                    }
+                {/* OTP Configuration */}
+                {stepType === "OTP" && (
+                  <div className="space-y-4 border rounded-md p-4 bg-blue-50/50 border-blue-100">
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
+                      🔐 OTP Configuration
+                    </h3>
 
-                    let parameters: string[] = [];
-                    try {
-                      const template = JSON.parse(selectedEndpoint.bodyTemplate);
-                      // Extract parameter names from template (simple heuristic)
-                      const extractParams = (obj: any, prefix = ''): void => {
-                        Object.keys(obj).forEach(key => {
-                          const fullKey = prefix ? `${prefix}.${key}` : key;
-                          if (typeof obj[key] === 'string' && obj[key].startsWith('{{') && obj[key].endsWith('}}')) {
-                            parameters.push(fullKey);
-                          } else if (typeof obj[key] === 'object' && obj[key] !== null) {
-                            extractParams(obj[key], fullKey);
-                          }
-                        });
-                      };
-                      extractParams(template);
-                    } catch (e) {
-                      console.error('Failed to parse bodyTemplate:', e);
-                    }
+                    <div className="bg-blue-100/50 p-3 rounded-md mb-2">
+                      <p className="text-xs text-blue-800">
+                        OTP sending and validation services are handled automatically by the system.
+                        Please configure the retry policy below.
+                      </p>
+                    </div>
 
-                    if (parameters.length === 0) {
-                      return (
-                        <p className="text-xs text-muted-foreground">
-                          No parameters found in endpoint template
-                        </p>
-                      );
-                    }
-
-                    return (
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        {parameters.map((param) => (
-                          <div key={param} className="flex items-center gap-2">
-                            <Label className="text-xs min-w-[120px]">{param}</Label>
-                            <Input
-                              placeholder="e.g., step_0.amount"
-                              value={parameterMapping[param] || ""}
-                              onChange={(e) => {
-                                setParameterMapping({
-                                  ...parameterMapping,
-                                  [param]: e.target.value
+                        <Label htmlFor="otpTimeout">Timeout (ms)</Label>
+                        <Input
+                          id="otpTimeout"
+                          type="number"
+                          placeholder="30000"
+                          value={timeoutMs}
+                          onChange={(e) => setTimeoutMs(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="otpMaxRetries">Max Retries</Label>
+                        <Input
+                          id="otpMaxRetries"
+                          type="number"
+                          min="0"
+                          max="5"
+                          placeholder="3"
+                          value={maxRetries}
+                          onChange={(e) => setMaxRetries(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+
+                {/* Validation/Post Transaction Configuration */}
+                {(stepType === "VALIDATION" || stepType === "POST_TRANSACTION") && (
+                  <div className="space-y-4 border rounded-md p-4 bg-purple-50/50 border-purple-100">
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
+                      {stepType === "VALIDATION" ? "✅ Validation Service" : "💸 Transaction Service"}
+                    </h3>
+
+                    {stepType === "VALIDATION" ? (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="service">Service</Label>
+                          <Select
+                            value={selectedServiceId}
+                            onValueChange={(value) => {
+                              setSelectedServiceId(value);
+                              setSelectedMethodId(""); // Reset method when service changes
+                              setParameterMapping({});
+                            }}
+                          >
+                            <SelectTrigger id="service">
+                              <SelectValue placeholder="Select Service" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {SYSTEM_SERVICES.map((service) => (
+                                <SelectItem key={service.id} value={service.id}>
+                                  {service.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="method">Method</Label>
+                          <Select
+                            value={selectedMethodId}
+                            onValueChange={(value) => {
+                              setSelectedMethodId(value);
+                              // Auto-populate parameter mapping keys
+                              const service = SYSTEM_SERVICES.find(s => s.id === selectedServiceId);
+                              const method = service?.methods.find(m => m.id === value);
+                              if (method) {
+                                const newMapping: Record<string, string> = {};
+                                method.params.forEach(param => {
+                                  newMapping[param.name] = "";
                                 });
-                              }}
-                              className="text-xs"
-                            />
-                          </div>
-                        ))}
+                                setParameterMapping(newMapping);
+                              }
+                            }}
+                            disabled={!selectedServiceId}
+                          >
+                            <SelectTrigger id="method">
+                              <SelectValue placeholder="Select Method" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {SYSTEM_SERVICES.find(s => s.id === selectedServiceId)?.methods.map((method) => (
+                                <SelectItem key={method.id} value={method.id}>
+                                  {method.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                    );
-                  })()}
+                    ) : (
+                      <div className="space-y-2">
+                        <Label htmlFor="transactionType">Transaction Type</Label>
+                        <Select
+                          value={selectedTransactionType}
+                          onValueChange={(value) => {
+                            setSelectedTransactionType(value);
+                            // Auto-populate mapping based on type
+                            const newMapping: Record<string, string> = {
+                              amount: "",
+                              description: "",
+                              currency: "MWK"
+                            };
+
+                            if (["TRANSFER", "WALLET_TRANSFER"].includes(value)) {
+                              newMapping["fromAccountNumber"] = "";
+                              newMapping["toAccountNumber"] = "";
+                            } else if (value === "DEBIT") {
+                              newMapping["fromAccountNumber"] = "";
+                            } else if (value === "CREDIT") {
+                              newMapping["toAccountNumber"] = "";
+                            }
+
+                            setParameterMapping(newMapping);
+                          }}
+                        >
+                          <SelectTrigger id="transactionType">
+                            <SelectValue placeholder="Select Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TRANSACTION_TYPES.map((type) => (
+                              <SelectItem key={type.value} value={type.value}>
+                                {type.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Parameter Mapping Section - Shared or conditional */}
+                    {(stepType === "VALIDATION" ? selectedMethodId : selectedTransactionType) && (
+                      <div className="space-y-4 pt-2">
+                        <Label>Parameter Mapping</Label>
+                        <div className="bg-white p-3 rounded border space-y-3">
+                          <p className="text-xs text-muted-foreground mb-2">
+                            Map existing variables to {stepType === "VALIDATION" ? "service parameters" : "transaction fields"}.
+                          </p>
+                          {Object.keys(parameterMapping).map((paramName) => (
+                            <div key={paramName} className="grid grid-cols-3 gap-2 items-center">
+                              <Label htmlFor={`param-${paramName}`} className="text-xs font-mono">{paramName}</Label>
+                              <Input
+                                id={`param-${paramName}`}
+                                placeholder="Value or {{variable}}"
+                                className="col-span-2 h-8 text-sm"
+                                value={parameterMapping[paramName]}
+                                onChange={(e) => setParameterMapping({
+                                  ...parameterMapping,
+                                  [paramName]: e.target.value
+                                })}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="border-t border-purple-200 mt-4 pt-4 space-y-4">
+                      <h4 className="text-sm font-semibold">Messages & Actions</h4>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="successMessage">Success Message</Label>
+                        <Input
+                          id="successMessage"
+                          placeholder="e.g. Validation successful!"
+                          value={successMessage}
+                          onChange={(e) => setSuccessMessage(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="failureMessage">Failure Message</Label>
+                        <Input
+                          id="failureMessage"
+                          placeholder="e.g. Validation failed, please check inputs."
+                          value={failureMessage}
+                          onChange={(e) => setFailureMessage(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="flex items-center space-x-2 pt-2">
+                        <Switch
+                          id="popEnabled"
+                          checked={popEnabled}
+                          onCheckedChange={setPopEnabled}
+                        />
+                        <Label htmlFor="popEnabled">Enable Proof of Payment (POP)</Label>
+                      </div>
+
+                      {popEnabled && (
+                        <div className="space-y-2 pl-6 border-l-2 border-purple-200 ml-1">
+                          <Label htmlFor="popButtonName">POP Button Name</Label>
+                          <Input
+                            id="popButtonName"
+                            placeholder="e.g. Download Receipt"
+                            value={popButtonName}
+                            onChange={(e) => setPopButtonName(e.target.value)}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Step Label */}
+                <div className="space-y-2">
+                  <Label htmlFor="label">Step Label *</Label>
+                  <Input
+                    id="label"
+                    placeholder="e.g., Enter Amount"
+                    value={stepLabel}
+                    onChange={(e) => setStepLabel(e.target.value)}
+                  />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Available data keys: step_0, step_1, step_2, etc. (based on step order)
-                </p>
-              </div>
-            )}
 
-            {/* Step Label */}
-            <div className="space-y-2">
-              <Label htmlFor="label">Step Label *</Label>
-              <Input
-                id="label"
-                placeholder="e.g., Enter Amount"
-                value={stepLabel}
-                onChange={(e) => setStepLabel(e.target.value)}
-              />
-            </div>
 
-            {/* Step Config */}
-            <div className="space-y-2">
-              <Label htmlFor="config">Configuration (JSON) {stepType === "FORM" ? "(Optional)" : "*"}</Label>
-              <Textarea
-                id="config"
-                placeholder={stepType === "FORM" ? '{"submitButtonText": "Continue"}' : '{"endpoint": "/api/example"}'}
-                value={stepConfig}
-                onChange={(e) => setStepConfig(e.target.value)}
-                rows={8}
-                className="font-mono text-sm"
-              />
-              <p className="text-xs text-muted-foreground">
-                {stepType === "FORM"
-                  ? "Additional configuration (formId will be added automatically)"
-                  : "Step-specific configuration in JSON format"}
-              </p>
-            </div>
 
-            {/* Step Validation */}
-            <div className="space-y-2">
-              <Label htmlFor="validation">Validation Rules (JSON, Optional)</Label>
-              <Textarea
-                id="validation"
-                placeholder='{"required": ["field1"]}'
-                value={stepValidation}
-                onChange={(e) => setStepValidation(e.target.value)}
-                rows={4}
-                className="font-mono text-sm"
-              />
-              <p className="text-xs text-muted-foreground">
-                Optional validation rules for this step
-              </p>
-            </div>
 
-            {/* Execution Configuration Section */}
-            <div className="border-t pt-4 mt-4">
-              <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                <span className="text-lg">⚙️</span>
-                Execution Configuration
-              </h3>
-              <div className="bg-muted/50 p-3 rounded-md mb-4">
-                <p className="text-xs text-muted-foreground">
-                  Configure how and when this step interacts with the backend.
-                  Choose <strong>Client Only</strong> for UI-only steps (forms, confirmations),
-                  or select a server mode to trigger backend actions.
-                </p>
+
+
+
+
               </div>
 
-              {/* Execution Mode */}
-              <div className="space-y-2 mb-4">
-                <Label htmlFor="executionMode">Execution Mode *</Label>
-                <Select value={executionMode} onValueChange={setExecutionMode}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="CLIENT_ONLY">
-                      <div>
-                        <p className="font-medium">Client Only</p>
-                        <p className="text-xs text-muted-foreground">No backend trigger</p>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="SERVER_SYNC">
-                      <div>
-                        <p className="font-medium">Server Sync</p>
-                        <p className="text-xs text-muted-foreground">Wait for backend response</p>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="SERVER_ASYNC">
-                      <div>
-                        <p className="font-medium">Server Async</p>
-                        <p className="text-xs text-muted-foreground">Fire and forget</p>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="SERVER_VALIDATION">
-                      <div>
-                        <p className="font-medium">Server Validation</p>
-                        <p className="text-xs text-muted-foreground">Validate before proceeding</p>
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Show trigger fields only if not CLIENT_ONLY */}
-              {executionMode !== "CLIENT_ONLY" && (
-                <>
-                  {/* Trigger Timing */}
-                  <div className="space-y-2 mb-4">
-                    <Label htmlFor="triggerTiming">Trigger Timing *</Label>
-                    <Select value={triggerTiming} onValueChange={setTriggerTiming}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select when to trigger" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="BEFORE_STEP">
-                          <div>
-                            <p className="font-medium">Before Step</p>
-                            <p className="text-xs text-muted-foreground">Execute before showing step</p>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="AFTER_STEP">
-                          <div>
-                            <p className="font-medium">After Step</p>
-                            <p className="text-xs text-muted-foreground">Execute after user completes step</p>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="BOTH">
-                          <div>
-                            <p className="font-medium">Before & After</p>
-                            <p className="text-xs text-muted-foreground">Execute before AND after</p>
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Trigger Endpoint */}
-                  <div className="space-y-2 mb-4">
-                    <Label htmlFor="triggerEndpoint">Trigger Endpoint *</Label>
-                    <Input
-                      id="triggerEndpoint"
-                      placeholder="/api/accounts/validate"
-                      value={triggerEndpoint}
-                      onChange={(e) => setTriggerEndpoint(e.target.value)}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      API endpoint to call for this step
-                    </p>
-                  </div>
-
-                  {/* HTTP Method */}
-                  <div className="space-y-2 mb-4">
-                    <Label htmlFor="triggerMethod">HTTP Method</Label>
-                    <Select value={triggerMethod} onValueChange={setTriggerMethod}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="GET">GET</SelectItem>
-                        <SelectItem value="POST">POST</SelectItem>
-                        <SelectItem value="PUT">PUT</SelectItem>
-                        <SelectItem value="PATCH">PATCH</SelectItem>
-                        <SelectItem value="DELETE">DELETE</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Timeout */}
-                  <div className="space-y-2 mb-4">
-                    <Label htmlFor="timeoutMs">Timeout (milliseconds)</Label>
-                    <Input
-                      id="timeoutMs"
-                      type="number"
-                      placeholder="30000"
-                      value={timeoutMs}
-                      onChange={(e) => setTimeoutMs(e.target.value)}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Maximum time to wait for response (default: 30000ms)
-                    </p>
-                  </div>
-
-                  {/* Max Retries */}
-                  <div className="space-y-2 mb-4">
-                    <Label htmlFor="maxRetries">Max Retries</Label>
-                    <Input
-                      id="maxRetries"
-                      type="number"
-                      min="0"
-                      max="10"
-                      placeholder="0"
-                      value={maxRetries}
-                      onChange={(e) => setMaxRetries(e.target.value)}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Number of retry attempts on failure (0 = no retries)
-                    </p>
-                  </div>
-                </>
-              )}
             </div>
           </div>
 
-          <DialogFooter>
+
+          <DialogFooter className="p-6 pt-2">
             <Button
               type="button"
               variant="outline"
@@ -1489,6 +1770,6 @@ export default function WorkflowDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </div >
   );
 }

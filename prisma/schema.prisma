@@ -241,6 +241,8 @@ enum WorkflowStepType {
   CONFIRMATION
   DISPLAY
   REDIRECT
+  OTP
+  POST_TRANSACTION
 }
 
 
