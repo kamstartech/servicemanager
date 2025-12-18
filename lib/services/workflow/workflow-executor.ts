@@ -130,7 +130,8 @@ export class WorkflowExecutor {
       if (timing === 'AFTER_STEP' && stepInput) {
         const stepKey = this.getStepKey(step);
         await workflowSessionStore.updateContext(execution.sessionId, {
-          [stepKey]: stepInput
+          [stepKey]: stepInput,
+          [`${stepKey}_result`]: stepInput // Store alias for consistency with server steps
         });
       }
 
