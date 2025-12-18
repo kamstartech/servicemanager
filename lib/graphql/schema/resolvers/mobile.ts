@@ -1,6 +1,15 @@
 import { prisma } from "@/lib/db/prisma";
 import type { GraphQLContext } from "@/lib/graphql/context";
 
+async function getHiddenAccountCategoryIds(): Promise<string[]> {
+  const hidden = await prisma.accountCategory.findMany({
+    where: { displayToMobile: false },
+    select: { category: true },
+  });
+
+  return hidden.map((c) => c.category);
+}
+
 export const mobileResolvers = {
   Query: {
     // Get current user's devices
@@ -83,8 +92,20 @@ export const mobileResolvers = {
         throw new Error("Authentication required");
       }
 
+      const hiddenCategoryIds = await getHiddenAccountCategoryIds();
+
       const accounts = await prisma.mobileUserAccount.findMany({
-        where: { mobileUserId: context.userId },
+        where: {
+          mobileUserId: context.userId,
+          ...(hiddenCategoryIds.length > 0
+            ? {
+                OR: [
+                  { categoryId: null },
+                  { categoryId: { notIn: hiddenCategoryIds } },
+                ],
+              }
+            : {}),
+        },
         orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
       });
 
@@ -113,10 +134,20 @@ export const mobileResolvers = {
         throw new Error("Authentication required");
       }
 
+      const hiddenCategoryIds = await getHiddenAccountCategoryIds();
+
       const account = await prisma.mobileUserAccount.findFirst({
         where: {
           mobileUserId: context.userId,
           isPrimary: true,
+          ...(hiddenCategoryIds.length > 0
+            ? {
+                OR: [
+                  { categoryId: null },
+                  { categoryId: { notIn: hiddenCategoryIds } },
+                ],
+              }
+            : {}),
         },
       });
 
