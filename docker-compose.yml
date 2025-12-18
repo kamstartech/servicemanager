@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-Z761HPjTU6li}
       POSTGRES_DB: ${POSTGRES_DB:-fdh_service_manager}
     ports:
-      - "25432:5432"
+      - "5432:5432"
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/initdb:/docker-entrypoint-initdb.d:ro
@@ -87,7 +87,7 @@ services:
     container_name: service_manager_redis
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-R5tX6G1qFae3DYgXFOTyoysrV7jWhfFh}
     ports:
-      - "16379:6379"
+      - "6379:6379"
     volumes:
       - ./redis_data:/data
     healthcheck:
