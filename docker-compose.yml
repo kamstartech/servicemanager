@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-Z761HPjTU6li}
       POSTGRES_DB: ${POSTGRES_DB:-fdh_service_manager}
     ports:
-      - "5432:5432"
+      - "25432:5432"
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/initdb:/docker-entrypoint-initdb.d:ro
@@ -38,7 +38,7 @@ services:
     volumes:
       - ./mssql_data:/var/opt/mssql
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P '${SA_PASSWORD:-YourStrong!Passw0rd}' -Q 'SELECT 1' -No -C || exit 1"]
+      test: [ "CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P '${SA_PASSWORD:-YourStrong!Passw0rd}' -Q 'SELECT 1' -No -C || exit 1" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -55,12 +55,12 @@ services:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-Z761HPjTU6li}
     ports:
-      - "9000:9000"  # API
-      - "9001:9001"  # Console
+      - "9000:9000" # API
+      - "9001:9001" # Console
     volumes:
       - ./minio_data:/data
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: [ "CMD", "mc", "ready", "local" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -73,13 +73,13 @@ services:
     image: mailhog/mailhog:latest
     container_name: service_manager_mailhog
     ports:
-      - "1025:1025"  # SMTP
-      - "8025:8025"  # Web UI
+      - "1025:1025" # SMTP
+      - "8025:8025" # Web UI
     restart: unless-stopped
     networks:
       - service_manager_network
     logging:
-      driver: "none"  # Disable logs to reduce noise
+      driver: "none" # Disable logs to reduce noise
 
   # Redis for PubSub & Caching
   redis:
@@ -87,11 +87,11 @@ services:
     container_name: service_manager_redis
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-R5tX6G1qFae3DYgXFOTyoysrV7jWhfFh}
     ports:
-      - "6379:6379"
+      - "16379:6379"
     volumes:
       - ./redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5

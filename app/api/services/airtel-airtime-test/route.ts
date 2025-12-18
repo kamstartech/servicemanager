@@ -53,6 +53,7 @@ function buildRechargeXml(opts: { msisdn: string; amount: number; extRefNum?: st
 }
 
 export async function POST(request: Request) {
+  console.log("[AirtelTest] Received recharge request");
   try {
     const body = await request.json();
 
@@ -76,22 +77,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const endpoint = "/api/esb/topup/airtel/v1/C2SReceiver";
-    const urlWithParams = buildUrlWithParams(endpoint, {
+    const { airtimeService } = require("@/lib/services/airtime/airtime-service");
+    const res = await airtimeService.airtelRecharge({
       msisdn,
       amount,
-      login: body.login,
-      password: body.password,
+      externalTxnId: body.extRefNum,
+      metadata: { ...body },
     });
-
-    const xml = buildRechargeXml({
-      msisdn,
-      amount,
-      extRefNum: body.extRefNum,
-    });
-
-    const esb = new ESBAirtimeTopupService();
-    const res = await esb.postXml(urlWithParams, xml, { "Content-Type": "text/xml" });
 
     if (!res.ok) {
       return NextResponse.json({
@@ -107,7 +99,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       status: res.status,
-      message: "Airtel airtime topup request sent",
+      message: "Airtel airtime topup request sent via AirtimeService",
       raw: res.raw,
       parsed: res.data,
     });

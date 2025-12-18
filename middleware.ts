@@ -9,14 +9,14 @@ const publicRoutes = [
   "/reset-password",
   "/setup-password",
   "/api/auth/login",
-  "/api/auth/passkey/login/start",
-  "/api/auth/passkey/login/complete",
   "/api/auth/logout",
   "/api/auth/forgot-password",
   "/api/auth/reset-password",
   "/api/auth/validate-reset-token",
   "/api/graphql", // Allow GraphQL for mobile login and public operations
   "/api/mobile/graphql",
+  "/api/services/airtel-airtime-test",
+  "/api/services/tnm-airtime-test",
 ];
 
 // Third-party API routes (handled by endpoint-level JWT verification)
@@ -25,7 +25,7 @@ const thirdPartyRoutes = [
   "/api/registrations",
 ];
 
-export async function proxy(request: NextRequest) {
+export default async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Get token from cookie or header
@@ -119,7 +119,7 @@ export async function proxy(request: NextRequest) {
     ];
 
     const isAdminOnlyRoute = adminOnlyApiRoutes.some(route => pathname.startsWith(route));
-    
+
     // Block non-admin users from admin-specific APIs
     if (isAdminOnlyRoute && user.context !== "ADMIN") {
       return NextResponse.json(

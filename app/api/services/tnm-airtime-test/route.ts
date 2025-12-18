@@ -64,6 +64,7 @@ function buildRechargeXml(opts: {
 }
 
 export async function POST(request: Request) {
+  console.log("[TnmTest] Received recharge request");
   try {
     const body = await request.json();
 
@@ -78,27 +79,14 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!bundleId) {
-      return NextResponse.json(
-        { success: false, error: "bundleId is required" },
-        { status: 400 }
-      );
-    }
-
-    const endpoint = "/api/esb/topup/tnm/v1/ERSTopup";
-    const xml = buildRechargeXml({
+    const { airtimeService } = require("@/lib/services/airtime/airtime-service");
+    const res = await airtimeService.tnmRecharge({
       msisdn,
       amount,
-      bundleId,
+      bundleId: bundleId || undefined,
       externalTxnId: body.externalTxnId,
-      senderMsisdn: body.senderMsisdn,
-      senderUserId: body.senderUserId,
-      wsUsername: body.wsUsername,
-      wsPassword: body.wsPassword,
+      metadata: { ...body },
     });
-
-    const esb = new ESBAirtimeTopupService();
-    const res = await esb.postXml(endpoint, xml, { "Content-Type": "text/xml" });
 
     if (!res.ok) {
       return NextResponse.json({
@@ -114,7 +102,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       status: res.status,
-      message: "TNM airtime/bundle purchase request sent",
+      message: `TNM airtime/bundle purchase request sent via AirtimeService${bundleId ? ' (Bundle: ' + bundleId + ')' : ''}`,
       raw: res.raw,
       parsed: res.data,
     });
