@@ -1,9 +1,9 @@
 import { workflowSessionStore } from './session-store';
 import { prisma } from '@/lib/db/prisma';
-import type { 
-  WorkflowStep, 
-  StepExecutionMode, 
-  TriggerTiming 
+import type {
+  WorkflowStep,
+  StepExecutionMode,
+  TriggerTiming
 } from '@prisma/client';
 
 interface ExecutionContext {
@@ -28,7 +28,7 @@ interface StepExecutionResponse {
 }
 
 export class WorkflowExecutor {
-  
+
   /**
    * Start a new workflow execution
    */
@@ -242,7 +242,7 @@ export class WorkflowExecutor {
         finalResult = await this.submitToAPI(finalStep, mappedData);
       } catch (error: any) {
         console.error('Final API submission failed:', error);
-        
+
         // Update execution as failed
         await prisma.workflowExecution.update({
           where: { id: executionId },
@@ -316,13 +316,13 @@ export class WorkflowExecutor {
     switch (step.executionMode) {
       case 'SERVER_SYNC':
         return this.handleServerSyncStep(step, context, input);
-      
+
       case 'SERVER_ASYNC':
         return this.handleServerAsyncStep(step, context, input);
-      
+
       case 'SERVER_VALIDATION':
         return this.handleServerValidationStep(step, context, input);
-      
+
       default:
         return {
           success: true,
@@ -440,7 +440,7 @@ export class WorkflowExecutor {
 
       // Parse config
       const triggerConfig = config || {};
-      
+
       // Build request body from parameter mapping if configured
       let requestBody = input;
       if (triggerConfig.parameterMapping && Object.keys(triggerConfig.parameterMapping).length > 0) {
@@ -504,16 +504,16 @@ export class WorkflowExecutor {
     contextData: any
   ): any {
     const result: any = {};
-    
+
     for (const [paramPath, dataPath] of Object.entries(mapping)) {
       if (!dataPath) continue; // Skip empty mappings
-      
+
       const value = this.getNestedValue(contextData, dataPath);
       if (value !== undefined) {
         this.setNestedValue(result, paramPath, value);
       }
     }
-    
+
     return result;
   }
 
@@ -523,14 +523,14 @@ export class WorkflowExecutor {
   private setNestedValue(obj: any, path: string, value: any): void {
     const keys = path.split('.');
     let current = obj;
-    
+
     for (let i = 0; i < keys.length - 1; i++) {
       if (!current[keys[i]]) {
         current[keys[i]] = {};
       }
       current = current[keys[i]];
     }
-    
+
     current[keys[keys.length - 1]] = value;
   }
 
@@ -568,7 +568,7 @@ export class WorkflowExecutor {
    */
   private mapContextToAPI(workflow: any, context: any): any {
     const mapping = workflow.config?.apiMapping || {};
-    
+
     if (Object.keys(mapping).length === 0) {
       // No mapping configured, return context as-is
       return context;
@@ -604,28 +604,47 @@ export class WorkflowExecutor {
   /**
    * Resolve variables in template string
    */
-  private resolveVariables(
+  /**
+   * Resolve variables in template string
+   */
+  public resolveVariables(
     template: string,
     context: ExecutionContext,
     input: any
   ): string {
-    let resolved = template;
+    if (!template) return template;
 
-    // Replace {context.variable}
-    Object.keys(context.variables).forEach(key => {
-      const regex = new RegExp(`\\{context\\.${key}\\}`, 'g');
-      resolved = resolved.replace(regex, String(context.variables[key]));
+    // Support both {key} and {{key}} syntax
+    return template.replace(/\{\{?([^{}]+)\}?\}|(\{[^{}]+\})/g, (match, p1, p2) => {
+      const path = (p1 || p2 || match).replace(/^\{\{?/, '').replace(/\}?\}$/, '').trim();
+
+      // Try to find in context.variables first
+      const contextValue = this.getNestedValue(context.variables, path);
+      if (contextValue !== undefined) {
+        return String(contextValue);
+      }
+
+      // Then try input if path starts with input.
+      if (path.startsWith('input.') && input) {
+        const inputPath = path.replace('input.', '');
+        const inputValue = this.getNestedValue(input, inputPath);
+        if (inputValue !== undefined) {
+          return String(inputValue);
+        }
+      }
+
+      // Then try context. if path starts with context.
+      if (path.startsWith('context.') && context.variables) {
+        const contextPath = path.replace('context.', '');
+        const contextValue = this.getNestedValue(context.variables, contextPath);
+        if (contextValue !== undefined) {
+          return String(contextValue);
+        }
+      }
+
+      // Default to original match if not found
+      return match;
     });
-
-    // Replace {input.field}
-    if (input && typeof input === 'object') {
-      Object.keys(input).forEach(key => {
-        const regex = new RegExp(`\\{input\\.${key}\\}`, 'g');
-        resolved = resolved.replace(regex, String(input[key]));
-      });
-    }
-
-    return resolved;
   }
 }
 

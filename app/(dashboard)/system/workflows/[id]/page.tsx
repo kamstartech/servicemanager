@@ -308,7 +308,7 @@ export default function WorkflowDetailPage() {
   const [stepConfig, setStepConfig] = useState("{}");
   const [stepValidation, setStepValidation] = useState("");
   const [selectedFormId, setSelectedFormId] = useState("");
-  
+
   // Execution configuration state
   const [executionMode, setExecutionMode] = useState("CLIENT_ONLY");
   const [triggerTiming, setTriggerTiming] = useState("");
@@ -317,11 +317,17 @@ export default function WorkflowDetailPage() {
   const [timeoutMs, setTimeoutMs] = useState("30000");
   const [maxRetries, setMaxRetries] = useState("0");
 
+  // Confirmation step configuration
+  const [confirmationMessage, setConfirmationMessage] = useState("");
+  const [confirmButtonLabel, setConfirmButtonLabel] = useState("Confirm");
+  const [declineButtonLabel, setDeclineButtonLabel] = useState("Cancel");
+  const [declineAction, setDeclineAction] = useState("CANCEL");
+
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<
     { id: string; label: string } | null
   >(null);
-  
+
   // Core banking endpoint integration
   const [selectedEndpointId, setSelectedEndpointId] = useState("");
   const [parameterMapping, setParameterMapping] = useState<Record<string, string>>({});
@@ -453,12 +459,12 @@ export default function WorkflowDetailPage() {
       setStepLabel(step.label);
       setStepConfig(JSON.stringify(step.config, null, 2));
       setStepValidation(step.validation ? JSON.stringify(step.validation, null, 2) : "");
-      
+
       // Extract formId if step type is FORM
       if (step.type === "FORM" && step.config?.formId) {
         setSelectedFormId(step.config.formId);
       }
-      
+
       // Set execution configuration
       setExecutionMode(step.executionMode || "CLIENT_ONLY");
       setTriggerTiming(step.triggerTiming || "");
@@ -466,13 +472,21 @@ export default function WorkflowDetailPage() {
       setTriggerMethod(step.triggerConfig?.method || "POST");
       setTimeoutMs(step.timeoutMs?.toString() || "30000");
       setMaxRetries(step.retryConfig?.maxRetries?.toString() || "0");
-      
+
       // Extract core banking endpoint and parameter mapping
       if (step.config?.endpointId) {
         setSelectedEndpointId(step.config.endpointId);
       }
       if (step.config?.parameterMapping) {
         setParameterMapping(step.config.parameterMapping);
+      }
+
+      // Set confirmation configuration
+      if (step.type === "CONFIRMATION") {
+        setConfirmationMessage(step.config?.message || "");
+        setConfirmButtonLabel(step.config?.confirmLabel || "Confirm");
+        setDeclineButtonLabel(step.config?.declineLabel || "Cancel");
+        setDeclineAction(step.config?.declineAction || "CANCEL");
       }
     } else {
       setEditingStep(null);
@@ -481,7 +495,7 @@ export default function WorkflowDetailPage() {
       setStepConfig("{}");
       setStepValidation("");
       setSelectedFormId("");
-      
+
       // Reset execution configuration
       setExecutionMode("CLIENT_ONLY");
       setTriggerTiming("");
@@ -489,7 +503,7 @@ export default function WorkflowDetailPage() {
       setTriggerMethod("POST");
       setTimeoutMs("30000");
       setMaxRetries("0");
-      
+
       // Reset core banking endpoint
       setSelectedEndpointId("");
       setParameterMapping({});
@@ -505,7 +519,13 @@ export default function WorkflowDetailPage() {
     setStepConfig("{}");
     setStepValidation("");
     setSelectedFormId("");
-    
+
+    // Reset confirmation configuration
+    setConfirmationMessage("");
+    setConfirmButtonLabel("Confirm");
+    setDeclineButtonLabel("Cancel");
+    setDeclineAction("CANCEL");
+
     // Reset execution configuration
     setExecutionMode("CLIENT_ONLY");
     setTriggerTiming("");
@@ -513,7 +533,7 @@ export default function WorkflowDetailPage() {
     setTriggerMethod("POST");
     setTimeoutMs("30000");
     setMaxRetries("0");
-    
+
     // Reset core banking endpoint
     setSelectedEndpointId("");
     setParameterMapping({});
@@ -571,7 +591,7 @@ export default function WorkflowDetailPage() {
       const selectedEndpoint = endpointsData?.coreBankingConnections
         ?.flatMap((conn: any) => conn.endpoints)
         ?.find((endpoint: any) => endpoint.id === selectedEndpointId);
-      
+
       if (selectedEndpoint) {
         parsedConfig = {
           ...parsedConfig,
@@ -579,12 +599,23 @@ export default function WorkflowDetailPage() {
           endpointName: selectedEndpoint.name,
           parameterMapping,
         };
-        
+
         // Auto-set trigger endpoint from the selected core banking endpoint
         if (!triggerEndpoint) {
           setTriggerEndpoint(selectedEndpoint.path);
         }
       }
+    }
+
+    // Merge confirmation config
+    if (stepType === "CONFIRMATION") {
+      parsedConfig = {
+        ...parsedConfig,
+        message: confirmationMessage,
+        confirmLabel: confirmButtonLabel,
+        declineLabel: declineButtonLabel,
+        declineAction: declineAction,
+      };
     }
 
     if (stepValidation.trim()) {
@@ -1029,6 +1060,63 @@ export default function WorkflowDetailPage() {
               </div>
             )}
 
+            {/* Confirmation Configuration - Only show when step type is CONFIRMATION */}
+            {stepType === "CONFIRMATION" && (
+              <div className="space-y-4 border rounded-md p-4 bg-amber-50/50 border-amber-100">
+                <div className="space-y-2">
+                  <Label htmlFor="confirmationMessage">Confirmation Message Template *</Label>
+                  <Textarea
+                    id="confirmationMessage"
+                    placeholder="e.g. Do you want to pay {{ step_0_result.amount }} to {{ step_0_result.recipient }}?"
+                    value={confirmationMessage}
+                    onChange={(e) => setConfirmationMessage(e.target.value)}
+                    rows={4}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Use <code className="bg-amber-100 px-1 rounded">{"{{ variable_name }}"}</code> as placeholders.
+                    Available variables: <code className="bg-amber-100 px-1 rounded">step_N_result.field</code>
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmLabel">Confirm Button Label</Label>
+                    <Input
+                      id="confirmLabel"
+                      placeholder="e.g. Proceed"
+                      value={confirmButtonLabel}
+                      onChange={(e) => setConfirmButtonLabel(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="declineLabel">Decline Button Label</Label>
+                    <Input
+                      id="declineLabel"
+                      placeholder="e.g. Cancel"
+                      value={declineButtonLabel}
+                      onChange={(e) => setDeclineButtonLabel(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="declineAction">Decline Action</Label>
+                  <Select value={declineAction} onValueChange={setDeclineAction}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CANCEL">Cancel Workflow</SelectItem>
+                      <SelectItem value="PREVIOUS_STEP">Go to Previous Step</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Action to take when the user declines the confirmation
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Core Banking Endpoint Selector - Only show when step type is API_CALL */}
             {stepType === "API_CALL" && executionMode !== "CLIENT_ONLY" && (
               <div className="space-y-2">
@@ -1094,7 +1182,7 @@ export default function WorkflowDetailPage() {
                     const selectedEndpoint = endpointsData?.coreBankingConnections
                       ?.flatMap((conn: any) => conn.endpoints)
                       ?.find((endpoint: any) => endpoint.id === selectedEndpointId);
-                    
+
                     if (!selectedEndpoint?.bodyTemplate) {
                       return (
                         <p className="text-xs text-muted-foreground">
@@ -1181,7 +1269,7 @@ export default function WorkflowDetailPage() {
                 className="font-mono text-sm"
               />
               <p className="text-xs text-muted-foreground">
-                {stepType === "FORM" 
+                {stepType === "FORM"
                   ? "Additional configuration (formId will be added automatically)"
                   : "Step-specific configuration in JSON format"}
               </p>
@@ -1211,8 +1299,8 @@ export default function WorkflowDetailPage() {
               </h3>
               <div className="bg-muted/50 p-3 rounded-md mb-4">
                 <p className="text-xs text-muted-foreground">
-                  Configure how and when this step interacts with the backend. 
-                  Choose <strong>Client Only</strong> for UI-only steps (forms, confirmations), 
+                  Configure how and when this step interacts with the backend.
+                  Choose <strong>Client Only</strong> for UI-only steps (forms, confirmations),
                   or select a server mode to trigger backend actions.
                 </p>
               </div>
@@ -1371,8 +1459,8 @@ export default function WorkflowDetailPage() {
                   ? translate("common.state.updating")
                   : translate("common.state.creating")
                 : editingStep
-                ? `${translate("common.actions.update")} ${translate("common.entities.step")}`
-                : `${translate("common.actions.create")} ${translate("common.entities.step")}`}
+                  ? `${translate("common.actions.update")} ${translate("common.entities.step")}`
+                  : `${translate("common.actions.create")} ${translate("common.entities.step")}`}
             </Button>
           </DialogFooter>
         </DialogContent>

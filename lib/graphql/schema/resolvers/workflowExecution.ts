@@ -1,4 +1,5 @@
 import { workflowExecutor } from '@/lib/services/workflow/workflow-executor';
+import { workflowSessionStore } from '@/lib/services/workflow/session-store';
 import { prisma } from '@/lib/db/prisma';
 import type { TriggerTiming } from '@prisma/client';
 import crypto from 'crypto';
@@ -12,10 +13,10 @@ async function getHiddenAccountCategoryIds(): Promise<string[]> {
   return hidden.map((c) => c.category);
 }
 
-async function hydrateFormStepsForClient(
+async function hydrateWorkflowStepsForClient(
   steps: any[],
   context: any,
-  options: { stripFormId: boolean }
+  options: { stripFormId: boolean; sessionId?: string }
 ): Promise<any[]> {
   const userId = context.userId;
   if (!Array.isArray(steps) || steps.length === 0) {
@@ -47,7 +48,40 @@ async function hydrateFormStepsForClient(
   }
 
   const hydratedSteps = [];
+
+  // Get session context if sessionId is provided for variable resolution
+  const sessionContext = options.sessionId
+    ? await workflowSessionStore.getContext(options.sessionId).catch(() => ({}))
+    : {};
+
   for (const step of steps) {
+    // Handle CONFIRMATION hydration (variable resolution)
+    if (step?.type === 'CONFIRMATION') {
+      const config = (step.config ?? {}) as Record<string, any>;
+      const message = config.message;
+
+      if (message && options.sessionId) {
+        const resolvedMessage = workflowExecutor.resolveVariables(
+          message,
+          {
+            userId: String(userId),
+            sessionId: options.sessionId,
+            variables: sessionContext || {}
+          },
+          {} // No step-specific input yet for hydration
+        );
+
+        hydratedSteps.push({
+          ...step,
+          config: {
+            ...config,
+            message: resolvedMessage
+          }
+        });
+        continue;
+      }
+    }
+
     if (step?.type !== 'FORM') {
       hydratedSteps.push(step);
       continue;
@@ -217,10 +251,13 @@ export const workflowExecutionResolvers = {
       }
 
       const isAdminRequest = !!context?.adminUser || !!context?.adminId;
-      const hydratedSteps = await hydrateFormStepsForClient(
+      const hydratedSteps = await hydrateWorkflowStepsForClient(
         execution.workflow.steps,
         context,
-        { stripFormId: !isAdminRequest }
+        {
+          stripFormId: !isAdminRequest,
+          sessionId: execution.sessionId
+        }
       );
 
       return {
@@ -231,7 +268,7 @@ export const workflowExecutionResolvers = {
           ...execution.workflow,
           createdAt: execution.workflow.createdAt.toISOString(),
           updatedAt: execution.workflow.updatedAt.toISOString(),
-          steps: hydratedSteps.map(step => ({
+          steps: hydratedSteps.map((step: any) => ({
             ...step,
             createdAt: step.createdAt.toISOString(),
             updatedAt: step.updatedAt.toISOString(),
@@ -287,10 +324,13 @@ export const workflowExecutionResolvers = {
       );
 
       const isAdminRequest = !!context?.adminUser || !!context?.adminId;
-      const hydratedSteps = await hydrateFormStepsForClient(
+      const hydratedSteps = await hydrateWorkflowStepsForClient(
         execution.workflow.steps,
         context,
-        { stripFormId: !isAdminRequest }
+        {
+          stripFormId: !isAdminRequest,
+          sessionId: execution.sessionId
+        }
       );
 
       return {
@@ -301,7 +341,7 @@ export const workflowExecutionResolvers = {
           ...execution.workflow,
           createdAt: execution.workflow.createdAt.toISOString(),
           updatedAt: execution.workflow.updatedAt.toISOString(),
-          steps: hydratedSteps.map(step => ({
+          steps: hydratedSteps.map((step: any) => ({
             ...step,
             createdAt: step.createdAt.toISOString(),
             updatedAt: step.updatedAt.toISOString(),
