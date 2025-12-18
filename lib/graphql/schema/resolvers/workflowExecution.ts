@@ -58,25 +58,42 @@ async function hydrateWorkflowStepsForClient(
     // Handle CONFIRMATION hydration (variable resolution)
     if (step?.type === 'CONFIRMATION') {
       const config = (step.config ?? {}) as Record<string, any>;
-      const message = config.message;
+      if (options.sessionId) {
+        const executionContext = {
+          userId: String(userId),
+          sessionId: options.sessionId,
+          variables: sessionContext || {}
+        };
 
-      if (message && options.sessionId) {
-        const resolvedMessage = workflowExecutor.resolveVariables(
-          message,
-          {
-            userId: String(userId),
-            sessionId: options.sessionId,
-            variables: sessionContext || {}
-          },
-          {} // No step-specific input yet for hydration
-        );
+        const resolvedConfig = { ...config };
+
+        if (config.message) {
+          resolvedConfig.message = workflowExecutor.resolveVariables(
+            config.message,
+            executionContext,
+            {}
+          );
+        }
+
+        if (config.confirmLabel) {
+          resolvedConfig.confirmLabel = workflowExecutor.resolveVariables(
+            config.confirmLabel,
+            executionContext,
+            {}
+          );
+        }
+
+        if (config.declineLabel) {
+          resolvedConfig.declineLabel = workflowExecutor.resolveVariables(
+            config.declineLabel,
+            executionContext,
+            {}
+          );
+        }
 
         hydratedSteps.push({
           ...step,
-          config: {
-            ...config,
-            message: resolvedMessage
-          }
+          config: resolvedConfig
         });
         continue;
       }

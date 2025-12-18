@@ -109,6 +109,15 @@ const COMPLETE_WORKFLOW_EXECUTION = gql`
   }
 `;
 
+const CANCEL_WORKFLOW_EXECUTION = gql`
+  mutation CancelWorkflowExecution($executionId: ID!, $reason: String) {
+    cancelWorkflowExecution(executionId: $executionId, reason: $reason) {
+      id
+      status
+    }
+  }
+`;
+
 const FORM_QUERY = gql`
   query Form($id: ID!) {
     form(id: $id) {
@@ -226,6 +235,14 @@ export default function AppScreensPreviewPage() {
 
   const [completeWorkflowExecution, { loading: completing }] = useMutation(COMPLETE_WORKFLOW_EXECUTION, {
     onError: (err: any) => toast.error(err.message),
+  });
+
+  const [cancelWorkflowExecution, { loading: cancelling }] = useMutation(CANCEL_WORKFLOW_EXECUTION, {
+    onError: (err: any) => toast.error(err.message),
+    onCompleted: () => {
+      resetExecution();
+      toast.success("Workflow cancelled");
+    },
   });
 
   const steps = useMemo(() => {
@@ -814,14 +831,43 @@ export default function AppScreensPreviewPage() {
                       <div className="text-sm text-muted-foreground">I confirm</div>
                       <Switch checked={confirmationAccepted} onCheckedChange={setConfirmationAccepted} />
                     </div>
-                    <Button
-                      type="button"
-                      className="w-full"
-                      disabled={!confirmationAccepted || executingStep || completing}
-                      onClick={() => handleRunActiveStep({ confirmed: true })}
-                    >
-                      Confirm
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        className="flex-1"
+                        disabled={!confirmationAccepted || executingStep || completing || cancelling}
+                        onClick={() => handleRunActiveStep({ confirmed: true })}
+                      >
+                        {activeStep?.config?.confirmLabel || "Confirm"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex-1"
+                        disabled={executingStep || completing || cancelling}
+                        onClick={async () => {
+                          const action = activeStep?.config?.declineAction || "CANCEL";
+                          if (action === "PREVIOUS_STEP") {
+                            if (activeStepIndex > 0) {
+                              setActiveStepIndex((prev) => prev - 1);
+                              setLastStepResponse(null);
+                            } else {
+                              toast.info("No previous step to go back to.");
+                            }
+                          } else {
+                            // Default to CANCEL
+                            await cancelWorkflowExecution({
+                              variables: {
+                                executionId: execution.id,
+                                reason: "User declined confirmation",
+                              },
+                            });
+                          }
+                        }}
+                      >
+                        {activeStep?.config?.declineLabel || "Cancel"}
+                      </Button>
+                    </div>
                   </div>
                 )}
 
