@@ -40,6 +40,21 @@ To support page workflows on mobile, the following fields are enabled on the mob
 - After a successful `executeWorkflowStep(..., timing: AFTER_STEP)` with `shouldProceed = true`, the backend advances `WorkflowExecution.currentStepId` to the next active step.
 - Mobile clients should query `workflowExecution(id)` after a successful step execution to retrieve the updated `currentStepId` and the hydrated step config (e.g., variable-resolved `CONFIRMATION` message).
 
+## OTP Step (Workflow)
+
+OTP steps are handled internally by the workflow engine.
+
+- `BEFORE_STEP`:
+  - Backend generates a 6-digit OTP and sends it to the authenticated user (SMS preferred, email fallback).
+  - OTP state is stored in the workflow session context (Redis) with expiry and attempt counter.
+  - Client should proceed to collect OTP input.
+
+- `AFTER_STEP`:
+  - Client submits the OTP code using one of: `otpCode`, `code`, or `otp`.
+  - Backend validates the submitted code (expiry + max attempts).
+  - On success: advances `WorkflowExecution.currentStepId` to the next active step.
+  - On failure: returns `success=false`, `shouldProceed=false` and keeps the execution on the OTP step.
+
 ## Implementation Notes
 - Mobile whitelist configuration: `lib/graphql/schema/mobile/index.ts`
 - `pageWorkflows` resolver: `lib/graphql/schema/resolvers/workflow.ts`

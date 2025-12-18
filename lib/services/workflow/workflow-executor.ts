@@ -1,5 +1,7 @@
 import { workflowSessionStore } from './session-store';
 import { prisma } from '@/lib/db/prisma';
+import { ESBSMSService } from '@/lib/services/sms/sms-service';
+import { emailService } from '@/lib/services/email';
 import type {
   WorkflowStep,
   StepExecutionMode,
@@ -141,6 +143,162 @@ export class WorkflowExecutor {
 
     // Get current context from Redis
     const context = await workflowSessionStore.getContext(execution.sessionId);
+
+    // OTP step: handled internally (no triggerEndpoint required)
+    if (step.type === 'OTP') {
+      const otpKey = `otp_${stepId}`;
+      const otpState = (context?.[otpKey] ?? null) as
+        | {
+            code: string;
+            expiresAt: string;
+            attempts: number;
+            sentTo?: string;
+            sentAt?: string;
+          }
+        | null;
+
+      if (timing === 'BEFORE_STEP') {
+        // Resolve destination: prefer phoneNumber (SMS), fallback to email
+        const userIdInt = parseInt(String(execution.userId), 10);
+        const user = await prisma.mobileUser.findUnique({
+          where: { id: userIdInt },
+          select: { phoneNumber: true, username: true },
+        });
+        const profile = await prisma.mobileUserProfile.findUnique({
+          where: { mobileUserId: userIdInt },
+          select: { email: true },
+        });
+
+        const phone = user?.phoneNumber?.toString();
+        const email = profile?.email?.toString();
+        const sentTo = phone && phone.length > 0 ? phone : email;
+
+        if (!sentTo) {
+          return {
+            success: false,
+            shouldProceed: false,
+            error: 'No phone number or email available for OTP delivery',
+          };
+        }
+
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+        await workflowSessionStore.updateContext(execution.sessionId, {
+          [otpKey]: {
+            code,
+            expiresAt: expiresAt.toISOString(),
+            attempts: 0,
+            sentTo,
+            sentAt: new Date().toISOString(),
+          },
+        });
+
+        if (sentTo.includes('@')) {
+          await emailService.sendOTP(
+            sentTo,
+            code,
+            user?.username?.toString() || String(execution.userId)
+          );
+        } else {
+          const smsResult = await ESBSMSService.sendOTP(sentTo, code, userIdInt);
+          if (!smsResult.success) {
+            return {
+              success: false,
+              shouldProceed: false,
+              error: smsResult.error || 'Failed to send OTP',
+            };
+          }
+        }
+
+        return {
+          success: true,
+          shouldProceed: true,
+          output: {
+            sentTo: sentTo.includes('@') ? 'email' : 'phone',
+            expiresInSeconds: 600,
+          },
+        };
+      }
+
+      if (timing === 'AFTER_STEP') {
+        const submitted =
+          stepInput?.otpCode?.toString() ??
+          stepInput?.code?.toString() ??
+          stepInput?.otp?.toString() ??
+          '';
+
+        if (!otpState) {
+          return {
+            success: false,
+            shouldProceed: false,
+            error: 'OTP session not initialized. Please request a new code.',
+          };
+        }
+
+        if (!submitted) {
+          return {
+            success: false,
+            shouldProceed: false,
+            error: 'OTP code is required',
+          };
+        }
+
+        const attempts = typeof otpState.attempts === 'number' ? otpState.attempts : 0;
+        if (attempts >= 5) {
+          return {
+            success: false,
+            shouldProceed: false,
+            error: 'Too many failed attempts. Please request a new code.',
+          };
+        }
+
+        const expiresAt = otpState.expiresAt ? new Date(otpState.expiresAt) : null;
+        if (expiresAt && new Date() > expiresAt) {
+          return {
+            success: false,
+            shouldProceed: false,
+            error: 'OTP expired. Please request a new code.',
+          };
+        }
+
+        if (otpState.code !== submitted) {
+          await workflowSessionStore.updateContext(execution.sessionId, {
+            [otpKey]: {
+              ...otpState,
+              attempts: attempts + 1,
+            },
+          });
+
+          return {
+            success: false,
+            shouldProceed: false,
+            error: 'Invalid OTP code',
+          };
+        }
+
+        // OTP verified: clear OTP state to prevent reuse
+        await workflowSessionStore.updateContext(execution.sessionId, {
+          [otpKey]: null,
+        });
+
+        const nextStepId = await this.getNextActiveStepId(
+          execution.workflowId,
+          stepId
+        );
+
+        await prisma.workflowExecution.update({
+          where: { id: executionId },
+          data: { currentStepId: nextStepId },
+        });
+
+        return {
+          success: true,
+          shouldProceed: true,
+          output: { verified: true },
+        };
+      }
+    }
 
     // Check if this step requires trigger at this timing
     if (
