@@ -1,6 +1,12 @@
 import { prisma } from "@/lib/db/prisma";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { BillerType } from "@prisma/client";
+import { billerTransactionService } from "@/lib/services/billers/transactions";
 import { Receipt, CheckCircle2, Clock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +30,76 @@ type BillerStatsRow = {
   };
 };
 
-export default async function BillersPage() {
+function encodeQueryParam(value: string) {
+  return encodeURIComponent(value);
+}
+
+async function testAirtelAirtimeTopup(formData: FormData) {
+  "use server";
+
+  const accountNumberRaw = (formData.get("accountNumber") || "").toString().trim();
+  const amountRaw = (formData.get("amount") || "").toString().trim();
+  const confirm = (formData.get("confirm") || "").toString().trim();
+
+  const accountNumber = accountNumberRaw.replace(/^\+/, "");
+
+  if (!accountNumber) {
+    redirect(`/mobile-banking/billers?test=error&message=${encodeQueryParam("Phone number is required")}`);
+  }
+
+  if (!amountRaw) {
+    redirect(`/mobile-banking/billers?test=error&message=${encodeQueryParam("Amount is required")}`);
+  }
+
+  const amount = Number(amountRaw);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    redirect(`/mobile-banking/billers?test=error&message=${encodeQueryParam("Amount must be a positive number")}`);
+  }
+
+  if (confirm !== "TOPUP") {
+    redirect(
+      `/mobile-banking/billers?test=error&message=${encodeQueryParam("Type TOPUP to confirm airtime test")}`
+    );
+  }
+
+  let test: "success" | "error" = "success";
+  let message = "Airtel airtime topup initiated";
+
+  try {
+    const config = await prisma.billerConfig.findUnique({
+      where: { billerType: BillerType.AIRTEL_VALIDATION, isActive: true },
+    });
+
+    if (!config) {
+      throw new Error("Airtel config not found or inactive");
+    }
+
+    const result = await billerTransactionService.processPayment(BillerType.AIRTEL_VALIDATION, {
+      accountNumber,
+      amount,
+      currency: config.defaultCurrency || "MWK",
+      metadata: {
+        source: "admin_test",
+      },
+    });
+
+    if (!result.success) {
+      throw new Error(result.error || "Airtel topup failed");
+    }
+  } catch (e: any) {
+    test = "error";
+    message = e?.message || "Airtel topup failed";
+  }
+
+  redirect(`/mobile-banking/billers?test=${test}&message=${encodeQueryParam(message)}`);
+}
+
+export default async function BillersPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ test?: string; message?: string }>;
+}) {
+  const sp = (await searchParams) || {};
   const configs = (await prisma.billerConfig.findMany({
     orderBy: { billerName: "asc" },
   })) as BillerConfigRow[];
@@ -46,6 +121,28 @@ export default async function BillersPage() {
           </p>
         </div>
       </div>
+
+      {sp.test && sp.message && (
+        <Card className={sp.test === "success" ? "border-emerald-200 bg-emerald-50/50" : "border-destructive/30 bg-destructive/10"}>
+          <CardContent className="py-4 text-sm">
+            <div className={sp.test === "success" ? "text-emerald-900" : "text-destructive"}>{sp.message}</div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Quick Setup</CardTitle>
+          <CardDescription>
+            Create the default Airtel/TNM configurations directly from this page
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-sm text-muted-foreground">
+            Airtime topups are tested and managed under <a className="underline" href="/services">Services Overview</a>.
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -177,6 +274,7 @@ export default async function BillersPage() {
                       {config.description}
                     </p>
                   )}
+
                 </CardContent>
               </Card>
             );

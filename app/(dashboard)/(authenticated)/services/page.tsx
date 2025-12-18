@@ -252,12 +252,22 @@ export default function ServicesMonitorPage() {
 
     setTestLoading(true);
     try {
-      const payload: Record<string, any> = {
-        [selectedService.testConfig!.paramName]:
-          selectedService.testConfig!.paramName === "userId"
-            ? parseInt(testParam)
-            : testParam,
-      };
+      const payload: Record<string, any> = (() => {
+        if (selectedService.testConfig!.paramName === "json") {
+          const parsed = JSON.parse(testParam);
+          if (!parsed || typeof parsed !== "object") {
+            throw new Error("Test payload must be a JSON object");
+          }
+          return parsed;
+        }
+
+        return {
+          [selectedService.testConfig!.paramName]:
+            selectedService.testConfig!.paramName === "userId"
+              ? parseInt(testParam)
+              : testParam,
+        };
+      })();
 
       if (
         selectedService.serviceKey === "sms" &&
@@ -553,6 +563,40 @@ export default function ServicesMonitorPage() {
         paramName: "phoneNumber",
         paramLabel: "Phone Number",
         paramPlaceholder: "e.g., +265999123456",
+      },
+    },
+    {
+      serviceKey: "airtel-airtime",
+      name: "Airtel Airtime Topup (ESB)",
+      type: "Integration Service",
+      description: "Posts an Airtel airtime topup request via ESB",
+      status: "Available",
+      interval: "On-demand",
+      details: "Endpoint: /api/esb/topup/airtel/v1/C2SReceiver",
+      variant: "outline" as const,
+      testable: true,
+      testConfig: {
+        endpoint: "/api/services/airtel-airtime-test",
+        paramName: "phoneNumber",
+        paramLabel: "Phone Number",
+        paramPlaceholder: "0991234567",
+      },
+    },
+    {
+      serviceKey: "tnm-airtime",
+      name: "TNM Airtime/Bundle Topup (ESB)",
+      type: "Integration Service",
+      description: "Posts a TNM bundle purchase/topup request via ESB",
+      status: "Available",
+      interval: "On-demand",
+      details: "Endpoint: /api/esb/topup/tnm/v1/ERSTopup",
+      variant: "outline" as const,
+      testable: true,
+      testConfig: {
+        endpoint: "/api/services/tnm-airtime-test",
+        paramName: "json",
+        paramLabel: "JSON Payload",
+        paramPlaceholder: '{"phoneNumber":"+265888537597","bundleId":"YOUR_BUNDLE_ID"}',
       },
     },
     {

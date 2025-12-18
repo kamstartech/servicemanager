@@ -5,6 +5,7 @@ import {
     PaymentParams,
     PaymentResult
 } from "../base";
+import { ESBAirtimeTopupService } from "../../airtime/topup";
 
 /**
  * Airtel Biller Service (Custom XML)
@@ -39,23 +40,52 @@ export class AirtelBillerService extends BaseBillerService {
         // Default: /api/esb/topup/airtel/v1/C2SReceiver
         const baseUrlEndpoint = "/api/esb/topup/airtel/v1/C2SReceiver";
 
+        const endpoint = endpoints?.purchase || baseUrlEndpoint;
+
         // Airtel builder appends query params to the URL even for POST!
-        const urlWithParams = this.buildUrlWithParams(baseUrlEndpoint, params);
+        const urlWithParams = this.buildUrlWithParams(endpoint, params);
 
         try {
-            const response = await this.retryRequest(() =>
-                this.makeRequest(urlWithParams, xmlPayload, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "text/xml"
-                    }
+            const esb = new ESBAirtimeTopupService({
+                baseUrl: this.config.baseUrl,
+                authentication: this.config.authentication as any,
+            });
+
+            const res = await this.retryRequest(() =>
+                esb.postXml(urlWithParams, xmlPayload, {
+                    "Content-Type": "text/xml",
                 })
             );
-            return this.parseXmlResponse(response);
+
+            if (!res.ok) {
+                return {
+                    success: false,
+                    error: res.error || `HTTP ${res.status}`,
+                    message: res.error || `HTTP ${res.status}`,
+                    data: {
+                        status: res.status,
+                        rawResponse: res.raw,
+                        parsed: res.data,
+                    },
+                };
+            }
+
+            const parsed = this.parseXmlResponse(res.raw);
+            return {
+                ...parsed,
+                data: {
+                    ...(parsed.data || {}),
+                    httpStatus: res.status,
+                    rawHttpResponse: res.raw,
+                    parsedHttpResponse: res.data,
+                },
+            };
         } catch (error: any) {
+            const msg = `Airtel Purchase failed: ${error.message}`;
             return {
                 success: false,
-                message: `Airtel Purchase failed: ${error.message}`
+                error: msg,
+                message: msg
             };
         }
     }

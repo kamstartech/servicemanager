@@ -3,9 +3,11 @@ import {
     BaseBillerService,
     Bundle,
     BundlePurchaseParams,
+    PaymentParams,
     PaymentResult,
     AccountDetails
 } from "../base";
+import { ESBAirtimeTopupService } from "../../airtime/topup";
 
 /**
  * TNM Biller Service (SOAP/XML)
@@ -30,9 +32,18 @@ export class TnmBillerService extends BaseBillerService {
         };
     }
 
-    async processPayment(params: any): Promise<PaymentResult> {
-        // TNM usually bundle based for this integration, but if direct airtime is needed:
-        throw new Error("Direct airtime implementation pending. Use purchaseBundle.");
+    async processPayment(params: PaymentParams): Promise<PaymentResult> {
+        const bundleId = params.metadata?.bundleId;
+
+        if (!bundleId) {
+            throw new Error("Bundle ID required for TNM bundle purchase");
+        }
+
+        return this.purchaseBundle({
+            bundleId,
+            accountNumber: params.accountNumber,
+            amount: params.amount.toString(),
+        });
     }
 
     async getBundleDetails(bundleId: string): Promise<Bundle> {
@@ -62,20 +73,46 @@ export class TnmBillerService extends BaseBillerService {
         const endpoint = endpoints.purchase || "/api/esb/topup/tnm/v1/ERSTopup";
 
         try {
-            const response = await this.retryRequest(() =>
-                this.makeRequest(endpoint, xmlPayload, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "text/xml",
-                        // Auth handled by getAuthHeaders in base
-                    }
+            const esb = new ESBAirtimeTopupService({
+                baseUrl: this.config.baseUrl,
+                authentication: this.config.authentication as any,
+            });
+
+            const res = await this.retryRequest(() =>
+                esb.postXml(endpoint, xmlPayload, {
+                    "Content-Type": "text/xml",
                 })
             );
-            return this.parseSoapResponse(response);
+
+            if (!res.ok) {
+                return {
+                    success: false,
+                    error: res.error || `HTTP ${res.status}`,
+                    message: res.error || `HTTP ${res.status}`,
+                    data: {
+                        status: res.status,
+                        rawResponse: res.raw,
+                        parsed: res.data,
+                    },
+                };
+            }
+
+            const parsed = this.parseSoapResponse(res.raw);
+            return {
+                ...parsed,
+                data: {
+                    ...(parsed.data || {}),
+                    httpStatus: res.status,
+                    rawHttpResponse: res.raw,
+                    parsedHttpResponse: res.data,
+                },
+            };
         } catch (error: any) {
+            const msg = `TNM Purchase failed: ${error.message}`;
             return {
                 success: false,
-                message: `TNM Purchase failed: ${error.message}`
+                error: msg,
+                message: msg
             };
         }
     }

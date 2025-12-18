@@ -164,6 +164,7 @@ export abstract class BaseBillerService {
 
     if (auth.type === "api_key") {
       return {
+        apikey: auth.apiKey,
         "X-API-Key": auth.apiKey,
       };
     }

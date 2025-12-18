@@ -367,6 +367,10 @@ export class BillerTransactionService {
         },
       });
 
+      if (!result.success && !result.error && result.message) {
+        (result as any).error = result.message;
+      }
+
       if (result.success) {
         await this.completeTransaction(transaction.id, result);
       } else {

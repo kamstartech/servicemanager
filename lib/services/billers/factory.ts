@@ -4,19 +4,17 @@ import { SoapBillerService } from "./soap";
 import { InvoiceBillerService } from "./invoice";
 import { BundleBillerService } from "./bundle";
 import { ValidationBillerService } from "./validation";
-import { TnmBillerService } from "./providers/tnm-biller";
-import { AirtelBillerService } from "./providers/airtel-biller";
 
 // Enum surrogate
 const BillerType = {
-  TNM_BUNDLES: "tnm_bundles",
-  AIRTEL_VALIDATION: "airtel_validation",
-  REGISTER_GENERAL: "register_general",
-  SRWB_PREPAID: "srwb_prepaid",
-  LWB_POSTPAID: "lwb_postpaid",
-  BWB_POSTPAID: "bwb_postpaid",
-  SRWB_POSTPAID: "srwb_postpaid",
-  MASM: "masm"
+  TNM_BUNDLES: "TNM_BUNDLES",
+  AIRTEL_VALIDATION: "AIRTEL_VALIDATION",
+  REGISTER_GENERAL: "REGISTER_GENERAL",
+  SRWB_PREPAID: "SRWB_PREPAID",
+  LWB_POSTPAID: "LWB_POSTPAID",
+  BWB_POSTPAID: "BWB_POSTPAID",
+  SRWB_POSTPAID: "SRWB_POSTPAID",
+  MASM: "MASM"
 } as const;
 
 /**
@@ -29,13 +27,14 @@ export class BillerServiceFactory {
   static create(config: BillerConfig): BaseBillerService {
     const features = config.features as any;
 
-    // Specific providers take precedence
-    if (config.billerType === BillerType.TNM_BUNDLES) {
-      return new TnmBillerService(config);
-    }
-
-    if (config.billerType === BillerType.AIRTEL_VALIDATION) {
-      return new AirtelBillerService(config);
+    // Airtime topups are handled via dedicated services (Services Overview), not via billers.
+    if (
+      config.billerType === BillerType.TNM_BUNDLES ||
+      config.billerType === BillerType.AIRTEL_VALIDATION
+    ) {
+      throw new Error(
+        `Biller type ${config.billerType} is not supported via billers. Use the airtime services instead.`
+      );
     }
 
     // Validation-only billers
