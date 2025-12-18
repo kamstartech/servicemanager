@@ -102,8 +102,7 @@ reorderPageWorkflows(pageId: ID!, workflowIds: [ID!]!): [AppScreenPageWorkflow!]
       "type": "FORM",
       "label": "Enter Amount",
       "config": {
-        "formId": "transfer-amount-form",
-        "fields": ["amount", "recipientAccount"]
+        "formId": "transfer-amount-form"
       }
     },
     {
@@ -156,6 +155,18 @@ reorderPageWorkflows(pageId: ID!, workflowIds: [ID!]!): [AppScreenPageWorkflow!]
 }
 ```
 
+## Mobile Client Contract (GraphQL)
+
+When a workflow execution is started via `startWorkflowExecution`, the backend will hydrate `FORM` steps for mobile clients so the app can render the form without querying `Form` separately.
+
+- **Authoring time (admin UI / database):** `FORM` steps reference a form using `config.formId`.
+- **Runtime (mobile GraphQL):** `startWorkflowExecution` returns `WorkflowExecution.workflow.steps[]` with `FORM` step config enriched:
+  - `config.schema` contains the form schema JSON (from `Form.schema`)
+  - `config.formMeta` contains basic form metadata
+  - `config.formId` is stripped for mobile clients
+
+This keeps the workflow authoring model stable while ensuring mobile only receives the data it needs to render the UI.
+
 ## Step Types
 
 ### 1. FORM
@@ -164,13 +175,17 @@ Display a form to collect user input.
 **Config:**
 ```json
 {
-  "formId": "string",           // Reference to form in Forms system
-  "validation": {               // Optional client-side validation
-    "required": ["field1"],
-    "rules": {...}
-  }
+  "formId": "string"
 }
 ```
+
+**Notes:**
+
+- **Authoring time (admin UI / database):** `formId` is used to reference a `Form`.
+- **Runtime (mobile GraphQL):** `startWorkflowExecution` hydrates the step with:
+  - `config.schema` (from `Form.schema`) for rendering
+  - `config.formMeta` (name/description/version)
+  - `config.formId` removed for mobile clients
 
 ### 2. API_CALL
 Make an API request to backend or external service.
