@@ -36,6 +36,10 @@ To support page workflows on mobile, the following fields are enabled on the mob
 - Workflow execution mutations require an authenticated mobile user.
 - Execution ownership is enforced for step execution and completion to prevent cross-user access.
 
+## Client Step Navigation
+- After a successful `executeWorkflowStep(..., timing: AFTER_STEP)` with `shouldProceed = true`, the backend advances `WorkflowExecution.currentStepId` to the next active step.
+- Mobile clients should query `workflowExecution(id)` after a successful step execution to retrieve the updated `currentStepId` and the hydrated step config (e.g., variable-resolved `CONFIRMATION` message).
+
 ## Implementation Notes
 - Mobile whitelist configuration: `lib/graphql/schema/mobile/index.ts`
 - `pageWorkflows` resolver: `lib/graphql/schema/resolvers/workflow.ts`

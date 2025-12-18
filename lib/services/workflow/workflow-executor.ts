@@ -29,6 +29,27 @@ interface StepExecutionResponse {
 
 export class WorkflowExecutor {
 
+  private async getNextActiveStepId(
+    workflowId: string,
+    currentStepId: string
+  ): Promise<string | null> {
+    const steps = await prisma.workflowStep.findMany({
+      where: {
+        workflowId,
+        isActive: true,
+      },
+      orderBy: { order: 'asc' },
+      select: { id: true },
+    });
+
+    const index = steps.findIndex((s) => s.id === currentStepId);
+    if (index < 0) {
+      return null;
+    }
+
+    return steps[index + 1]?.id ?? null;
+  }
+
   /**
    * Start a new workflow execution
    */
@@ -135,6 +156,18 @@ export class WorkflowExecutor {
         });
       }
 
+      if (timing === 'AFTER_STEP') {
+        const nextStepId = await this.getNextActiveStepId(
+          execution.workflowId,
+          stepId
+        );
+
+        await prisma.workflowExecution.update({
+          where: { id: executionId },
+          data: { currentStepId: nextStepId },
+        });
+      }
+
       // Extend session TTL
       await workflowSessionStore.extendSession(execution.sessionId);
 
@@ -178,11 +211,17 @@ export class WorkflowExecutor {
       // Extend session TTL
       await workflowSessionStore.extendSession(execution.sessionId);
 
-      // Update current step
-      await prisma.workflowExecution.update({
-        where: { id: executionId },
-        data: { currentStepId: stepId }
-      });
+      if (timing === 'AFTER_STEP' && result.shouldProceed) {
+        const nextStepId = await this.getNextActiveStepId(
+          execution.workflowId,
+          stepId
+        );
+
+        await prisma.workflowExecution.update({
+          where: { id: executionId },
+          data: { currentStepId: nextStepId },
+        });
+      }
 
       return result;
 
