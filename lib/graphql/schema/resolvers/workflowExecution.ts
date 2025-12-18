@@ -3,10 +3,21 @@ import { prisma } from '@/lib/db/prisma';
 import type { TriggerTiming } from '@prisma/client';
 import crypto from 'crypto';
 
+async function getHiddenAccountCategoryIds(): Promise<string[]> {
+  const hidden = await prisma.accountCategory.findMany({
+    where: { displayToMobile: false },
+    select: { category: true },
+  });
+
+  return hidden.map((c) => c.category);
+}
+
 async function hydrateFormStepsForClient(
   steps: any[],
+  context: any,
   options: { stripFormId: boolean }
 ): Promise<any[]> {
+  const userId = context.userId;
   if (!Array.isArray(steps) || steps.length === 0) {
     return steps;
   }
@@ -46,9 +57,54 @@ async function hydrateFormStepsForClient(
 
     const { formId: _formId, ...restConfig } = (step.config ?? {}) as Record<string, any>;
 
+    let hydratedSchema = form.schema;
+
+    // Handle account field hydration if userId is available
+    if (userId && form.schema && (form.schema as any).fields) {
+      const userIdInt = typeof userId === 'string' ? parseInt(userId) : userId;
+      const schema = form.schema as any;
+
+      const hasAccountField = schema.fields.some((f: any) => f.type === "account");
+
+      if (hasAccountField) {
+        // Use the same logic as myAccounts in mobile.ts
+        const hiddenCategoryIds = await getHiddenAccountCategoryIds();
+        const accounts = await prisma.mobileUserAccount.findMany({
+          where: {
+            mobileUserId: userIdInt,
+            ...(hiddenCategoryIds.length > 0
+              ? {
+                OR: [
+                  { categoryId: null },
+                  { categoryId: { notIn: hiddenCategoryIds } },
+                ],
+              }
+              : {}),
+          },
+          orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+        });
+
+        const accountOptions = accounts.map(acc => ({
+          label: `${acc.accountName || acc.accountType} - ${acc.accountNumber} (${acc.balance?.toString() || "0"} ${acc.currency})`,
+          value: acc.accountNumber
+        }));
+
+        // Inject options into account fields
+        hydratedSchema = {
+          ...schema,
+          fields: schema.fields.map((f: any) => {
+            if (f.type === "account") {
+              return { ...f, options: accountOptions.map(opt => opt.label), accountOptions };
+            }
+            return f;
+          })
+        };
+      }
+    }
+
     const nextConfig: Record<string, any> = {
       ...(restConfig ?? {}),
-      schema: form.schema,
+      schema: hydratedSchema,
       formMeta: {
         name: form.name,
         description: form.description,
@@ -92,7 +148,7 @@ async function assertExecutionOwnership(executionId: string, userId: string) {
 
 export const workflowExecutionResolvers = {
   Query: {
-    async workflowExecution(_parent: unknown, args: { id: string }) {
+    async workflowExecution(_parent: unknown, args: { id: string }, context: any) {
       const execution = await prisma.workflowExecution.findUnique({
         where: { id: args.id },
         include: {
@@ -110,10 +166,27 @@ export const workflowExecutionResolvers = {
         throw new Error('Workflow execution not found');
       }
 
+      const isAdminRequest = !!context?.adminUser || !!context?.adminId;
+      const hydratedSteps = await hydrateFormStepsForClient(
+        execution.workflow.steps,
+        context,
+        { stripFormId: !isAdminRequest }
+      );
+
       return {
         ...execution,
         startedAt: execution.startedAt.toISOString(),
         completedAt: execution.completedAt?.toISOString(),
+        workflow: {
+          ...execution.workflow,
+          createdAt: execution.workflow.createdAt.toISOString(),
+          updatedAt: execution.workflow.updatedAt.toISOString(),
+          steps: hydratedSteps.map(step => ({
+            ...step,
+            createdAt: step.createdAt.toISOString(),
+            updatedAt: step.updatedAt.toISOString(),
+          }))
+        }
       };
     },
 
@@ -152,7 +225,7 @@ export const workflowExecutionResolvers = {
       context: any
     ) {
       const userId = requireAuthenticatedUserId(context);
-      
+
       // Generate session ID if not provided
       const sessionId = context.sessionId || crypto.randomUUID();
 
@@ -166,6 +239,7 @@ export const workflowExecutionResolvers = {
       const isAdminRequest = !!context?.adminUser || !!context?.adminId;
       const hydratedSteps = await hydrateFormStepsForClient(
         execution.workflow.steps,
+        context,
         { stripFormId: !isAdminRequest }
       );
 
@@ -262,11 +336,11 @@ export const workflowExecutionResolvers = {
       if (parent.workflow) {
         return {
           ...parent.workflow,
-          createdAt: parent.workflow.createdAt?.toISOString 
-            ? parent.workflow.createdAt.toISOString() 
+          createdAt: parent.workflow.createdAt?.toISOString
+            ? parent.workflow.createdAt.toISOString()
             : parent.workflow.createdAt,
-          updatedAt: parent.workflow.updatedAt?.toISOString 
-            ? parent.workflow.updatedAt.toISOString() 
+          updatedAt: parent.workflow.updatedAt?.toISOString
+            ? parent.workflow.updatedAt.toISOString()
             : parent.workflow.updatedAt,
         };
       }
