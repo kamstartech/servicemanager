@@ -245,6 +245,7 @@ export const mobileUserResolvers = {
           username: user.username,
           phoneNumber: user.phoneNumber,
           isActive: user.isActive,
+          secretHash: user.secretHash,
           createdAt: user.createdAt.toISOString(),
           updatedAt: user.updatedAt.toISOString(),
         },

@@ -200,6 +200,7 @@ export const deviceVerificationResolvers = {
           phoneNumber: attempt.mobileUser!.phoneNumber,
           customerNumber: attempt.mobileUser!.customerNumber,
           isActive: attempt.mobileUser!.isActive,
+          secretHash: attempt.mobileUser!.secretHash,
           accounts: accounts.map((acc: any) => ({
             id: acc.id,
             accountNumber: acc.accountNumber,
