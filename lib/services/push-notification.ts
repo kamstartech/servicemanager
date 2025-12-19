@@ -34,8 +34,7 @@ export class PushNotificationService {
     try {
       // Check if Firebase messaging is available
       if (!messaging) {
-        console.warn('Firebase messaging not initialized - skipping push notification');
-        return null;
+        throw new Error('Firebase messaging not initialized');
       }
 
       // Get user devices with FCM tokens
@@ -56,8 +55,7 @@ export class PushNotificationService {
       const tokens = devices.map((d) => d.fcmToken!).filter(Boolean);
 
       if (tokens.length === 0) {
-        console.log(`No valid FCM tokens for user ${userId}`);
-        return null;
+        throw new Error(`No valid FCM tokens found for user ${userId}`);
       }
 
       // Create notification ID
@@ -68,7 +66,7 @@ export class PushNotificationService {
         notification: {
           title,
           body,
-          ...(imageUrl && { imageUrl }),
+          ...(imageUrl && { image: imageUrl }),
         },
         data: {
           notificationId,
@@ -90,11 +88,11 @@ export class PushNotificationService {
       // Handle invalid tokens
       if (response.failureCount > 0) {
         const invalidTokens: string[] = [];
-        
+
         response.responses.forEach((resp, idx) => {
           if (resp.error) {
             console.error(`Failed to send to token ${idx}:`, resp.error.message);
-            
+
             // Check if token is invalid
             if (
               resp.error.code === 'messaging/invalid-registration-token' ||
@@ -328,7 +326,7 @@ export class PushNotificationService {
    */
   private static async removeInvalidTokens(tokens: string[]) {
     console.log(`Removing ${tokens.length} invalid FCM token(s)`);
-    
+
     await prisma.mobileDevice.updateMany({
       where: { fcmToken: { in: tokens } },
       data: { fcmToken: null },
