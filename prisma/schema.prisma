@@ -1208,7 +1208,7 @@ model MobileUserProfile {
   address   String? @db.Text
   city      String? @db.Text
   country   String? @db.Text
-  zip             String? @db.Text
+  zip       String? @db.Text
   profileImageUrl String? @map("profile_image_url") @db.Text
 
   createdAt DateTime @default(now()) @map("created_at")

@@ -7,4 +7,5 @@ enum TransactionType {
   WALLET_CREDIT
   ACCOUNT_TO_WALLET
   WALLET_TO_ACCOUNT
+  AIRTIME
 }
