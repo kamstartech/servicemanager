@@ -479,6 +479,7 @@ export const authResolvers = {
       const { PushNotificationService } = await import("@/lib/services/push-notification");
       PushNotificationService.sendNewDeviceLoginAttempt(
         user.id,
+        deviceId,
         deviceName || "Unknown Device",
         deviceModel,
         deviceOs,

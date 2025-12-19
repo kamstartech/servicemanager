@@ -91,7 +91,7 @@ export class PushNotificationService {
       });
 
       // Prepare message
-      const message = {
+      const message: any = {
         notification: {
           title,
           body,
@@ -103,6 +103,26 @@ export class PushNotificationService {
           priority,
           ...(actionUrl && { actionUrl }),
           ...(actionData && { actionData: JSON.stringify(actionData) }),
+        },
+        // Android-specific configuration
+        android: {
+          priority: priority === 'HIGH' || priority === 'URGENT' ? 'high' : 'normal',
+          notification: {
+            channelId: type === 'NEW_DEVICE_ATTEMPT' ? 'device_security' : 'default',
+            priority: priority === 'HIGH' || priority === 'URGENT' ? 'high' : 'default',
+            defaultSound: true,
+            defaultVibrateTimings: true,
+          },
+        },
+        // iOS-specific configuration
+        apns: {
+          payload: {
+            aps: {
+              sound: 'default',
+              badge: 1,
+              ...(type === 'NEW_DEVICE_ATTEMPT' && { category: 'DEVICE_APPROVAL' }),
+            },
+          },
         },
         tokens,
       };
@@ -346,6 +366,7 @@ export class PushNotificationService {
    */
   static async sendNewDeviceLoginAttempt(
     userId: number,
+    deviceId: string,
     deviceName: string,
     deviceModel?: string,
     deviceOs?: string,
@@ -362,7 +383,7 @@ export class PushNotificationService {
       title: 'New Device Login Attempt',
       body: `A new device (${deviceName}${deviceInfo ? ` - ${deviceInfo}` : ''}) is attempting to login${locationInfo} and requires approval`,
       actionUrl: '/security/devices',
-      actionData: { deviceName, deviceModel, deviceOs, location, ipAddress },
+      actionData: { deviceId, deviceName, deviceModel, deviceOs, location, ipAddress },
     });
   }
 
