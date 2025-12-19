@@ -98,16 +98,16 @@ export class BackupService {
             const files = await listFiles(BUCKETS.BACKUPS);
 
             const backups = await Promise.all(
-                files.map(async (file) => {
+                files.filter(f => !!f.name).map(async (file) => {
                     try {
-                        const metadata = await getFileMetadata(BUCKETS.BACKUPS, file.name);
+                        const metadata = await getFileMetadata(BUCKETS.BACKUPS, file.name!);
                         const meta = metadata.metaData || {};
 
                         return {
-                            filename: file.name,
+                            filename: file.name!,
                             sizeBytes: file.size?.toString() || "0",
                             createdAt: meta["x-backup-timestamp"] || file.lastModified?.toISOString() || new Date().toISOString(),
-                            storageUrl: this.getMinIOUrl(file.name),
+                            storageUrl: this.getMinIOUrl(file.name!),
                             type: meta["x-backup-type"] || "unknown",
                             createdBy: meta["x-created-by-user-id"] ? {
                                 userId: meta["x-created-by-user-id"],
@@ -118,10 +118,10 @@ export class BackupService {
                     } catch (error) {
                         console.error(`Failed to get metadata for ${file.name}:`, error);
                         return {
-                            filename: file.name,
+                            filename: file.name!,
                             sizeBytes: file.size?.toString() || "0",
                             createdAt: file.lastModified?.toISOString() || new Date().toISOString(),
-                            storageUrl: this.getMinIOUrl(file.name),
+                            storageUrl: this.getMinIOUrl(file.name!),
                             type: "unknown",
                         };
                     }

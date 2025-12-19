@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = "force-dynamic";
 
 import { useQuery, gql, useMutation } from "@apollo/client";
 import { useI18n } from "@/components/providers/i18n-provider";

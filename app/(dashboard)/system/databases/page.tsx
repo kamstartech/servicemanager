@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = "force-dynamic";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -131,8 +132,8 @@ export default function DatabaseConnectionsPage() {
         const tooltip = !hasTest
           ? "Not tested yet"
           : row.lastTestOk
-          ? `Last test successful at ${when}`
-          : `Last test failed at ${when}`;
+            ? `Last test successful at ${when}`
+            : `Last test failed at ${when}`;
 
         if (!hasTest) {
           return (
@@ -215,9 +216,9 @@ export default function DatabaseConnectionsPage() {
                   setLastTestSuccessful(payload.ok);
                   setLastTestMessage(
                     payload.message ||
-                      (payload.ok
-                        ? "Connection successful."
-                        : "Connection failed."),
+                    (payload.ok
+                      ? "Connection successful."
+                      : "Connection failed."),
                   );
                   if (payload.ok) {
                     toast.success(
@@ -231,13 +232,11 @@ export default function DatabaseConnectionsPage() {
               } catch (mutationError: any) {
                 setLastTestSuccessful(false);
                 setLastTestMessage(
-                  `Connection test failed: ${
-                    mutationError?.message ?? String(mutationError)
+                  `Connection test failed: ${mutationError?.message ?? String(mutationError)
                   }`,
                 );
                 toast.error(
-                  `Connection test failed: ${
-                    mutationError?.message ?? String(mutationError)
+                  `Connection test failed: ${mutationError?.message ?? String(mutationError)
                   }`,
                 );
                 await refetch();

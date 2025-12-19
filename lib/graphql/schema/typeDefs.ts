@@ -41,6 +41,7 @@ export const typeDefs = /* GraphQL */ `
     WALLET_CREDIT
     ACCOUNT_TO_WALLET
     WALLET_TO_ACCOUNT
+    AIRTIME
   }
 
   enum SuspicionReason {
@@ -2089,6 +2090,27 @@ export const typeDefs = /* GraphQL */ `
     checkbookRequest(id: ID!): CheckbookRequest
     checkbookRequestStats: CheckbookRequestStats!
   }
+
+  enum AirtimeProvider {
+    AIRTEL
+    TNM
+  }
+
+  input PurchaseAirtimeInput {
+    provider: AirtimeProvider!
+    msisdn: String!
+    amount: Decimal!
+    sourceAccountNumber: String!
+    bundleId: String
+  }
+
+  type PurchaseAirtimeResponse {
+    success: Boolean!
+    message: String
+    transactionId: String
+    reference: String
+    status: String
+  }
   
   extend type Mutation {
     # Mobile user mutations
@@ -2109,6 +2131,9 @@ export const typeDefs = /* GraphQL */ `
     adminTestPushNotification(userId: ID!, deviceId: String): Boolean!
     updateCheckbookRequest(id: ID!, input: UpdateCheckbookRequestInput!): CheckbookRequest!
     deleteCheckbookRequest(id: ID!): Boolean!
+
+    # Airtime mutations
+    purchaseAirtime(input: PurchaseAirtimeInput!): PurchaseAirtimeResponse!
   }
 
   enum NotificationType {

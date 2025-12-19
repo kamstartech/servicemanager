@@ -59,6 +59,7 @@ const MOBILE_MUTATION_FIELDS = new Set([
   "createTransfer",
   "retryTransaction",
   "reverseTransaction",
+  "purchaseAirtime",
 ]);
 
 function pickRootFields(
@@ -113,8 +114,8 @@ export const mobileSchema = new GraphQLSchema({
   }),
   mutation: baseMutation
     ? new GraphQLObjectType({
-        name: baseMutation.name,
-        fields: () => pickRootFields(baseMutation, MOBILE_MUTATION_FIELDS),
-      })
+      name: baseMutation.name,
+      fields: () => pickRootFields(baseMutation, MOBILE_MUTATION_FIELDS),
+    })
     : undefined,
 });
