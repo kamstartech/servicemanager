@@ -23,8 +23,10 @@ export class BackupService {
      * Create a new backup of the database
      */
     async createBackup(userContext?: { userId: string; email: string; name: string }): Promise<string> {
-        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-        const filename = `backup-${timestamp}.sql`;
+        const now = new Date();
+        const isoTimestamp = now.toISOString();
+        const filenameSafeTimestamp = isoTimestamp.replace(/[:.]/g, "-");
+        const filename = `backup-${filenameSafeTimestamp}.sql`;
         const filepath = path.join(BACKUP_DIR, filename);
 
         // Database connection string from environment
@@ -44,7 +46,7 @@ export class BackupService {
                 const fileBuffer = fs.readFileSync(filepath);
                 const metadata: Record<string, string> = {
                     "Content-Type": "application/sql",
-                    "X-Backup-Timestamp": timestamp,
+                    "X-Backup-Timestamp": isoTimestamp, // Store valid ISO timestamp
                     "X-Database": "service_manager",
                     "X-Backup-Type": "manual",
                 };
@@ -235,9 +237,11 @@ export class BackupService {
         }
 
         // Generate unique filename with timestamp
-        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+        const now = new Date();
+        const isoTimestamp = now.toISOString();
+        const filenameSafeTimestamp = isoTimestamp.replace(/[:.]/g, "-");
         const sanitizedName = originalFilename.replace(/[^a-zA-Z0-9.-]/g, "_");
-        const filename = `uploaded-${timestamp}-${sanitizedName}`;
+        const filename = `uploaded-${filenameSafeTimestamp}-${sanitizedName}`;
         const filepath = path.join(BACKUP_DIR, filename);
 
         try {
@@ -248,7 +252,7 @@ export class BackupService {
             try {
                 const metadata: Record<string, string> = {
                     "Content-Type": "application/sql",
-                    "X-Backup-Timestamp": timestamp,
+                    "X-Backup-Timestamp": isoTimestamp, // Store valid ISO timestamp
                     "X-Backup-Type": "uploaded",
                     "X-Original-Filename": originalFilename,
                 };
