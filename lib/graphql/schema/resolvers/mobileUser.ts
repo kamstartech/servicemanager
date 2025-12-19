@@ -247,7 +247,42 @@ export const mobileUserResolvers = {
           isActive: user.isActive,
           createdAt: user.createdAt.toISOString(),
           updatedAt: user.updatedAt.toISOString(),
-        }
+        },
+        token: null, // Token already exists on client
+        appStructure: await prisma.appScreen.findMany({
+          where: {
+            context: user.context,
+            isActive: true,
+          },
+          include: {
+            pages: {
+              where: { isActive: true },
+              orderBy: { order: "asc" },
+            },
+          },
+          orderBy: { order: "asc" },
+        }).then(screens => screens.map((screen) => ({
+          id: screen.id,
+          name: screen.name,
+          context: screen.context,
+          icon: screen.icon,
+          order: screen.order,
+          isActive: screen.isActive,
+          isTesting: screen.isTesting,
+          pages: screen.pages.map((page) => ({
+            id: page.id,
+            name: page.name,
+            icon: page.icon,
+            order: page.order,
+            isActive: page.isActive,
+            isTesting: page.isTesting,
+            screenId: page.screenId,
+            createdAt: page.createdAt.toISOString(),
+            updatedAt: page.updatedAt.toISOString(),
+          })),
+          createdAt: screen.createdAt.toISOString(),
+          updatedAt: screen.updatedAt.toISOString(),
+        })))
       };
     },
   },

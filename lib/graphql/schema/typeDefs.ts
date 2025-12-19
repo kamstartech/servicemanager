@@ -2172,6 +2172,8 @@ export const typeDefs = /* GraphQL */ `
     success: Boolean!
     message: String
     user: MobileUser
+    token: String
+    appStructure: [AppScreen!]
   }
 
   type PushNotification {
