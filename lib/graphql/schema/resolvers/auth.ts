@@ -253,7 +253,6 @@ export const authResolvers = {
             username: user.username,
             phoneNumber: user.phoneNumber,
             customerNumber: user.customerNumber,
-            accountNumber: user.accountNumber,
             isActive: user.isActive,
             accounts: accounts.map((acc) => ({
               id: acc.id,

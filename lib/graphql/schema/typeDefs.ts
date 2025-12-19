@@ -187,7 +187,6 @@ export const typeDefs = /* GraphQL */ `
     username: String
     phoneNumber: String
     customerNumber: String
-    accountNumber: String
     accounts: [Account!]!
     primaryAccount: Account
     profile: MobileUserProfile

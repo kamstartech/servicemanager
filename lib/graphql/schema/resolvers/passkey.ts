@@ -356,7 +356,6 @@ export const passkeyResolvers = {
                         username: user.username,
                         phoneNumber: user.phoneNumber,
                         customerNumber: user.customerNumber,
-                        accountNumber: user.accountNumber,
                         isActive: user.isActive,
                         accounts: accounts.map((acc: any) => ({
                             id: acc.id,
