@@ -31,7 +31,6 @@ import {
 const BACKUPS_QUERY = gql`
   query Backups {
     backups {
-      id
       filename
       sizeBytes
       createdAt
@@ -42,21 +41,20 @@ const BACKUPS_QUERY = gql`
 const CREATE_BACKUP = gql`
   mutation CreateBackup {
     createBackup {
-      id
       filename
     }
   }
 `;
 
 const RESTORE_BACKUP = gql`
-  mutation RestoreBackup($id: ID!) {
-    restoreBackup(id: $id)
+  mutation RestoreBackup($filename: String!) {
+    restoreBackup(filename: $filename)
   }
 `;
 
 const DELETE_BACKUP = gql`
-  mutation DeleteBackup($id: ID!) {
-    deleteBackup(id: $id)
+  mutation DeleteBackup($filename: String!) {
+    deleteBackup(filename: $filename)
   }
 `;
 
@@ -87,7 +85,6 @@ const UPDATE_BACKUP_SCHEDULE = gql`
 `;
 
 type BackupRow = {
-    id: string;
     filename: string;
     sizeBytes: string; // BigInt serialized as string usually
     createdAt: string;
@@ -120,7 +117,7 @@ export default function BackupsPage() {
     const [restoreBackup, { loading: restoring }] = useMutation(RESTORE_BACKUP);
     const [deleteBackup, { loading: deleting }] = useMutation(DELETE_BACKUP);
     const [updateBackupSchedule, { loading: savingSchedule }] = useMutation(UPDATE_BACKUP_SCHEDULE);
-    
+
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -169,10 +166,10 @@ export default function BackupsPage() {
         }
     };
 
-    const handleRestoreBackup = async (id: string, filename: string) => {
+    const handleRestoreBackup = async (filename: string) => {
         try {
             toast.info("Starting restore process... The system might be unresponsive.");
-            const result = await restoreBackup({ variables: { id } });
+            const result = await restoreBackup({ variables: { filename } });
             if (result.data?.restoreBackup) {
                 toast.success(`Restored from ${filename} successfully.`);
                 refetch();
@@ -184,9 +181,9 @@ export default function BackupsPage() {
         }
     };
 
-    const handleDeleteBackup = async (id: string) => {
+    const handleDeleteBackup = async (filename: string) => {
         try {
-            await deleteBackup({ variables: { id } });
+            await deleteBackup({ variables: { filename } });
             toast.success("Backup deleted.");
             refetch();
         } catch (err: any) {
@@ -221,7 +218,7 @@ export default function BackupsPage() {
 
         try {
             toast.info(`Uploading ${file.name}...`);
-            
+
             const response = await fetch("/api/backups/upload", {
                 method: "POST",
                 body: formData,
@@ -293,7 +290,7 @@ export default function BackupsPage() {
                         className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
                         title="Download"
                     >
-                        <a href={`/api/backups/${row.id}/download`} target="_blank" rel="noopener noreferrer">
+                        <a href={`/api/backups/${row.filename}/download`} target="_blank" rel="noopener noreferrer">
                             <Download className="h-4 w-4 mr-2" />
                             {translate("common.actions.download")}
                         </a>
@@ -324,7 +321,7 @@ export default function BackupsPage() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                                 <AlertDialogCancel>{translate("common.actions.cancel")}</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleRestoreBackup(row.id, row.filename)} className="bg-red-600 hover:bg-red-700">
+                                <AlertDialogAction onClick={() => handleRestoreBackup(row.filename)} className="bg-red-600 hover:bg-red-700">
                                     {translate("common.actions.confirmRestore")}
                                 </AlertDialogAction>
                             </AlertDialogFooter>
@@ -354,7 +351,7 @@ export default function BackupsPage() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                                 <AlertDialogCancel>{translate("common.actions.cancel")}</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDeleteBackup(row.id)}>
+                                <AlertDialogAction onClick={() => handleDeleteBackup(row.filename)}>
                                     {translate("common.actions.delete")}
                                 </AlertDialogAction>
                             </AlertDialogFooter>
@@ -384,8 +381,8 @@ export default function BackupsPage() {
                         <Button variant="outline" size="sm" onClick={handleUploadClick} disabled={uploading}>
                             <Upload className="h-4 w-4 mr-2" />
                             {uploading
-                              ? translate("common.state.uploading")
-                              : `${translate("common.actions.upload")} ${translate("common.entities.backup")}`}
+                                ? translate("common.state.uploading")
+                                : `${translate("common.actions.upload")} ${translate("common.entities.backup")}`}
                         </Button>
                         <input
                             ref={fileInputRef}
@@ -397,8 +394,8 @@ export default function BackupsPage() {
                         <Button size="sm" onClick={handleCreateBackup} disabled={creating}>
                             <Plus className="h-4 w-4 mr-2" />
                             {creating
-                              ? translate("common.state.creating")
-                              : `${translate("common.actions.create")} ${translate("common.entities.backup")}`}
+                                ? translate("common.state.creating")
+                                : `${translate("common.actions.create")} ${translate("common.entities.backup")}`}
                         </Button>
                     </div>
                 </CardHeader>
@@ -456,8 +453,8 @@ export default function BackupsPage() {
                                         disabled={scheduleLoading || savingSchedule}
                                     >
                                         {savingSchedule
-                                          ? translate("common.state.saving")
-                                          : `${translate("common.actions.save")} ${translate("common.entities.schedule")}`}
+                                            ? translate("common.state.saving")
+                                            : `${translate("common.actions.save")} ${translate("common.entities.schedule")}`}
                                     </Button>
                                 </div>
                             </div>

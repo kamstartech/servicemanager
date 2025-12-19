@@ -1,9 +1,0 @@
-model Backup {
-  id         String   @id @default(cuid())
-  filename   String   @unique
-  sizeBytes  BigInt   @map("size_bytes")
-  storageUrl String?  @map("storage_url") @db.Text
-  createdAt  DateTime @default(now()) @map("created_at")
-
-  @@map("fdh_backups")
-}

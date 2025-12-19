@@ -2,7 +2,7 @@ import { exec } from "child_process";
 import fs from "fs";
 import path from "path";
 import { promisify } from "util";
-import { prisma } from "@/lib/db/prisma";
+
 import { uploadFile, downloadFile, deleteFile, listFiles, getFileMetadata, BUCKETS } from "@/lib/storage/minio";
 import type { GraphQLContext } from "@/lib/graphql/context";
 

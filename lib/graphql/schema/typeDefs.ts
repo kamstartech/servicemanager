@@ -566,7 +566,6 @@ export const typeDefs = /* GraphQL */ `
   }
 
   type Backup {
-    id: ID!
     filename: String!
     sizeBytes: String!
     createdAt: String!
