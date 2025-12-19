@@ -1175,7 +1175,9 @@ export const typeDefs = /* GraphQL */ `
     isPrimary: Boolean!
     isCurrent: Boolean!
     lastUsedAt: String
+    credentialId: String
     createdAt: String!
+    updatedAt: String!
     activeSessions: [MySession!]!
   }
 

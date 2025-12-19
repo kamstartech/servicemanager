@@ -51,7 +51,9 @@ export const mobileResolvers = {
         isPrimary: device.isPrimary,
         isCurrent: device.deviceId === context.deviceId,
         lastUsedAt: device.lastUsedAt?.toISOString(),
+        credentialId: device.credentialId,
         createdAt: device.createdAt.toISOString(),
+        updatedAt: device.updatedAt.toISOString(),
         activeSessions: (sessionsByDevice[device.deviceId] || []).map((s: any) => ({
           id: s.id,
           deviceId: s.deviceId,
