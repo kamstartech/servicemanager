@@ -474,6 +474,20 @@ export const authResolvers = {
         }),
       ]);
 
+      // Send notification to user's existing active devices (async, don't block response)
+      // The PushNotificationService.send() method already checks user.pushNotifications
+      const { PushNotificationService } = await import("@/lib/services/push-notification");
+      PushNotificationService.sendNewDeviceLoginAttempt(
+        user.id,
+        deviceName || "Unknown Device",
+        deviceModel,
+        deviceOs,
+        location,
+        ipAddress
+      ).catch((error) => {
+        console.error("Failed to send new device notification:", error);
+      });
+
       return {
         success: true,
         requiresApproval: true,

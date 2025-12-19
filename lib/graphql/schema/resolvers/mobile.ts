@@ -7,7 +7,7 @@ async function getHiddenAccountCategoryIds(): Promise<string[]> {
     select: { category: true },
   });
 
-  return hidden.map((c) => c.category);
+  return hidden.map((c: { category: string }) => c.category);
 }
 
 export const mobileResolvers = {
@@ -462,6 +462,105 @@ export const mobileResolvers = {
         success: true,
         message: `Revoked ${result.count} other session(s)`,
       };
+    },
+
+    /**
+     * Approve a pending device (user self-approval)
+     */
+    async approveMyDevice(
+      _: unknown,
+      { deviceId }: { deviceId: string },
+      context: GraphQLContext
+    ) {
+      if (!context.userId) {
+        throw new Error("Authentication required");
+      }
+
+      // Verify device belongs to this user and is pending
+      const device = await prisma.mobileDevice.findFirst({
+        where: {
+          id: deviceId,
+          mobileUserId: context.userId,
+          isActive: false, // Must be pending
+        },
+      });
+
+      if (!device) {
+        throw new Error("Pending device not found or already approved");
+      }
+
+      // Approve the device
+      await prisma.$transaction(async (tx: import('@prisma/client').Prisma.TransactionClient) => {
+        await tx.mobileDevice.update({
+          where: { id: deviceId },
+          data: { isActive: true, verifiedVia: "USER_APPROVAL" },
+        });
+
+        // Ensure user has a primary device
+        const primary = await tx.mobileDevice.findFirst({
+          where: { mobileUserId: context.userId!, isPrimary: true },
+          select: { id: true },
+        });
+
+        if (!primary) {
+          await tx.mobileDevice.updateMany({
+            where: { mobileUserId: context.userId! },
+            data: { isPrimary: false },
+          });
+          await tx.mobileDevice.update({
+            where: { id: deviceId },
+            data: { isPrimary: true },
+          });
+        }
+      });
+
+      // Send notification to the newly approved device (if it has FCM token)
+      const { PushNotificationService } = await import("@/lib/services/push-notification");
+      PushNotificationService.send({
+        userId: context.userId,
+        type: "DEVICE_APPROVED",
+        priority: "HIGH",
+        title: "Device Approved",
+        body: `Your device "${device.name || 'Mobile Device'}" has been approved and is now active`,
+        deviceId: device.deviceId,
+      }).catch((error) => {
+        console.error("Failed to send device approval notification:", error);
+      });
+
+      return true;
+    },
+
+    /**
+     * Deny a pending device (user self-denial)
+     */
+    async denyMyDevice(
+      _: unknown,
+      { deviceId }: { deviceId: string },
+      context: GraphQLContext
+    ) {
+      if (!context.userId) {
+        throw new Error("Authentication required");
+      }
+
+      // Verify device belongs to this user and is pending
+      const device = await prisma.mobileDevice.findFirst({
+        where: {
+          id: deviceId,
+          mobileUserId: context.userId,
+          isActive: false,
+        },
+      });
+
+      if (!device) {
+        throw new Error("Pending device not found");
+      }
+
+      // Delete the pending device
+      await prisma.mobileDevice.delete({
+        where: { id: deviceId },
+      });
+
+      return true;
     },
   },
 };

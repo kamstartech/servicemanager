@@ -1051,14 +1051,10 @@ model MobileUser {
 
   // Core banking linkage
   customerNumber String? @db.Text
-  accountNumber  String? @db.Text // Deprecated: use accounts relation
 
   // Secrets (storage/validation rules depend on context)
   passwordHash String? @db.Text
   secretHash   String? @map("secret") @db.Text
-
-  // Token versioning for rotation
-  tokenVersion Int @default(0) @map("token_version")
 
   smsNotifications   Boolean @default(true) @map("sms_notifications")
   emailNotifications Boolean @default(true) @map("email_notifications")

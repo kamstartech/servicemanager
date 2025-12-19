@@ -1224,6 +1224,8 @@ export const typeDefs = /* GraphQL */ `
     # Device Management
     revokeMyDevice(deviceId: String!): Boolean!
     renameMyDevice(deviceId: String!, name: String!): MyDevice!
+    approveMyDevice(deviceId: String!): Boolean!
+    denyMyDevice(deviceId: String!): Boolean!
     
     # Session Management
     revokeMySession(sessionId: String!): Boolean!

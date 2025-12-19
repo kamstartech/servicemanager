@@ -27,7 +27,6 @@ const USER_DETAILS_QUERY = gql`
       username
       phoneNumber
       customerNumber
-      accountNumber
       isActive
       createdAt
       updatedAt

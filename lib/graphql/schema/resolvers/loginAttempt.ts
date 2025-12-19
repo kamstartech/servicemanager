@@ -50,7 +50,13 @@ export const loginAttemptResolvers = {
       ]);
 
       return {
-        attempts,
+        attempts: attempts.map((attempt) => ({
+          ...attempt,
+          attemptedAt: attempt.attemptedAt.toISOString(),
+          otpSentAt: attempt.otpSentAt?.toISOString(),
+          otpExpiresAt: attempt.otpExpiresAt?.toISOString(),
+          otpVerifiedAt: attempt.otpVerifiedAt?.toISOString(),
+        })),
         total,
       };
     },

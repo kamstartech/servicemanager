@@ -43,6 +43,8 @@ const MOBILE_MUTATION_FIELDS = new Set([
   "updateMyProfile",
   "revokeMyDevice",
   "renameMyDevice",
+  "approveMyDevice",
+  "denyMyDevice",
   "revokeMySession",
   "revokeAllMyOtherSessions",
   "createCheckbookRequest",

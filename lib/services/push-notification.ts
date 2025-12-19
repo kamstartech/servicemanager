@@ -342,6 +342,31 @@ export class PushNotificationService {
   }
 
   /**
+   * Send notification when a new device attempts to login (pending approval)
+   */
+  static async sendNewDeviceLoginAttempt(
+    userId: number,
+    deviceName: string,
+    deviceModel?: string,
+    deviceOs?: string,
+    location?: string,
+    ipAddress?: string
+  ) {
+    const deviceInfo = [deviceModel, deviceOs].filter(Boolean).join(' • ');
+    const locationInfo = location ? ` from ${location}` : '';
+
+    return this.send({
+      userId,
+      type: 'NEW_DEVICE_ATTEMPT',
+      priority: 'HIGH',
+      title: 'New Device Login Attempt',
+      body: `A new device (${deviceName}${deviceInfo ? ` - ${deviceInfo}` : ''}) is attempting to login${locationInfo} and requires approval`,
+      actionUrl: '/security/devices',
+      actionData: { deviceName, deviceModel, deviceOs, location, ipAddress },
+    });
+  }
+
+  /**
    * Send payment due reminder
    */
   static async sendPaymentDueReminder(
