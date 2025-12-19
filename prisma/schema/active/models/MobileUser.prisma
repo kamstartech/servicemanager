@@ -16,6 +16,7 @@ model MobileUser {
   smsNotifications   Boolean @default(true) @map("sms_notifications")
   emailNotifications Boolean @default(true) @map("email_notifications")
   pushNotifications  Boolean @default(true) @map("push_notifications")
+  allowMultiSession  Boolean @default(false) @map("allow_multi_session")
 
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")

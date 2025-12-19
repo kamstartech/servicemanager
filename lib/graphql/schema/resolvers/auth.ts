@@ -426,7 +426,74 @@ export const authResolvers = {
         };
       }
 
-      // 3c. Second+ device - Requires admin approval
+      // 3c. Second+ device - Check if user allows multi-device sessions
+      if (user.allowMultiSession) {
+        // User allows multiple devices - Send OTP like first device
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+        const verificationToken = crypto.randomUUID();
+
+        // Determine verification method
+        const profile = await prisma.mobileUserProfile.findUnique({
+          where: { mobileUserId: user.id },
+        });
+
+        const email = profile?.email;
+        const verificationMethod = user.phoneNumber ? "SMS" : "EMAIL";
+        const sentTo = verificationMethod === "SMS" ? user.phoneNumber : email;
+
+        if (!sentTo) {
+          throw new Error("No phone number or email associated with this account");
+        }
+
+        // Create login attempt with OTP
+        await prisma.deviceLoginAttempt.create({
+          data: {
+            mobileUserId: user.id,
+            username,
+            context,
+            deviceId,
+            deviceName,
+            deviceModel,
+            deviceOs,
+            ipAddress,
+            location,
+            attemptType: "PASSWORD_LOGIN",
+            status: "PENDING_VERIFICATION",
+            otpCode,
+            otpSentTo: sentTo,
+            otpSentAt: new Date(),
+            otpExpiresAt,
+            verificationToken,
+            attemptedAt: new Date(),
+          },
+        });
+
+        if (verificationMethod === "SMS") {
+          const smsResult = await ESBSMSService.sendOTP(sentTo, otpCode, user.id);
+          if (!smsResult.success) {
+            throw new Error(smsResult.error || "Failed to send OTP");
+          }
+        } else {
+          await emailService.sendOTP(sentTo, otpCode, user.username ?? username ?? "");
+        }
+
+        // Mask contact
+        const maskedContact = maskContact(sentTo, verificationMethod);
+
+        return {
+          success: true,
+          requiresVerification: true,
+          verificationMethod,
+          maskedContact,
+          verificationToken,
+          message: `Verification code sent to ${maskedContact}`,
+          devicePending: false,
+        };
+      }
+
+      // 3d. Second+ device - Multi-session disabled, requires approval
+
       await prisma.$transaction([
         prisma.mobileDevice.upsert({
           where: {
