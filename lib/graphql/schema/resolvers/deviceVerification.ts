@@ -10,24 +10,7 @@ const JWT_SECRET: Secret =
 const JWT_EXPIRES_IN: SignOptions["expiresIn"] =
   (process.env.JWT_EXPIRES_IN as SignOptions["expiresIn"]) || "24h";
 
-async function issueMobileUserSecret(
-  mobileUserId: number
-): Promise<string | null> {
-  const secret = crypto.randomBytes(32).toString("base64url");
-  const secretHash = await bcrypt.hash(secret, 12);
 
-  try {
-    await prisma.mobileUser.update({
-      where: { id: mobileUserId },
-      data: { secretHash },
-    });
-  } catch (err) {
-    console.error("Failed to persist mobile user secretHash:", err);
-    return null;
-  }
-
-  return secret;
-}
 
 export const deviceVerificationResolvers = {
   Mutation: {
@@ -206,12 +189,10 @@ export const deviceVerificationResolvers = {
         },
       });
 
-      const secret = await issueMobileUserSecret(attempt.mobileUserId!);
-
       return {
         success: true,
         token,
-        secret,
+        secret: null,
         user: {
           id: attempt.mobileUser!.id,
           context: attempt.mobileUser!.context,

@@ -43,24 +43,7 @@ function maskContact(contact: string, method: "SMS" | "EMAIL"): string {
   }
 }
 
-async function issueMobileUserSecret(
-  mobileUserId: number
-): Promise<string | null> {
-  const secret = crypto.randomBytes(32).toString("base64url");
-  const secretHash = await bcrypt.hash(secret, 12);
 
-  try {
-    await prisma.mobileUser.update({
-      where: { id: mobileUserId },
-      data: { secretHash },
-    });
-  } catch (err) {
-    console.error("Failed to persist mobile user secretHash:", err);
-    return null;
-  }
-
-  return secret;
-}
 
 export const authResolvers = {
   Mutation: {
@@ -245,7 +228,7 @@ export const authResolvers = {
           },
         });
 
-        const secret = await issueMobileUserSecret(user.id);
+
 
         // Fetch app structure for user's context
         const appStructure = await prisma.appScreen.findMany({
@@ -342,7 +325,7 @@ export const authResolvers = {
             updatedAt: user.updatedAt.toISOString(),
           },
           token,
-          secret,
+          secret: null,
           message: "Login successful",
           devicePending: false,
           requiresVerification: false,

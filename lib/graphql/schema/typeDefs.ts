@@ -193,6 +193,7 @@ export const typeDefs = /* GraphQL */ `
     profile: MobileUserProfile
     walletTier: MobileUserWalletTier
     isActive: Boolean!
+    hasSecret: Boolean!
     createdAt: String!
     updatedAt: String!
   }
@@ -2134,6 +2135,9 @@ export const typeDefs = /* GraphQL */ `
 
     # Airtime mutations
     purchaseAirtime(input: PurchaseAirtimeInput!): PurchaseAirtimeResponse!
+
+    # Security mutations
+    setMemoWord(memoWord: String!): MobileUserResponse!
   }
 
   enum NotificationType {
@@ -2162,6 +2166,12 @@ export const typeDefs = /* GraphQL */ `
     DELIVERED
     FAILED
     READ
+  }
+
+  type MobileUserResponse {
+    success: Boolean!
+    message: String
+    user: MobileUser
   }
 
   type PushNotification {

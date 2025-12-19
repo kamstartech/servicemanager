@@ -1066,7 +1066,6 @@ model MobileUser {
   // Secrets (storage/validation rules depend on context)
   passwordHash String? @db.Text
   secretHash   String? @map("secret") @db.Text
-  memoWord     String? @map("memo_word") @db.Text // Security word for password reset
 
   // Token versioning for rotation
   tokenVersion Int @default(0) @map("token_version")

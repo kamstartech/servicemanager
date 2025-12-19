@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { pubsub, EVENTS } from "../../pubsub";
 import { WalletTierService } from "@/lib/services/wallet-tiers";
+import bcrypt from "bcryptjs";
 
 type MobileUsersArguments = {
   context?: string;
@@ -56,7 +57,7 @@ export const mobileUserResolvers = {
     // Field resolver for primary account
     async primaryAccount(parent: any) {
       const account = await prisma.mobileUserAccount.findFirst({
-        where: { 
+        where: {
           mobileUserId: parent.id,
           isPrimary: true,
           isActive: true
@@ -134,6 +135,10 @@ export const mobileUserResolvers = {
         dailyTransactionCount: kyc.walletTier.dailyTransactionCount,
         monthlyTransactionCount: kyc.walletTier.monthlyTransactionCount,
       };
+    },
+    // Check if secret is set
+    hasSecret(parent: any) {
+      return !!parent.secretHash;
     }
   },
 
@@ -174,7 +179,7 @@ export const mobileUserResolvers = {
         try {
           // Assign default tier
           await WalletTierService.assignDefaultTier(user.id);
-          
+
           // Create wallet account (phoneNumber as accountNumber)
           await WalletTierService.getOrCreateWalletAccount(user.id);
         } catch (error) {
@@ -218,6 +223,32 @@ export const mobileUserResolvers = {
       pubsub.publish(EVENTS.MOBILE_USER_UPDATED, formattedUser);
 
       return formattedUser;
+    },
+    async setMemoWord(_parent: unknown, args: { memoWord: string }, context: any) {
+      if (!context.userId) {
+        throw new Error("Authentication required");
+      }
+
+      const hashedSecret = await bcrypt.hash(args.memoWord, 12);
+
+      const user = await prisma.mobileUser.update({
+        where: { id: context.userId },
+        data: { secretHash: hashedSecret },
+      });
+
+      return {
+        success: true,
+        message: "Memo word set successfully",
+        user: {
+          id: user.id,
+          context: user.context,
+          username: user.username,
+          phoneNumber: user.phoneNumber,
+          isActive: user.isActive,
+          createdAt: user.createdAt.toISOString(),
+          updatedAt: user.updatedAt.toISOString(),
+        }
+      };
     },
   },
 };
