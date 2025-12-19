@@ -557,11 +557,19 @@ export const typeDefs = /* GraphQL */ `
     device: MobileDevice
   }
 
+  type BackupCreator {
+    userId: String!
+    email: String!
+    name: String!
+  }
+
   type Backup {
-    id: ID!
     filename: String!
     sizeBytes: String!
     createdAt: String!
+    storageUrl: String!
+    type: String!
+    createdBy: BackupCreator
   }
 
   type BackupSchedule {
@@ -676,8 +684,8 @@ export const typeDefs = /* GraphQL */ `
 
     # Backups
     createBackup: Backup!
-    restoreBackup(id: ID!): Boolean!
-    deleteBackup(id: ID!): Boolean!
+    restoreBackup(filename: String!): Boolean!
+    deleteBackup(filename: String!): Boolean!
 
     updateBackupSchedule(input: BackupScheduleInput!): BackupSchedule!
 
@@ -1190,7 +1198,9 @@ export const typeDefs = /* GraphQL */ `
     city: String
     country: String
     zip: String
+    profileImageUrl: String
   }
+
 
   extend type Query {
     # Device & Session Management

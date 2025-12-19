@@ -1,5 +1,4 @@
 import { backupService } from "@/lib/services/backup";
-import { prisma } from "@/lib/db/prisma";
 import type { GraphQLContext } from "@/lib/graphql/context";
 
 function requireAdminContext(ctx: GraphQLContext) {
@@ -9,46 +8,57 @@ function requireAdminContext(ctx: GraphQLContext) {
     }
 }
 
+function getUserContext(ctx: GraphQLContext) {
+    const userId = ctx.auth?.userId;
+    const adminUser = ctx.adminUser;
+
+    if (!userId) {
+        throw new Error("User not authenticated");
+    }
+
+    // Extract user info from admin user object or use defaults
+    const email = adminUser?.email || "unknown";
+    const name = adminUser?.name || `User ${userId}`;
+
+    return {
+        userId: userId.toString(),
+        email,
+        name
+    };
+}
+
 export const backupResolvers = {
     Query: {
         async backups(_parent: unknown, _args: unknown, ctx: GraphQLContext) {
             requireAdminContext(ctx);
-            // Cast to any because backup model might not be in types yet
-            const backups = await (prisma as any).backup.findMany({
-                orderBy: { createdAt: "desc" },
-            });
-
-            return backups.map((b: any) => ({
-                ...b,
-                createdAt: b.createdAt.toISOString(),
-                sizeBytes: b.sizeBytes.toString(), // Convert BigInt to string
-            }));
+            // Read backups directly from MinIO
+            return await backupService.listBackups();
         },
     },
 
     Mutation: {
         async createBackup(_parent: unknown, _args: unknown, ctx: GraphQLContext) {
             requireAdminContext(ctx);
-            const filename = await backupService.createBackup();
-            const backup = await (prisma as any).backup.findUnique({ where: { filename } });
+            const userContext = getUserContext(ctx);
+            const filename = await backupService.createBackup(userContext);
 
-            if (!backup) throw new Error("Backup created but record not found");
+            // Return backup info from MinIO metadata
+            const backups = await backupService.listBackups();
+            const backup = backups.find(b => b.filename === filename);
 
-            return {
-                ...backup,
-                createdAt: backup.createdAt.toISOString(),
-                sizeBytes: backup.sizeBytes.toString(),
-            };
+            if (!backup) throw new Error("Backup created but not found in storage");
+
+            return backup;
         },
 
-        async restoreBackup(_parent: unknown, args: { id: string }, ctx: GraphQLContext) {
+        async restoreBackup(_parent: unknown, args: { filename: string }, ctx: GraphQLContext) {
             requireAdminContext(ctx);
-            return await backupService.restoreBackup(args.id);
+            return await backupService.restoreBackup(args.filename);
         },
 
-        async deleteBackup(_parent: unknown, args: { id: string }, ctx: GraphQLContext) {
+        async deleteBackup(_parent: unknown, args: { filename: string }, ctx: GraphQLContext) {
             requireAdminContext(ctx);
-            return await backupService.deleteBackup(args.id);
+            return await backupService.deleteBackup(args.filename);
         },
     },
 };

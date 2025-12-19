@@ -34,9 +34,9 @@ export const mobileResolvers = {
       // Group sessions by device
       const sessionsByDevice = sessions.reduce(
         (acc: Record<string, any[]>, session: any) => {
-        if (!acc[session.deviceId]) acc[session.deviceId] = [];
-        acc[session.deviceId].push(session);
-        return acc;
+          if (!acc[session.deviceId]) acc[session.deviceId] = [];
+          acc[session.deviceId].push(session);
+          return acc;
         },
         {} as Record<string, any[]>
       );
@@ -99,11 +99,11 @@ export const mobileResolvers = {
           mobileUserId: context.userId,
           ...(hiddenCategoryIds.length > 0
             ? {
-                OR: [
-                  { categoryId: null },
-                  { categoryId: { notIn: hiddenCategoryIds } },
-                ],
-              }
+              OR: [
+                { categoryId: null },
+                { categoryId: { notIn: hiddenCategoryIds } },
+              ],
+            }
             : {}),
         },
         orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
@@ -142,11 +142,11 @@ export const mobileResolvers = {
           isPrimary: true,
           ...(hiddenCategoryIds.length > 0
             ? {
-                OR: [
-                  { categoryId: null },
-                  { categoryId: { notIn: hiddenCategoryIds } },
-                ],
-              }
+              OR: [
+                { categoryId: null },
+                { categoryId: { notIn: hiddenCategoryIds } },
+              ],
+            }
             : {}),
         },
       });
@@ -256,6 +256,7 @@ export const mobileResolvers = {
           city: input.city,
           country: input.country,
           zip: input.zip,
+          profileImageUrl: input.profileImageUrl,
         },
         create: {
           mobileUserId: context.userId,
@@ -267,7 +268,9 @@ export const mobileResolvers = {
           city: input.city,
           country: input.country,
           zip: input.zip,
+          profileImageUrl: input.profileImageUrl,
         },
+
       });
 
       return {

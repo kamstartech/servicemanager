@@ -3,7 +3,8 @@ import fs from "fs";
 import path from "path";
 import { promisify } from "util";
 import { prisma } from "@/lib/db/prisma";
-import { uploadFile, downloadFile, deleteFile, BUCKETS } from "@/lib/storage/minio";
+import { uploadFile, downloadFile, deleteFile, listFiles, getFileMetadata, BUCKETS } from "@/lib/storage/minio";
+import type { GraphQLContext } from "@/lib/graphql/context";
 
 const execAsync = promisify(exec);
 const BACKUP_DIR = process.env.BACKUP_DIR || path.resolve(process.cwd(), "backups");
@@ -21,7 +22,7 @@ export class BackupService {
     /**
      * Create a new backup of the database
      */
-    async createBackup(): Promise<string> {
+    async createBackup(userContext?: { userId: string; email: string; name: string }): Promise<string> {
         const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
         const filename = `backup-${timestamp}.sql`;
         const filepath = path.join(BACKUP_DIR, filename);
@@ -38,35 +39,34 @@ export class BackupService {
 
             const stats = fs.statSync(filepath);
 
-            // Upload to MinIO storage
-            let storageUrl: string | null = null;
+            // Upload to MinIO storage with user attribution metadata
             try {
                 const fileBuffer = fs.readFileSync(filepath);
+                const metadata: Record<string, string> = {
+                    "Content-Type": "application/sql",
+                    "X-Backup-Timestamp": timestamp,
+                    "X-Database": "service_manager",
+                    "X-Backup-Type": "manual",
+                };
+
+                // Add user attribution if provided
+                if (userContext) {
+                    metadata["X-Created-By-User-Id"] = userContext.userId;
+                    metadata["X-Created-By-User-Email"] = userContext.email;
+                    metadata["X-Created-By-User-Name"] = userContext.name;
+                }
+
                 const result = await uploadFile(
                     BUCKETS.BACKUPS,
                     filename,
                     fileBuffer,
-                    {
-                        "Content-Type": "application/sql",
-                        "X-Backup-Timestamp": timestamp,
-                        "X-Database": "service_manager",
-                    }
+                    metadata
                 );
-                storageUrl = result.url;
-                console.log(`✅ Backup uploaded to MinIO: ${storageUrl}`);
+                console.log(`✅ Backup uploaded to MinIO: ${result.url}`);
             } catch (storageError) {
                 console.error("⚠️ Failed to upload backup to MinIO:", storageError);
-                // Continue anyway - we still have local backup
+                throw new Error(`Failed to upload backup to storage: ${storageError}`);
             }
-
-            // Save to database
-            await prisma.backup.create({
-                data: {
-                    filename,
-                    sizeBytes: BigInt(stats.size),
-                    storageUrl,
-                },
-            });
 
             return filename;
         } catch (error) {
@@ -80,41 +80,96 @@ export class BackupService {
     }
 
     /**
+     * List all backups from MinIO storage  
+     */
+    async listBackups(): Promise<Array<{
+        filename: string;
+        sizeBytes: string;
+        createdAt: string;
+        storageUrl: string;
+        type: string;
+        createdBy?: {
+            userId: string;
+            email: string;
+            name: string;
+        };
+    }>> {
+        try {
+            const files = await listFiles(BUCKETS.BACKUPS);
+
+            const backups = await Promise.all(
+                files.map(async (file) => {
+                    try {
+                        const metadata = await getFileMetadata(BUCKETS.BACKUPS, file.name);
+                        const meta = metadata.metaData || {};
+
+                        return {
+                            filename: file.name,
+                            sizeBytes: file.size?.toString() || "0",
+                            createdAt: meta["x-backup-timestamp"] || file.lastModified?.toISOString() || new Date().toISOString(),
+                            storageUrl: this.getMinIOUrl(file.name),
+                            type: meta["x-backup-type"] || "unknown",
+                            createdBy: meta["x-created-by-user-id"] ? {
+                                userId: meta["x-created-by-user-id"],
+                                email: meta["x-created-by-user-email"] || "",
+                                name: meta["x-created-by-user-name"] || "",
+                            } : undefined,
+                        };
+                    } catch (error) {
+                        console.error(`Failed to get metadata for ${file.name}:`, error);
+                        return {
+                            filename: file.name,
+                            sizeBytes: file.size?.toString() || "0",
+                            createdAt: file.lastModified?.toISOString() || new Date().toISOString(),
+                            storageUrl: this.getMinIOUrl(file.name),
+                            type: "unknown",
+                        };
+                    }
+                })
+            );
+            return backups.sort((a, b) =>
+                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+        } catch (error) {
+            console.error("Failed to list backups:", error);
+            throw new Error(`Failed to list backups: ${error}`);
+        }
+    }
+
+    /**
+     * Helper to generate MinIO URL
+     */
+    private getMinIOUrl(filename: string): string {
+        const endpoint = process.env.MINIO_ENDPOINT || "localhost";
+        const port = process.env.MINIO_PORT || "9000";
+        const useSSL = process.env.MINIO_USE_SSL === "true";
+        return `${useSSL ? "https" : "http"}://${endpoint}:${port}/${BUCKETS.BACKUPS}/${filename}`;
+    }
+
+    /**
      * Restore database from a backup
      */
-    async restoreBackup(backupId: string): Promise<boolean> {
-        const backup = await prisma.backup.findUnique({
-            where: { id: backupId },
-        });
+    async restoreBackup(filename: string): Promise<boolean> {
+        const filepath = path.join(BACKUP_DIR, filename);
 
-        if (!backup) throw new Error("Backup not found");
-
-        let filepath = path.join(BACKUP_DIR, backup.filename);
-        
-        // If file doesn't exist locally but we have storage URL, download from MinIO
-        if (!fs.existsSync(filepath) && backup.storageUrl) {
+        // Download from MinIO if not exists locally
+        if (!fs.existsSync(filepath)) {
             console.log("📥 Downloading backup from MinIO storage...");
             try {
-                const fileBuffer = await downloadFile(BUCKETS.BACKUPS, backup.filename);
+                const fileBuffer = await downloadFile(BUCKETS.BACKUPS, filename);
                 fs.writeFileSync(filepath, fileBuffer);
                 console.log("✅ Backup downloaded successfully");
             } catch (error) {
                 throw new Error(`Failed to download backup from storage: ${error}`);
             }
-        } else if (!fs.existsSync(filepath)) {
-            throw new Error("Backup file not found locally or in storage");
         }
 
         const dbUrl = process.env.DATABASE_URL;
         if (!dbUrl) throw new Error("DATABASE_URL is not defined");
 
         try {
-            // Use pg_restore (or psql for plain sql) to restore
-            // WARNING: This will overwrite data. pg_restore --clean equivalent logic might be needed
-            // Since we generate SQL files with pg_dump (default format), we use psql to restore
             const command = `psql "${dbUrl}" < "${filepath}"`;
             await execAsync(command);
-
             return true;
         } catch (error) {
             console.error("Restore failed:", error);
@@ -125,32 +180,19 @@ export class BackupService {
     /**
      * Delete a backup
      */
-    async deleteBackup(backupId: string): Promise<boolean> {
-        const backup = await prisma.backup.findUnique({
-            where: { id: backupId },
-        });
+    async deleteBackup(filename: string): Promise<boolean> {
+        const filepath = path.join(BACKUP_DIR, filename);
 
-        if (!backup) return false;
-
-        const filepath = path.join(BACKUP_DIR, backup.filename);
-
-        // Delete from MinIO storage if it exists there
-        if (backup.storageUrl) {
-            try {
-                await deleteFile(BUCKETS.BACKUPS, backup.filename);
-                console.log(`✅ Deleted backup from MinIO: ${backup.filename}`);
-            } catch (error) {
-                console.error("⚠️ Failed to delete backup from MinIO:", error);
-                // Continue anyway
-            }
+        // Delete from MinIO storage
+        try {
+            await deleteFile(BUCKETS.BACKUPS, filename);
+            console.log(`✅ Deleted backup from MinIO: ${filename}`);
+        } catch (error) {
+            console.error("⚠️ Failed to delete backup from MinIO:", error);
+            throw new Error(`Failed to delete backup: ${error}`);
         }
 
-        // Delete from DB
-        await prisma.backup.delete({
-            where: { id: backupId },
-        });
-
-        // Then delete local file if it exists
+        // Delete local file if it exists
         if (fs.existsSync(filepath)) {
             fs.unlinkSync(filepath);
         }
@@ -161,27 +203,19 @@ export class BackupService {
     /**
      * Get absolute path for download
      */
-    async getBackupPath(backupId: string): Promise<string> {
-        const backup = await prisma.backup.findUnique({
-            where: { id: backupId },
-        });
+    async getBackupPath(filename: string): Promise<string> {
+        const filepath = path.resolve(BACKUP_DIR, filename);
 
-        if (!backup) throw new Error("Backup not found");
-
-        const filepath = path.resolve(BACKUP_DIR, backup.filename);
-        
-        // If file doesn't exist locally but we have storage URL, download from MinIO
-        if (!fs.existsSync(filepath) && backup.storageUrl) {
+        // Download from MinIO if not exists locally
+        if (!fs.existsSync(filepath)) {
             console.log("📥 Downloading backup from MinIO for download...");
             try {
-                const fileBuffer = await downloadFile(BUCKETS.BACKUPS, backup.filename);
+                const fileBuffer = await downloadFile(BUCKETS.BACKUPS, filename);
                 fs.writeFileSync(filepath, fileBuffer);
                 console.log("✅ Backup ready for download");
             } catch (error) {
                 throw new Error(`Failed to download backup from storage: ${error}`);
             }
-        } else if (!fs.existsSync(filepath)) {
-            throw new Error("Backup file not found locally or in storage");
         }
 
         return filepath;
@@ -190,7 +224,11 @@ export class BackupService {
     /**
      * Upload a backup file
      */
-    async uploadBackup(fileBuffer: Buffer, originalFilename: string): Promise<string> {
+    async uploadBackup(
+        fileBuffer: Buffer,
+        originalFilename: string,
+        userContext?: { userId: string; email: string; name: string }
+    ): Promise<string> {
         // Validate filename
         if (!originalFilename.endsWith('.sql')) {
             throw new Error("Only .sql files are allowed");
@@ -205,37 +243,34 @@ export class BackupService {
         try {
             // Save file locally
             fs.writeFileSync(filepath, fileBuffer);
-            const stats = fs.statSync(filepath);
 
-            // Upload to MinIO storage
-            let storageUrl: string | null = null;
+            // Upload to MinIO storage with user attribution
             try {
+                const metadata: Record<string, string> = {
+                    "Content-Type": "application/sql",
+                    "X-Backup-Timestamp": timestamp,
+                    "X-Backup-Type": "uploaded",
+                    "X-Original-Filename": originalFilename,
+                };
+
+                // Add user attribution if provided
+                if (userContext) {
+                    metadata["X-Created-By-User-Id"] = userContext.userId;
+                    metadata["X-Created-By-User-Email"] = userContext.email;
+                    metadata["X-Created-By-User-Name"] = userContext.name;
+                }
+
                 const result = await uploadFile(
                     BUCKETS.BACKUPS,
                     filename,
                     fileBuffer,
-                    {
-                        "Content-Type": "application/sql",
-                        "X-Backup-Timestamp": timestamp,
-                        "X-Backup-Type": "uploaded",
-                        "X-Original-Filename": originalFilename,
-                    }
+                    metadata
                 );
-                storageUrl = result.url;
-                console.log(`✅ Uploaded backup to MinIO: ${storageUrl}`);
+                console.log(`✅ Uploaded backup to MinIO: ${result.url}`);
             } catch (storageError) {
                 console.error("⚠️ Failed to upload backup to MinIO:", storageError);
-                // Continue anyway - we still have local backup
+                throw new Error(`Failed to upload backup to storage: ${storageError}`);
             }
-
-            // Save to database
-            await prisma.backup.create({
-                data: {
-                    filename,
-                    sizeBytes: BigInt(stats.size),
-                    storageUrl,
-                },
-            });
 
             return filename;
         } catch (error) {
