@@ -38,6 +38,7 @@ model MobileUser {
   alerts               AccountAlert[]
   suspiciousActivities SuspiciousActivityLog[]
   checkbookRequests    CheckbookRequest[]
+  notifications        PushNotification[]
   kyc                  MobileUserKYC?
   
   // Transaction relationships

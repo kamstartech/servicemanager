@@ -1,0 +1,6 @@
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}

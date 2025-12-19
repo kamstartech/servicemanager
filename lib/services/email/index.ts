@@ -8,9 +8,9 @@ const emailConfig = {
   secure: process.env.SMTP_SECURE === "true", // true for 465, false for other ports
   auth: process.env.SMTP_USER
     ? {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD || "",
-      }
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASSWORD || "",
+    }
     : undefined,
 };
 
@@ -38,6 +38,8 @@ export interface EmailOptions {
     path?: string;
     cid?: string;
   }>;
+  userId?: number;
+  type?: string;
 }
 
 export class EmailService {
@@ -45,6 +47,23 @@ export class EmailService {
    * Send an email
    */
   async sendEmail(options: EmailOptions): Promise<boolean> {
+    // Check user preference for non-critical Email
+    const { userId, type } = options;
+    const criticalTypes = ['otp', 'password_reset'];
+
+    if (userId && type && !criticalTypes.includes(type)) {
+      const { prisma } = await import('@/lib/db/prisma');
+      const user = await prisma.mobileUser.findUnique({
+        where: { id: userId },
+        select: { emailNotifications: true }
+      });
+
+      if (user && !user.emailNotifications) {
+        console.log(`Email notifications are disabled for user ${userId}. Skipping ${type} message.`);
+        return false;
+      }
+    }
+
     const transporter = getTransporter();
 
     try {

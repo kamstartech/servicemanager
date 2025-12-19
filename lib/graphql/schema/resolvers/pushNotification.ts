@@ -3,6 +3,67 @@ import type { GraphQLContext } from "@/lib/graphql/context";
 import { PushNotificationService } from "@/lib/services/push-notification";
 
 export const pushNotificationResolvers = {
+  Query: {
+    // Get current user's notifications
+    async myNotifications(
+      _: unknown,
+      args: {
+        type?: string;
+        page?: number;
+        pageSize?: number;
+      },
+      context: GraphQLContext
+    ) {
+      if (!context.userId) {
+        throw new Error("Authentication required");
+      }
+
+      const page = args.page || 1;
+      const pageSize = args.pageSize || 20;
+      const skip = (page - 1) * pageSize;
+
+      const where: any = {
+        mobileUserId: context.userId,
+      };
+
+      if (args.type) {
+        where.type = args.type;
+      }
+
+      const [items, totalCount] = await Promise.all([
+        prisma.pushNotification.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: pageSize,
+        }),
+        prisma.pushNotification.count({ where }),
+      ]);
+
+      return {
+        items,
+        totalCount,
+        page,
+        pageSize,
+        totalPages: Math.ceil(totalCount / pageSize),
+      };
+    },
+
+    // Get unread notification count
+    async unreadNotificationCount(_: unknown, __: unknown, context: GraphQLContext) {
+      if (!context.userId) {
+        throw new Error("Authentication required");
+      }
+
+      return await prisma.pushNotification.count({
+        where: {
+          mobileUserId: context.userId,
+          status: { not: "READ" },
+        },
+      });
+    },
+  },
+
   Mutation: {
     // Register device for push notifications
     async registerDeviceForPush(
@@ -87,6 +148,74 @@ export const pushNotificationResolvers = {
         context.userId,
         args.deviceId
       );
+
+      return true;
+    },
+
+    // Mark notification as read
+    async markNotificationAsRead(
+      _: unknown,
+      args: { id: string },
+      context: GraphQLContext
+    ) {
+      if (!context.userId) {
+        throw new Error("Authentication required");
+      }
+
+      await prisma.pushNotification.update({
+        where: {
+          id: args.id,
+          mobileUserId: context.userId,
+        },
+        data: {
+          status: "READ",
+          readAt: new Date(),
+        },
+      });
+
+      return true;
+    },
+
+    // Mark all notifications as read
+    async markAllNotificationsAsRead(
+      _: unknown,
+      __: unknown,
+      context: GraphQLContext
+    ) {
+      if (!context.userId) {
+        throw new Error("Authentication required");
+      }
+
+      await prisma.pushNotification.updateMany({
+        where: {
+          mobileUserId: context.userId,
+          status: { not: "READ" },
+        },
+        data: {
+          status: "READ",
+          readAt: new Date(),
+        },
+      });
+
+      return true;
+    },
+
+    // Delete a notification
+    async deleteNotification(
+      _: unknown,
+      args: { id: string },
+      context: GraphQLContext
+    ) {
+      if (!context.userId) {
+        throw new Error("Authentication required");
+      }
+
+      await prisma.pushNotification.delete({
+        where: {
+          id: args.id,
+          mobileUserId: context.userId,
+        },
+      });
 
       return true;
     },

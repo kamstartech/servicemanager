@@ -23,6 +23,24 @@ export class ESBSMSService {
     userId: number = 1,
     type: string = 'generic'
   ): Promise<SMSResponse> {
+    // Check user preference for non-critical SMS
+    const criticalTypes = ['otp', 'password_reset'];
+    if (!criticalTypes.includes(type)) {
+      const { prisma } = await import('@/lib/db/prisma');
+      const user = await prisma.mobileUser.findUnique({
+        where: { id: userId },
+        select: { smsNotifications: true }
+      });
+
+      if (user && !user.smsNotifications) {
+        console.log(`SMS notifications are disabled for user ${userId}. Skipping ${type} message.`);
+        return {
+          success: false,
+          status: 'skipped',
+          error: 'User disabled SMS notifications'
+        };
+      }
+    }
     const masked = phoneNumber ? phoneNumber.replace(/(\d{3})\d+(\d{3})/, "$1****$2") : "";
 
     // Log SMS to database
@@ -200,7 +218,7 @@ export class ESBSMSService {
   ): Promise<SMSResponse> {
     const action = type === 'DEBIT' ? 'debited from' : 'credited to';
     let message = `Transaction: ${amount} ${currency} ${action} your account.`;
-    
+
     if (balance) {
       message += ` New balance: ${balance} ${currency}`;
     }

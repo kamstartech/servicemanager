@@ -37,18 +37,30 @@ export class PushNotificationService {
         throw new Error('Firebase messaging not initialized');
       }
 
-      // Get user devices with FCM tokens
+      // Check global user push preference
+      const user = await prisma.mobileUser.findUnique({
+        where: { id: userId },
+        select: { pushNotifications: true }
+      });
+
+      if (user && !user.pushNotifications) {
+        console.log(`Push notifications are globally disabled for user ${userId}`);
+        return null;
+      }
+
+      // Get user devices with FCM tokens and push enabled
       const devices = await prisma.mobileDevice.findMany({
         where: {
           mobileUserId: userId,
           isActive: true,
+          pushEnabled: true,
           fcmToken: { not: null },
           ...(deviceId && { deviceId }),
         },
       });
 
       if (devices.length === 0) {
-        console.log(`No active devices with FCM tokens found for user ${userId}`);
+        console.log(`No active devices with push enabled found for user ${userId}`);
         return null;
       }
 
@@ -60,6 +72,23 @@ export class PushNotificationService {
 
       // Create notification ID
       const notificationId = crypto.randomUUID();
+
+      // Create notification record in database
+      const notification = await prisma.pushNotification.create({
+        data: {
+          id: notificationId,
+          mobileUserId: userId,
+          deviceId: deviceId || null,
+          type: type as any,
+          priority: priority as any,
+          title,
+          body,
+          imageUrl,
+          actionUrl,
+          actionData,
+          status: 'PENDING',
+        },
+      });
 
       // Prepare message
       const message = {
@@ -84,6 +113,18 @@ export class PushNotificationService {
       const response = await messaging.sendEachForMulticast(message);
 
       console.log(`Push notification sent: ${response.successCount} success, ${response.failureCount} failed`);
+
+      // Update notification status in database
+      await prisma.pushNotification.update({
+        where: { id: notificationId },
+        data: {
+          status: response.successCount > 0 ? 'SENT' : 'FAILED',
+          sentAt: new Date(),
+          ...(response.failureCount > 0 && {
+            failureReason: response.responses.find((r) => r.error)?.error?.message,
+          }),
+        },
+      });
 
       // Handle invalid tokens
       if (response.failureCount > 0) {

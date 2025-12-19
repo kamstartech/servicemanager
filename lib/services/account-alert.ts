@@ -31,7 +31,31 @@ export class AccountAlertService {
       }
 
       // Determine channels to send
-      const channels = this.getChannelsForAlert(alertType, settings);
+      let channels = this.getChannelsForAlert(alertType, settings);
+
+      // Check global user preferences as master switches
+      const user = await prisma.mobileUser.findUnique({
+        where: { id: userId },
+        select: {
+          smsNotifications: true,
+          emailNotifications: true,
+          pushNotifications: true,
+        },
+      });
+
+      if (user) {
+        channels = channels.filter(channel => {
+          if (channel === 'SMS' && !user.smsNotifications) return false;
+          if (channel === 'EMAIL' && !user.emailNotifications) return false;
+          if (channel === 'PUSH' && !user.pushNotifications) return false;
+          return true;
+        });
+      }
+
+      if (channels.length === 0) {
+        console.log(`All notification channels are disabled for user ${userId}`);
+        return null;
+      }
 
       // Create alert record
       const alert = await prisma.accountAlert.create({
@@ -67,21 +91,50 @@ export class AccountAlertService {
       if (channels.includes('SMS' as NotificationChannel)) {
         try {
           // Get user phone number
-          const user = await prisma.mobileUser.findUnique({
+          const userData = await prisma.mobileUser.findUnique({
             where: { id: userId },
             select: { phoneNumber: true },
           });
 
-          if (user?.phoneNumber) {
+          if (userData?.phoneNumber) {
             await ESBSMSService.sendAccountAlert(
-              user.phoneNumber,
+              userData.phoneNumber,
               alertType,
-              alertData
+              alertData,
+              userId
             );
             notificationSent = true;
           }
         } catch (error) {
           console.error('Failed to send SMS for alert:', error);
+        }
+      }
+
+      // Send Email if EMAIL is in channels
+      if (channels.includes('EMAIL' as NotificationChannel)) {
+        try {
+          const userData = await prisma.mobileUser.findUnique({
+            where: { id: userId },
+            include: { profile: true },
+          });
+
+          if (userData?.profile?.email) {
+            const { emailService } = await import("./email");
+            await emailService.sendTransactionNotification(
+              userData.profile.email,
+              userData.username || 'User',
+              {
+                type: alertType,
+                amount: alertData.amount || 'N/A',
+                currency: alertData.currency || '',
+                reference: alertData.transactionId || alertData.logId || 'N/A',
+                timestamp: alertData.timestamp || new Date().toISOString(),
+              }
+            );
+            notificationSent = true;
+          }
+        } catch (error) {
+          console.error('Failed to send Email for alert:', error);
         }
       }
 
@@ -224,14 +277,95 @@ export class AccountAlertService {
         }
       }
 
-      // Send push notification directly (not tied to account)
-      if (settings.loginAlertChannels.includes('PUSH' as NotificationChannel)) {
-        await PushNotificationService.sendLoginAlert(
-          userId,
-          deviceName,
-          location,
-          ipAddress
-        );
+      // Determine channels from settings
+      let channels = settings.loginAlertChannels as NotificationChannel[];
+
+      // Check global user preferences as master switches
+      const user = await prisma.mobileUser.findUnique({
+        where: { id: userId },
+        select: {
+          smsNotifications: true,
+          emailNotifications: true,
+          pushNotifications: true,
+          phoneNumber: true,
+          username: true,
+          profile: { select: { email: true } },
+        },
+      });
+
+      if (user) {
+        channels = channels.filter((channel) => {
+          if (channel === 'SMS' && !user.smsNotifications) return false;
+          if (channel === 'EMAIL' && !user.emailNotifications) return false;
+          if (channel === 'PUSH' && !user.pushNotifications) return false;
+          return true;
+        });
+      }
+
+      if (channels.length === 0) {
+        console.log(`All login alert channels are disabled for user ${userId}`);
+        return null;
+      }
+
+      let notificationSent = false;
+
+      // Send push notification if PUSH is in channels
+      if (channels.includes('PUSH' as NotificationChannel)) {
+        try {
+          await PushNotificationService.sendLoginAlert(
+            userId,
+            deviceName,
+            location,
+            ipAddress
+          );
+          notificationSent = true;
+        } catch (error) {
+          console.error('Failed to send push login alert:', error);
+        }
+      }
+
+      // Send SMS if SMS is in channels
+      if (channels.includes('SMS' as NotificationChannel) && user?.phoneNumber) {
+        try {
+          await ESBSMSService.sendSMS(
+            user.phoneNumber,
+            `Security Alert: New login detected on device ${deviceName}${location ? ` from ${location}` : ''}. If this wasn't you, please secure your account.`,
+            userId,
+            'login_alert'
+          );
+          notificationSent = true;
+        } catch (error) {
+          console.error('Failed to send SMS login alert:', error);
+        }
+      }
+
+      // Send Email if EMAIL is in channels
+      if (channels.includes('EMAIL' as NotificationChannel) && user?.profile?.email) {
+        try {
+          const { emailService } = await import("./email");
+          await emailService.sendEmail({
+            to: user.profile.email,
+            subject: 'Security Alert: New Login Detected',
+            text: `Hello ${user.username || 'User'},\n\nA new login was detected for your account.\n\nDevice: ${deviceName}\nLocation: ${location || 'Unknown'}\nIP Address: ${ipAddress || 'Unknown'}\nTime: ${new Date().toLocaleString()}\n\nIf this was not you, please contact support immediately or lock your account.`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #d9534f;">Security Alert: New Login Detected</h2>
+                <p>Hello ${user.username || 'User'},</p>
+                <p>A new login was detected for your account with the following details:</p>
+                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                  <p><strong>Device:</strong> ${deviceName}</p>
+                  <p><strong>Location:</strong> ${location || 'Unknown'}</p>
+                  <p><strong>IP Address:</strong> ${ipAddress || 'Unknown'}</p>
+                  <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
+                </div>
+                <p style="color: #d9534f; font-weight: bold;">If this was not you, please contact support immediately or lock your account.</p>
+              </div>
+            `,
+          });
+          notificationSent = true;
+        } catch (error) {
+          console.error('Failed to send Email login alert:', error);
+        }
       }
 
       // Create alert record
@@ -247,9 +381,9 @@ export class AccountAlertService {
             ipAddress,
             timestamp: new Date().toISOString(),
           },
-          status: 'SENT',
-          channelsSent: settings.loginAlertChannels,
-          sentAt: new Date(),
+          status: notificationSent ? 'SENT' : 'FAILED',
+          channelsSent: channels,
+          sentAt: notificationSent ? new Date() : null,
         },
       });
     } catch (error) {

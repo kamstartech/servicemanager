@@ -1,0 +1,45 @@
+model PushNotification {
+  id              String               @id @default(cuid())
+  mobileUserId    Int                  @map("mobile_user_id")
+  deviceId        String?              @map("device_id") // null = all devices
+  
+  type            NotificationType
+  priority        NotificationPriority @default(NORMAL)
+  
+  title           String               @db.Text
+  body            String               @db.Text
+  imageUrl        String?              @map("image_url") @db.Text
+  
+  // Action/Deep linking
+  actionUrl       String?              @map("action_url") @db.Text
+  actionData      Json?                @map("action_data")
+  
+  // Delivery tracking
+  status          NotificationStatus   @default(PENDING)
+  sentAt          DateTime?            @map("sent_at")
+  deliveredAt     DateTime?            @map("delivered_at")
+  readAt          DateTime?            @map("read_at")
+  failedAt        DateTime?            @map("failed_at")
+  failureReason   String?              @map("failure_reason") @db.Text
+  
+  // Retry logic
+  retryCount      Int                  @default(0) @map("retry_count")
+  nextRetryAt     DateTime?            @map("next_retry_at")
+  
+  // Metadata
+  metadata        Json?
+  expiresAt       DateTime?            @map("expires_at")
+  
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+  
+  // Relations
+  mobileUser      MobileUser           @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
+  
+  @@index([mobileUserId])
+  @@index([deviceId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([nextRetryAt])
+  @@map("fdh_push_notifications")
+}

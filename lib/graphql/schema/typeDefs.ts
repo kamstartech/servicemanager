@@ -2090,9 +2090,76 @@ export const typeDefs = /* GraphQL */ `
     unregisterDeviceFromPush(deviceId: String!): Boolean!
     testPushNotification(deviceId: String): Boolean!
     
+    # Notification actions
+    markNotificationAsRead(id: ID!): Boolean!
+    markAllNotificationsAsRead: Boolean!
+    deleteNotification(id: ID!): Boolean!
+    
     # Admin mutations
     adminTestPushNotification(userId: ID!, deviceId: String): Boolean!
     updateCheckbookRequest(id: ID!, input: UpdateCheckbookRequestInput!): CheckbookRequest!
     deleteCheckbookRequest(id: ID!): Boolean!
+  }
+
+  enum NotificationType {
+    ACCOUNT_ALERT
+    TRANSACTION_COMPLETE
+    TRANSACTION_FAILED
+    CHECKBOOK_STATUS
+    ACCOUNT_FROZEN
+    LOGIN_ALERT
+    SECURITY_ALERT
+    PAYMENT_DUE
+    PROMOTION
+    SYSTEM_ANNOUNCEMENT
+  }
+
+  enum NotificationPriority {
+    LOW
+    NORMAL
+    HIGH
+    URGENT
+  }
+
+  enum NotificationStatus {
+    PENDING
+    SENT
+    DELIVERED
+    FAILED
+    READ
+  }
+
+  type PushNotification {
+    id: ID!
+    type: NotificationType!
+    priority: NotificationPriority!
+    title: String!
+    body: String!
+    imageUrl: String
+    actionUrl: String
+    actionData: JSON
+    status: NotificationStatus!
+    sentAt: String
+    deliveredAt: String
+    readAt: String
+    createdAt: String!
+  }
+
+  type PushNotificationConnection {
+    items: [PushNotification!]!
+    totalCount: Int!
+    page: Int!
+    pageSize: Int!
+    totalPages: Int!
+  }
+
+  extend type Query {
+    myNotifications(
+      type: NotificationType
+      page: Int = 1
+      pageSize: Int = 20
+    ): PushNotificationConnection!
+    
+    unreadNotificationCount: Int!
   }
 `;
