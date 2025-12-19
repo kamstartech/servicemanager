@@ -316,6 +316,28 @@ export const mobileResolvers = {
       };
     },
 
+    // Toggle multi-device session setting
+    async toggleMultiDeviceSession(
+      _: unknown,
+      { enabled }: { enabled: boolean },
+      context: GraphQLContext
+    ) {
+      if (!context.userId) {
+        throw new Error("Authentication required");
+      }
+
+      await prisma.mobileUser.update({
+        where: { id: context.userId },
+        data: { allowMultiSession: enabled },
+      });
+
+      console.log(
+        `Multi-device session ${enabled ? "enabled" : "disabled"} for user ${context.userId}`
+      );
+
+      return true;
+    },
+
     // Revoke a device (cannot revoke current device)
     async revokeMyDevice(
       _: unknown,

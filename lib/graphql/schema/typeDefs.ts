@@ -1227,6 +1227,9 @@ export const typeDefs = /* GraphQL */ `
     approveMyDevice(deviceId: String!): Boolean!
     denyMyDevice(deviceId: String!): Boolean!
     
+    # Multi-Device Session
+    toggleMultiDeviceSession(enabled: Boolean!): Boolean!
+    
     # Session Management
     revokeMySession(sessionId: String!): Boolean!
     revokeAllMyOtherSessions: RevokeSessionsResult!

@@ -38,6 +38,7 @@ const MOBILE_MUTATION_FIELDS = new Set([
   "verifyResetOTP",
   "completePasswordReset",
   "updateMyNotificationSettings",
+  "toggleMultiDeviceSession",
   "updateAccountAlertSettings",
   "acknowledgeAlert",
   "updateMyProfile",
