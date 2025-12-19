@@ -60,6 +60,7 @@ const MOBILE_MUTATION_FIELDS = new Set([
   "retryTransaction",
   "reverseTransaction",
   "purchaseAirtime",
+  "setMemoWord",
 ]);
 
 function pickRootFields(
