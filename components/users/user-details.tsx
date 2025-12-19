@@ -62,6 +62,7 @@ const DEVICES_QUERY = gql`
       model
       os
       deviceId
+      fcmToken
       isActive
       lastUsedAt
       createdAt
@@ -262,7 +263,7 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
 
   const handleLinkAccount = async () => {
     if (!newAccountNumber.trim()) return;
-    
+
     await linkAccount({
       variables: {
         userId: id,
@@ -276,7 +277,7 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
 
   const handleUnlinkAccount = async (accountId: string) => {
     if (!confirm("Are you sure you want to unlink this account?")) return;
-    
+
     await unlinkAccount({
       variables: { userId: id, accountId },
     });
@@ -332,12 +333,17 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
         },
       });
 
-      const ok = result?.data?.adminTestPushNotification;
-      if (ok) {
+      if (result?.data?.adminTestPushNotification) {
         toast.success("Test push sent");
       } else {
-        toast.error("Test push was not sent (no active token or Firebase not configured)");
+        // The mutation returns boolean, but if it throws, onError handles it.
+        // However, if it returns false without throwing (unlikely with my recent changes),
+        // we keep a fallback.
+        toast.error("Test push failed. Please check if the device has a valid token.");
       }
+    } catch (e: any) {
+      // Logic handled by mutation onError, but we can catch local errors too
+      console.error("Test push error:", e);
     } finally {
       setTestingPushForDeviceId(null);
     }
@@ -403,8 +409,8 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
     }
   };
 
-  const basePath = context === "MOBILE_BANKING" 
-    ? "/mobile-banking/users" 
+  const basePath = context === "MOBILE_BANKING"
+    ? "/mobile-banking/users"
     : "/wallet/users";
 
   // Define columns for Accounts table
@@ -578,7 +584,7 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
       header: COMMON_TABLE_HEADERS.actions,
       accessor: (row) => (
         <div className="flex flex-wrap justify-center gap-2">
-          {row.isActive && (
+          {row.isActive && row.fcmToken && (
             <Button
               size="sm"
               variant="outline"
@@ -901,8 +907,8 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
                     {primaryAccount && ` • Primary: ${primaryAccount.accountNumber}`}
                   </p>
                 </div>
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   onClick={() => setShowLinkAccount(!showLinkAccount)}
                   disabled={linkingAccount}
                 >

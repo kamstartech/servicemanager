@@ -525,6 +525,7 @@ export const typeDefs = /* GraphQL */ `
     deviceId: String
     credentialId: String!
     transports: [String!]
+    fcmToken: String
     isActive: Boolean!
     isPrimary: Boolean!
     lastUsedAt: String
