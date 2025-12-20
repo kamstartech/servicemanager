@@ -3,6 +3,7 @@ import { workflowSessionStore } from '@/lib/services/workflow/session-store';
 import { prisma } from '@/lib/db/prisma';
 import type { TriggerTiming } from '@prisma/client';
 import crypto from 'crypto';
+import { GraphQLError } from 'graphql';
 
 async function getHiddenAccountCategoryIds(): Promise<string[]> {
   const hidden = await prisma.accountCategory.findMany({
@@ -227,7 +228,12 @@ async function hydrateWorkflowStepsForClient(
 function requireAuthenticatedUserId(context: any): string {
   const userId = context?.userId;
   if (userId === null || userId === undefined) {
-    throw new Error('Unauthorized');
+    throw new GraphQLError('Unauthorized', {
+      extensions: {
+        code: 'UNAUTHENTICATED',
+        http: { status: 401 },
+      },
+    });
   }
   return String(userId);
 }
@@ -239,11 +245,21 @@ async function assertExecutionOwnership(executionId: string, userId: string) {
   });
 
   if (!execution) {
-    throw new Error('Workflow execution not found');
+    throw new GraphQLError('Workflow execution not found', {
+      extensions: {
+        code: 'NOT_FOUND',
+        http: { status: 404 },
+      },
+    });
   }
 
   if (execution.userId !== userId) {
-    throw new Error('Forbidden');
+    throw new GraphQLError('Forbidden', {
+      extensions: {
+        code: 'FORBIDDEN',
+        http: { status: 403 },
+      },
+    });
   }
 }
 
@@ -264,7 +280,12 @@ export const workflowExecutionResolvers = {
       });
 
       if (!execution) {
-        throw new Error('Workflow execution not found');
+        throw new GraphQLError('Workflow execution not found', {
+          extensions: {
+            code: 'NOT_FOUND',
+            http: { status: 404 },
+          },
+        });
       }
 
       const isAdminRequest = !!context?.adminUser || !!context?.adminId;
@@ -429,7 +450,12 @@ export const workflowExecutionResolvers = {
       });
 
       if (!execution) {
-        throw new Error('Workflow execution not found');
+        throw new GraphQLError('Workflow execution not found', {
+          extensions: {
+            code: 'NOT_FOUND',
+            http: { status: 404 },
+          },
+        });
       }
 
       return {

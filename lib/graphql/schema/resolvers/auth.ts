@@ -5,6 +5,7 @@ import crypto from "crypto";
 import { ESBSMSService } from "@/lib/services/sms";
 import { emailService } from "@/lib/services/email";
 import type { Prisma } from "@prisma/client";
+import { GraphQLError } from 'graphql';
 
 type LoginInput = {
   username: string;
@@ -96,7 +97,12 @@ export const authResolvers = {
           password,
           "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYIBL0dKzGK"
         );
-        throw new Error("Invalid credentials");
+        throw new GraphQLError("Invalid credentials", {
+          extensions: {
+            code: 'UNAUTHENTICATED',
+            http: { status: 401 },
+          },
+        });
       }
 
       // 2. Verify password using bcrypt
@@ -122,7 +128,12 @@ export const authResolvers = {
           },
         });
 
-        throw new Error("Invalid credentials");
+        throw new GraphQLError("Invalid credentials", {
+          extensions: {
+            code: 'UNAUTHENTICATED',
+            http: { status: 401 },
+          },
+        });
       }
 
       // 3. ✅ Password is correct - Check if device exists
@@ -377,7 +388,12 @@ export const authResolvers = {
         const sendEmail = !!(email && user.emailNotifications);
 
         if (!sendSMS && !sendEmail) {
-          throw new Error("No phone number or email is enabled for verification on this account");
+          throw new GraphQLError("No phone number or email is enabled for verification on this account", {
+            extensions: {
+              code: 'FAILED_PRECONDITION',
+              http: { status: 400 },
+            },
+          });
         }
 
         const verificationMethod = sendSMS && sendEmail
@@ -427,7 +443,12 @@ export const authResolvers = {
           const smsResult = await ESBSMSService.sendOTP(user.phoneNumber!, otpCode, user.id);
           if (!smsResult.success && !sendEmail) {
             // Only fail hard if this was the ONLY channel
-            throw new Error(smsResult.error || "Failed to send OTP via SMS");
+            throw new GraphQLError(smsResult.error || "Failed to send OTP via SMS", {
+              extensions: {
+                code: 'INTERNAL_SERVER_ERROR',
+                http: { status: 500 },
+              },
+            });
           }
         }
 
@@ -467,7 +488,12 @@ export const authResolvers = {
           },
         });
 
-        throw new Error("Multi-device sessions are disabled. Please enable it from your existing device or contact support.");
+        throw new GraphQLError("Multi-device sessions are disabled. Please enable it from your existing device or contact support.", {
+          extensions: {
+            code: 'FORBIDDEN',
+            http: { status: 403 },
+          },
+        });
       }
 
       // 3d. Second+ device - Multi-session ENABLED, requires approval from PRIMARY device
@@ -554,7 +580,12 @@ export const authResolvers = {
       });
 
       if (!user) {
-        throw new Error("User not found");
+        throw new GraphQLError("User not found", {
+          extensions: {
+            code: 'NOT_FOUND',
+            http: { status: 404 },
+          },
+        });
       }
 
       // Generate 6-digit password for wallet users, alphanumeric for others

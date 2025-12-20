@@ -1,5 +1,7 @@
 import type { GraphQLContext } from "@/lib/graphql/context";
 import { pubsub, EVENTS } from "@/lib/graphql/pubsub";
+import { GraphQLError } from 'graphql';
+import { prisma } from "@/lib/db/prisma";
 
 async function getHiddenAccountCategoryIds(): Promise<string[]> {
   const hidden = await prisma.accountCategory.findMany({
@@ -15,7 +17,12 @@ export const mobileResolvers = {
     // Get current user's devices
     async myDevices(_: unknown, __: unknown, context: GraphQLContext) {
       if (!context.userId) {
-        throw new Error("Authentication required");
+        throw new GraphQLError('Authentication required', {
+          extensions: {
+            code: 'UNAUTHENTICATED',
+            http: { status: 401 },
+          },
+        });
       }
 
       const devices = await prisma.mobileDevice.findMany({
@@ -70,7 +77,12 @@ export const mobileResolvers = {
     // Get current user's profile
     async myProfile(_: unknown, __: unknown, context: GraphQLContext) {
       if (!context.userId) {
-        throw new Error("Authentication required");
+        throw new GraphQLError('Authentication required', {
+          extensions: {
+            code: 'UNAUTHENTICATED',
+            http: { status: 401 },
+          },
+        });
       }
 
       const profile = await prisma.mobileUserProfile.findUnique({
@@ -91,7 +103,12 @@ export const mobileResolvers = {
     // Get current user's accounts
     async myAccounts(_: unknown, __: unknown, context: GraphQLContext) {
       if (!context.userId) {
-        throw new Error("Authentication required");
+        throw new GraphQLError('Authentication required', {
+          extensions: {
+            code: 'UNAUTHENTICATED',
+            http: { status: 401 },
+          },
+        });
       }
 
       const hiddenCategoryIds = await getHiddenAccountCategoryIds();
@@ -133,7 +150,12 @@ export const mobileResolvers = {
     // Get primary account
     async myPrimaryAccount(_: unknown, __: unknown, context: GraphQLContext) {
       if (!context.userId) {
-        throw new Error("Authentication required");
+        throw new GraphQLError('Authentication required', {
+          extensions: {
+            code: 'UNAUTHENTICATED',
+            http: { status: 401 },
+          },
+        });
       }
 
       const hiddenCategoryIds = await getHiddenAccountCategoryIds();
@@ -179,7 +201,12 @@ export const mobileResolvers = {
     // Get current user's active sessions
     async mySessions(_: unknown, __: unknown, context: GraphQLContext) {
       if (!context.userId) {
-        throw new Error("Authentication required");
+        throw new GraphQLError('Authentication required', {
+          extensions: {
+            code: 'UNAUTHENTICATED',
+            http: { status: 401 },
+          },
+        });
       }
 
       const sessions = await prisma.deviceSession.findMany({
@@ -209,7 +236,12 @@ export const mobileResolvers = {
       context: GraphQLContext
     ) {
       if (!context.userId) {
-        throw new Error("Authentication required");
+        throw new GraphQLError('Authentication required', {
+          extensions: {
+            code: 'UNAUTHENTICATED',
+            http: { status: 401 },
+          },
+        });
       }
 
       const where: any = { mobileUserId: context.userId };
@@ -244,7 +276,12 @@ export const mobileResolvers = {
       context: GraphQLContext
     ) {
       if (!context.userId) {
-        throw new Error("Authentication required");
+        throw new GraphQLError('Authentication required', {
+          extensions: {
+            code: 'UNAUTHENTICATED',
+            http: { status: 401 },
+          },
+        });
       }
 
       const profile = await prisma.mobileUserProfile.upsert({
@@ -288,7 +325,12 @@ export const mobileResolvers = {
       context: GraphQLContext
     ) {
       if (!context.userId) {
-        throw new Error("Authentication required");
+        throw new GraphQLError('Authentication required', {
+          extensions: {
+            code: 'UNAUTHENTICATED',
+            http: { status: 401 },
+          },
+        });
       }
 
       const updated = await prisma.mobileUser.update({
@@ -325,7 +367,12 @@ export const mobileResolvers = {
       context: GraphQLContext
     ) {
       if (!context.userId) {
-        throw new Error("Authentication required");
+        throw new GraphQLError('Authentication required', {
+          extensions: {
+            code: 'UNAUTHENTICATED',
+            http: { status: 401 },
+          },
+        });
       }
 
       await prisma.mobileUser.update({
@@ -347,11 +394,21 @@ export const mobileResolvers = {
       context: GraphQLContext
     ) {
       if (!context.userId) {
-        throw new Error("Authentication required");
+        throw new GraphQLError('Authentication required', {
+          extensions: {
+            code: 'UNAUTHENTICATED',
+            http: { status: 401 },
+          },
+        });
       }
 
       if (deviceId === context.deviceId) {
-        throw new Error("Cannot revoke current device. Use logout instead.");
+        throw new GraphQLError("Cannot revoke current device. Use logout instead.", {
+          extensions: {
+            code: 'OPERATION_NOT_ALLOWED',
+            http: { status: 400 },
+          },
+        });
       }
 
       // Verify device belongs to user
@@ -363,7 +420,12 @@ export const mobileResolvers = {
       });
 
       if (!device) {
-        throw new Error("Device not found");
+        throw new GraphQLError('Device not found', {
+          extensions: {
+            code: 'NOT_FOUND',
+            http: { status: 404 },
+          },
+        });
       }
 
       // Revoke all sessions for that device
@@ -389,7 +451,12 @@ export const mobileResolvers = {
       context: GraphQLContext
     ) {
       if (!context.userId) {
-        throw new Error("Authentication required");
+        throw new GraphQLError('Authentication required', {
+          extensions: {
+            code: 'UNAUTHENTICATED',
+            http: { status: 401 },
+          },
+        });
       }
 
       const device = await prisma.mobileDevice.findFirst({
@@ -400,7 +467,12 @@ export const mobileResolvers = {
       });
 
       if (!device) {
-        throw new Error("Device not found");
+        throw new GraphQLError('Device not found', {
+          extensions: {
+            code: 'NOT_FOUND',
+            http: { status: 404 },
+          },
+        });
       }
 
       const updated = await prisma.mobileDevice.update({
@@ -430,11 +502,21 @@ export const mobileResolvers = {
       context: GraphQLContext
     ) {
       if (!context.userId) {
-        throw new Error("Authentication required");
+        throw new GraphQLError('Authentication required', {
+          extensions: {
+            code: 'UNAUTHENTICATED',
+            http: { status: 401 },
+          },
+        });
       }
 
       if (sessionId === context.sessionId) {
-        throw new Error("Cannot revoke current session. Use logout instead.");
+        throw new GraphQLError("Cannot revoke current session. Use logout instead.", {
+          extensions: {
+            code: 'OPERATION_NOT_ALLOWED',
+            http: { status: 400 },
+          },
+        });
       }
 
       const session = await prisma.deviceSession.findFirst({
@@ -446,7 +528,12 @@ export const mobileResolvers = {
       });
 
       if (!session) {
-        throw new Error("Session not found");
+        throw new GraphQLError('Session not found', {
+          extensions: {
+            code: 'NOT_FOUND',
+            http: { status: 404 },
+          },
+        });
       }
 
       await prisma.deviceSession.update({
@@ -467,7 +554,12 @@ export const mobileResolvers = {
       context: GraphQLContext
     ) {
       if (!context.userId) {
-        throw new Error("Authentication required");
+        throw new GraphQLError('Authentication required', {
+          extensions: {
+            code: 'UNAUTHENTICATED',
+            http: { status: 401 },
+          },
+        });
       }
 
       const result = await prisma.deviceSession.updateMany({
@@ -497,7 +589,12 @@ export const mobileResolvers = {
       context: GraphQLContext
     ) {
       if (!context.userId) {
-        throw new Error("Authentication required");
+        throw new GraphQLError('Authentication required', {
+          extensions: {
+            code: 'UNAUTHENTICATED',
+            http: { status: 401 },
+          },
+        });
       }
 
       // Verify device belongs to this user and is pending
@@ -510,7 +607,12 @@ export const mobileResolvers = {
       });
 
       if (!device) {
-        throw new Error("Pending device not found or already approved");
+        throw new GraphQLError('Pending device not found or already approved', {
+          extensions: {
+            code: 'NOT_FOUND',
+            http: { status: 404 },
+          },
+        });
       }
 
       // Approve the device
@@ -572,7 +674,12 @@ export const mobileResolvers = {
       context: GraphQLContext
     ) {
       if (!context.userId) {
-        throw new Error("Authentication required");
+        throw new GraphQLError('Authentication required', {
+          extensions: {
+            code: 'UNAUTHENTICATED',
+            http: { status: 401 },
+          },
+        });
       }
 
       // Verify device belongs to this user and is pending
@@ -585,7 +692,12 @@ export const mobileResolvers = {
       });
 
       if (!device) {
-        throw new Error("Pending device not found");
+        throw new GraphQLError('Pending device not found', {
+          extensions: {
+            code: 'NOT_FOUND',
+            http: { status: 404 },
+          },
+        });
       }
 
       // Send notification to the denied device (async)
