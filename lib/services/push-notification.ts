@@ -51,7 +51,7 @@ export class PushNotificationService {
       }
 
       // Get user devices with FCM tokens and push enabled
-      const devices = await prisma.mobileDevice.findMany({
+      let devices = await prisma.mobileDevice.findMany({
         where: {
           mobileUserId: userId,
           isActive: true,
@@ -61,6 +61,21 @@ export class PushNotificationService {
           ...(primaryOnly && { isPrimary: true }),
         },
       });
+
+      // Fallback: If primaryOnly was requested but no primary device found, 
+      // try sending to any active device for this user
+      if (primaryOnly && devices.length === 0) {
+        console.log(`No primary device found for user ${userId}, falling back to any active device`);
+        devices = await prisma.mobileDevice.findMany({
+          where: {
+            mobileUserId: userId,
+            isActive: true,
+            pushEnabled: true,
+            fcmToken: { not: null },
+            ...(deviceId && { deviceId }),
+          },
+        });
+      }
 
       if (devices.length === 0) {
         console.log(`No active devices with push enabled found for user ${userId}`);

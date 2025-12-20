@@ -31,6 +31,7 @@ import { checkbookRequestResolvers } from "./checkbookRequest";
 import { pushNotificationResolvers } from "./pushNotification";
 import { backupScheduleResolvers } from "./backupSchedule";
 import { airtimeResolvers } from "./airtime";
+import { deviceManagementResolvers } from "./deviceManagement";
 import { JSONResolver, DateTimeResolver } from "graphql-scalars";
 import { GraphQLScalarType, Kind } from "graphql";
 
@@ -117,6 +118,7 @@ export const resolvers = {
     ...walletTierResolvers.Mutation,
     ...checkbookRequestResolvers.Mutation,
     ...pushNotificationResolvers.Mutation,
+    ...deviceManagementResolvers.Mutation,
     ...airtimeResolvers.Mutation,
   },
   CoreBankingConnection: {

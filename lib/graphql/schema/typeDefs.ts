@@ -535,6 +535,13 @@ export const typeDefs = /* GraphQL */ `
     updatedAt: String!
   }
 
+  type OtpVerificationResponse {
+    success: Boolean!
+    verificationToken: String
+    maskedContact: String
+    verificationMethod: String
+  }
+
   type PasskeyRegistrationOptions {
     rp: String!
     user: String!
@@ -2141,6 +2148,10 @@ export const typeDefs = /* GraphQL */ `
     registerDeviceForPush(fcmToken: String!, deviceId: String!): Boolean!
     unregisterDeviceFromPush(deviceId: String!): Boolean!
     testPushNotification(deviceId: String): Boolean!
+    
+    # Device management
+    requestPrimaryDeviceOtp(deviceId: String!): OtpVerificationResponse!
+    setPrimaryDevice(deviceId: String!, otpCode: String!, verificationToken: String!): MobileDevice!
     
     # Notification actions
     markNotificationAsRead(id: ID!): Boolean!
