@@ -2,10 +2,12 @@ import { workflowSessionStore } from './session-store';
 import { prisma } from '@/lib/db/prisma';
 import { ESBSMSService } from '@/lib/services/sms/sms-service';
 import { emailService } from '@/lib/services/email';
-import type {
+import { t24Service } from '@/lib/services/t24-service';
+import {
   WorkflowStep,
   StepExecutionMode,
-  TriggerTiming
+  TriggerTiming,
+  TransferType
 } from '@prisma/client';
 
 interface ExecutionContext {
@@ -22,10 +24,19 @@ interface StepExecutionRequest {
   timing: TriggerTiming;
 }
 
+interface WorkflowError {
+  title?: string;
+  message?: string;
+  code?: string;
+  type?: 'POPUP' | 'BANNER' | 'FIELD' | 'SNACKBAR';
+  details?: any;
+}
+
 interface StepExecutionResponse {
   success: boolean;
   output?: any;
   error?: string;
+  structuredError?: WorkflowError;
   shouldProceed: boolean;
 }
 
@@ -452,16 +463,28 @@ export class WorkflowExecutor {
         console.error('Final API submission failed:', error);
 
         // Update execution as failed
+        const errorMsg = error.message || 'API submission failed';
         await prisma.workflowExecution.update({
           where: { id: executionId },
           data: {
             status: 'FAILED',
-            error: error.message || 'API submission failed',
+            error: errorMsg,
             completedAt: new Date()
           }
         });
 
-        throw error;
+        return {
+          success: false,
+          result: mappedData,
+          executionId,
+          error: errorMsg,
+          structuredError: {
+            title: 'Submission Failed',
+            message: errorMsg,
+            code: 'API_ERROR',
+            type: 'POPUP'
+          }
+        };
       }
     }
 
@@ -566,6 +589,11 @@ export class WorkflowExecutor {
   ): Promise<StepExecutionResponse> {
     const { step, context, input } = request;
 
+    // Support built-in POST_TRANSACTION if no endpoint is configured
+    if (step.type === 'POST_TRANSACTION' && !step.triggerEndpoint) {
+      return this.handlePostTransactionStep(step, context, input);
+    }
+
     // Handle different execution modes
     switch (step.executionMode) {
       case 'SERVER_SYNC':
@@ -594,7 +622,17 @@ export class WorkflowExecutor {
     input: any
   ): Promise<StepExecutionResponse> {
     if (!step.triggerEndpoint) {
-      throw new Error('Trigger endpoint not configured for sync step');
+      return {
+        success: false,
+        error: 'Trigger endpoint not configured for sync step',
+        structuredError: {
+          title: 'Configuration Error',
+          message: 'Server trigger is not configured for this step.',
+          code: 'CONFIG_ERROR',
+          type: 'BANNER'
+        },
+        shouldProceed: false
+      };
     }
 
     const result = await this.makeAPICall(
@@ -652,7 +690,17 @@ export class WorkflowExecutor {
     input: any
   ): Promise<StepExecutionResponse> {
     if (!step.triggerEndpoint) {
-      throw new Error('Trigger endpoint not configured for validation step');
+      return {
+        success: false,
+        error: 'Trigger endpoint not configured for validation step',
+        structuredError: {
+          title: 'Configuration Error',
+          message: 'Validation endpoint is missing for this step.',
+          code: 'CONFIG_ERROR',
+          type: 'BANNER'
+        },
+        shouldProceed: false
+      };
     }
 
     const result = await this.makeAPICall(
@@ -676,6 +724,95 @@ export class WorkflowExecutor {
       output: result.data,
       shouldProceed: true
     };
+  }
+
+  /**
+   * Handle built-in transaction processing for POST_TRANSACTION step
+   */
+  private async handlePostTransactionStep(
+    step: WorkflowStep,
+    context: ExecutionContext,
+    input: any
+  ): Promise<StepExecutionResponse> {
+    const config = (step.config as any) || {};
+    const mapping = config.parameterMapping || {};
+
+    if (Object.keys(mapping).length === 0) {
+      return {
+        success: false,
+        error: 'Parameter mapping missing for transaction step',
+        shouldProceed: false
+      };
+    }
+
+    // Resolve variables in mapping
+    const resolvedParams: Record<string, any> = {};
+    for (const [key, template] of Object.entries(mapping)) {
+      if (typeof template === 'string') {
+        resolvedParams[key] = this.resolveVariables(template, context, input);
+      } else {
+        resolvedParams[key] = template;
+      }
+    }
+
+    // Map resolved params to T24TransferRequest
+    const transferRequest = {
+      fromAccount: resolvedParams.fromAccountNumber || resolvedParams.fromAccount,
+      toAccount: resolvedParams.toAccountNumber || resolvedParams.toAccount,
+      amount: resolvedParams.amount?.toString(),
+      currency: resolvedParams.currency || 'MWK',
+      description: resolvedParams.description || step.label || 'Workflow Transaction',
+      reference: resolvedParams.reference || `WF-${context.sessionId.slice(-8)}`,
+      transferType: config.transactionType === 'TRANSFER' ? TransferType.FDH_BANK : TransferType.FDH_WALLET
+    };
+
+    if (!transferRequest.fromAccount || !transferRequest.toAccount || !transferRequest.amount) {
+      return {
+        success: false,
+        error: `Missing required transaction data: ${!transferRequest.fromAccount ? 'Source Account, ' : ''}${!transferRequest.toAccount ? 'Destination Account, ' : ''}${!transferRequest.amount ? 'Amount' : ''}`,
+        shouldProceed: false
+      };
+    }
+
+    try {
+      console.log(`[WorkflowExecutor] Executing built-in T24 transfer for step: ${step.id}`);
+      const result = await t24Service.transfer(transferRequest);
+
+      if (!result.success) {
+        return {
+          success: false,
+          error: typeof result.message === 'string' ? result.message : 'Transaction failed',
+          structuredError: {
+            title: 'Transaction Error',
+            message: typeof result.message === 'string'
+              ? result.message
+              : (result.message?.errorDetails?.[0]?.message || 'The transaction could not be processed.'),
+            code: result.errorCode || 'T24_ERROR',
+            type: 'POPUP',
+            details: result.message
+          },
+          shouldProceed: false
+        };
+      }
+
+      return {
+        success: true,
+        output: {
+          t24Reference: result.t24Reference,
+          externalReference: result.externalReference,
+          status: 'COMPLETED',
+          message: result.message
+        },
+        shouldProceed: true
+      };
+    } catch (error: any) {
+      console.error('T24 built-in transfer failed:', error);
+      return {
+        success: false,
+        error: error.message || 'T24 connection failed',
+        shouldProceed: false
+      };
+    }
   }
 
   /**

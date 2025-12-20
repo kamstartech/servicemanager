@@ -1049,17 +1049,28 @@ export const typeDefs = /* GraphQL */ `
     workflow: Workflow
   }
 
+  type WorkflowError {
+    title: String
+    message: String
+    code: String
+    type: String
+    details: JSON
+  }
+
   type StepExecutionResponse {
     success: Boolean!
     result: JSON
     shouldProceed: Boolean!
     error: String
+    structuredError: WorkflowError
   }
 
   type WorkflowCompletionResult {
     success: Boolean!
     result: JSON!
     executionId: ID!
+    error: String
+    structuredError: WorkflowError
   }
 
   type Workflow {
