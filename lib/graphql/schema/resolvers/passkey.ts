@@ -122,12 +122,20 @@ export const passkeyResolvers = {
 
                 // Ensure we save credentialId as base64url string
                 const newDevice = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-                    const existingPrimary = await tx.mobileDevice.findFirst({
-                        where: { mobileUserId: user.id, isPrimary: true },
-                        select: { id: true },
+                    const existingDevices = await tx.mobileDevice.findMany({
+                        where: { mobileUserId: user.id, isActive: true },
+                        select: { id: true, isPrimary: true },
                     });
 
-                    const shouldBePrimary = !existingPrimary;
+                    const isFirstDevice = existingDevices.length === 0;
+
+                    // Honor multi-session setting for secondary devices
+                    if (!isFirstDevice && !user.allowMultiSession) {
+                        throw new Error("Multi-device sessions are disabled for this account.");
+                    }
+
+                    const shouldBePrimary = isFirstDevice;
+                    const isActive = isFirstDevice; // Secondary devices start inactive if multi-session is enabled
 
                     const created = await tx.mobileDevice.create({
                         data: {
@@ -141,6 +149,8 @@ export const passkeyResolvers = {
                             os: deviceInfo.os,
                             deviceId: deviceInfo.deviceId,
                             isPrimary: shouldBePrimary,
+                            isActive: isActive,
+                            verifiedVia: "PASSKEY",
                         },
                     });
 
@@ -155,6 +165,21 @@ export const passkeyResolvers = {
                 });
 
                 challengeStore.delete(`reg-${user.id}`);
+
+                // Send notification to Primary device if this is a secondary device (requires approval)
+                if (!newDevice.isActive) {
+                    const { PushNotificationService } = await import("@/lib/services/push-notification");
+                    PushNotificationService.sendNewDeviceLoginAttempt(
+                        user.id,
+                        newDevice.id, // Using record ID for approval mutation
+                        newDevice.name || "Mobile Device",
+                        newDevice.model || undefined,
+                        newDevice.os || undefined,
+                        undefined, // location
+                        undefined, // ip
+                        true // primaryOnly
+                    ).catch(err => console.error("Failed to send passkey approval notification:", err));
+                }
 
                 return {
                     success: true,

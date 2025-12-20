@@ -12,6 +12,7 @@ export interface SendPushNotificationParams {
   actionUrl?: string;
   actionData?: any;
   deviceId?: string; // Send to specific device, or all if null
+  primaryOnly?: boolean; // Send exclusively to the primary device
 }
 
 export class PushNotificationService {
@@ -29,6 +30,7 @@ export class PushNotificationService {
       actionUrl,
       actionData,
       deviceId,
+      primaryOnly,
     } = params;
 
     try {
@@ -56,6 +58,7 @@ export class PushNotificationService {
           pushEnabled: true,
           fcmToken: { not: null },
           ...(deviceId && { deviceId }),
+          ...(primaryOnly && { isPrimary: true }),
         },
       });
 
@@ -371,7 +374,8 @@ export class PushNotificationService {
     deviceModel?: string,
     deviceOs?: string,
     location?: string,
-    ipAddress?: string
+    ipAddress?: string,
+    primaryOnly: boolean = false
   ) {
     const deviceInfo = [deviceModel, deviceOs].filter(Boolean).join(' • ');
     const locationInfo = location ? ` from ${location}` : '';
@@ -384,6 +388,7 @@ export class PushNotificationService {
       body: `A new device (${deviceName}${deviceInfo ? ` - ${deviceInfo}` : ''}) is attempting to login${locationInfo} and requires approval`,
       actionUrl: '/security/devices',
       actionData: { deviceId, deviceName, deviceModel, deviceOs, location, ipAddress },
+      primaryOnly,
     });
   }
 

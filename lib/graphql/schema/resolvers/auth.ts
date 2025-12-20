@@ -427,26 +427,8 @@ export const authResolvers = {
       }
 
       // 3c. Second+ device - Check if user allows multi-device sessions
-      if (user.allowMultiSession) {
-        // User allows multiple devices - Send OTP like first device
-        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-        const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
-        const verificationToken = crypto.randomUUID();
-
-        // Determine verification method
-        const profile = await prisma.mobileUserProfile.findUnique({
-          where: { mobileUserId: user.id },
-        });
-
-        const email = profile?.email;
-        const verificationMethod = user.phoneNumber ? "SMS" : "EMAIL";
-        const sentTo = verificationMethod === "SMS" ? user.phoneNumber : email;
-
-        if (!sentTo) {
-          throw new Error("No phone number or email associated with this account");
-        }
-
-        // Create login attempt with OTP
+      if (!user.allowMultiSession) {
+        // Multi-session disabled - REJECT immediately
         await prisma.deviceLoginAttempt.create({
           data: {
             mobileUserId: user.id,
@@ -459,40 +441,16 @@ export const authResolvers = {
             ipAddress,
             location,
             attemptType: "PASSWORD_LOGIN",
-            status: "PENDING_VERIFICATION",
-            otpCode,
-            otpSentTo: sentTo,
-            otpSentAt: new Date(),
-            otpExpiresAt,
-            verificationToken,
+            status: "FAILED_POLICY",
+            failureReason: "Multi-device session is disabled for this account",
             attemptedAt: new Date(),
           },
         });
 
-        if (verificationMethod === "SMS") {
-          const smsResult = await ESBSMSService.sendOTP(sentTo, otpCode, user.id);
-          if (!smsResult.success) {
-            throw new Error(smsResult.error || "Failed to send OTP");
-          }
-        } else {
-          await emailService.sendOTP(sentTo, otpCode, user.username ?? username ?? "");
-        }
-
-        // Mask contact
-        const maskedContact = maskContact(sentTo, verificationMethod);
-
-        return {
-          success: true,
-          requiresVerification: true,
-          verificationMethod,
-          maskedContact,
-          verificationToken,
-          message: `Verification code sent to ${maskedContact}`,
-          devicePending: false,
-        };
+        throw new Error("Multi-device sessions are disabled. Please enable it from your existing device or contact support.");
       }
 
-      // 3d. Second+ device - Multi-session disabled, requires approval
+      // 3d. Second+ device - Multi-session ENABLED, requires approval from PRIMARY device
 
       await prisma.$transaction([
         prisma.mobileDevice.upsert({
@@ -541,8 +499,7 @@ export const authResolvers = {
         }),
       ]);
 
-      // Send notification to user's existing active devices (async, don't block response)
-      // The PushNotificationService.send() method already checks user.pushNotifications
+      // Send notification EXCLUSIVELY to user's PRIMARY device (async, don't block response)
       const { PushNotificationService } = await import("@/lib/services/push-notification");
       PushNotificationService.sendNewDeviceLoginAttempt(
         user.id,
@@ -551,9 +508,10 @@ export const authResolvers = {
         deviceModel,
         deviceOs,
         location,
-        ipAddress
+        ipAddress,
+        true // primaryOnly = true
       ).catch((error) => {
-        console.error("Failed to send new device notification:", error);
+        console.error("Failed to send new device notification to primary device:", error);
       });
 
       return {
