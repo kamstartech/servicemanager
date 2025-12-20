@@ -786,14 +786,29 @@ export class WorkflowExecutor {
       const result = await t24Service.transfer(transferRequest);
 
       if (!result.success) {
+        // Extract error message from T24 response
+        let errorMessage = 'Transaction failed';
+
+        if (typeof result.message === 'string') {
+          errorMessage = result.message;
+        } else if (result.message && typeof result.message === 'object') {
+          // Handle T24 business error format: { type: 'BUSINESS', errorDetails: [...] }
+          const errorDetails = (result.message as any).errorDetails;
+          if (Array.isArray(errorDetails) && errorDetails.length > 0) {
+            errorMessage = errorDetails[0].message || errorDetails[0].errorMessage || errorMessage;
+          } else if ((result.message as any).message) {
+            errorMessage = (result.message as any).message;
+          }
+        }
+
+        console.log('[WorkflowExecutor] T24 transaction failed:', errorMessage);
+
         return {
           success: false,
-          error: typeof result.message === 'string' ? result.message : 'Transaction failed',
+          error: errorMessage,
           structuredError: {
             title: 'Transaction Error',
-            message: typeof result.message === 'string'
-              ? result.message
-              : (result.message?.errorDetails?.[0]?.message || 'The transaction could not be processed.'),
+            message: errorMessage,
             code: result.errorCode || 'T24_ERROR',
             type: 'POPUP',
             details: result.message
