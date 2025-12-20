@@ -220,6 +220,7 @@ export const typeDefs = /* GraphQL */ `
     city: String
     country: String
     zip: String
+    profileImageUrl: String
     createdAt: String!
     updatedAt: String!
   }
