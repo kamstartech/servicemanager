@@ -367,18 +367,37 @@ export const authResolvers = {
         const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
         const verificationToken = crypto.randomUUID();
 
-        // Determine verification method
+        // Determine verification method based on preferences and availability
         const profile = await prisma.mobileUserProfile.findUnique({
           where: { mobileUserId: user.id },
         });
 
         const email = profile?.email;
-        const verificationMethod = user.phoneNumber ? "SMS" : "EMAIL";
-        const sentTo = verificationMethod === "SMS" ? user.phoneNumber : email;
+        const sendSMS = !!(user.phoneNumber && user.smsNotifications);
+        const sendEmail = !!(email && user.emailNotifications);
 
-        if (!sentTo) {
-          throw new Error("No phone number or email associated with this account");
+        if (!sendSMS && !sendEmail) {
+          throw new Error("No phone number or email is enabled for verification on this account");
         }
+
+        const verificationMethod = sendSMS && sendEmail
+          ? "SMS_EMAIL"
+          : sendSMS ? "SMS" : "EMAIL";
+
+        const maskedContacts: string[] = [];
+        const sentToDetails: string[] = [];
+
+        if (sendSMS) {
+          maskedContacts.push(maskContact(user.phoneNumber!, "SMS"));
+          sentToDetails.push(user.phoneNumber!);
+        }
+        if (sendEmail) {
+          maskedContacts.push(maskContact(email!, "EMAIL"));
+          sentToDetails.push(email!);
+        }
+
+        const maskedContact = maskedContacts.join(" and ");
+        const sentTo = sentToDetails.join(", ");
 
         // Create login attempt with OTP
         await prisma.deviceLoginAttempt.create({
@@ -403,17 +422,18 @@ export const authResolvers = {
           },
         });
 
-        if (verificationMethod === "SMS") {
-          const smsResult = await ESBSMSService.sendOTP(sentTo, otpCode, user.id);
-          if (!smsResult.success) {
-            throw new Error(smsResult.error || "Failed to send OTP");
+        // Send to all enabled channels
+        if (sendSMS) {
+          const smsResult = await ESBSMSService.sendOTP(user.phoneNumber!, otpCode, user.id);
+          if (!smsResult.success && !sendEmail) {
+            // Only fail hard if this was the ONLY channel
+            throw new Error(smsResult.error || "Failed to send OTP via SMS");
           }
-        } else {
-          await emailService.sendOTP(sentTo, otpCode, user.username ?? username ?? "");
         }
 
-        // Mask contact
-        const maskedContact = maskContact(sentTo, verificationMethod);
+        if (sendEmail) {
+          await emailService.sendOTP(email!, otpCode, user.username ?? username ?? "");
+        }
 
         return {
           success: true,

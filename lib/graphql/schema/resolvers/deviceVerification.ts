@@ -61,7 +61,10 @@ export const deviceVerificationResolvers = {
       }
 
       // ✅ OTP VERIFIED - Create device!
-      const verifiedVia = attempt.otpSentTo?.includes("@") ? "OTP_EMAIL" : "OTP_SMS";
+      let verifiedVia = "OTP_SMS";
+      if (attempt.otpSentTo?.includes("@")) {
+        verifiedVia = attempt.otpSentTo.includes(",") ? "OTP_SMS_EMAIL" : "OTP_EMAIL";
+      }
 
       const device = await prisma.$transaction(async (tx) => {
         const existingPrimary = await tx.mobileDevice.findFirst({
@@ -347,15 +350,34 @@ export const deviceVerificationResolvers = {
         },
       });
 
-      // Send OTP (integrate with SMS/Email service)
-      const sentTo = attempt.otpSentTo!;
-      if (sentTo.includes("@")) {
-        await emailService.sendOTP(sentTo, otpCode, attempt.mobileUser.username ?? "");
-      } else {
-        const smsResult = await ESBSMSService.sendOTP(sentTo, otpCode, attempt.mobileUserId!);
-        if (!smsResult.success) {
-          throw new Error(smsResult.error || "Failed to send OTP");
+      // Send OTP to all channels used in the original attempt
+      const sentToAddresses = attempt.otpSentTo?.split(", ") || [];
+      let successCount = 0;
+
+      for (const address of sentToAddresses) {
+        if (address.includes("@")) {
+          try {
+            await emailService.sendOTP(address, otpCode, attempt.mobileUser.username ?? "");
+            successCount++;
+          } catch (err) {
+            console.error(`Resend Email OTP failed for ${address}:`, err);
+          }
+        } else {
+          try {
+            const smsResult = await ESBSMSService.sendOTP(address, otpCode, attempt.mobileUserId!);
+            if (smsResult.success) {
+              successCount++;
+            } else {
+              console.error(`Resend SMS OTP failed for ${address}:`, smsResult.error);
+            }
+          } catch (err) {
+            console.error(`Resend SMS OTP error for ${address}:`, err);
+          }
         }
+      }
+
+      if (successCount === 0) {
+        throw new Error("Failed to send OTP to any enabled channel");
       }
 
       return true;

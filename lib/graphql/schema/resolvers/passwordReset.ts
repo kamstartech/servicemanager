@@ -97,19 +97,14 @@ export const passwordResetResolvers = {
         }
 
         // 3. Determine where to send OTP (phone or email)
-        let otpDestination = phoneNumber || user.phoneNumber;
-        let otpMethod = "sms";
+        const sendSMS = !!(user.phoneNumber && user.smsNotifications);
+        const email = user.profile?.email;
+        const sendEmail = !!(email && user.emailNotifications);
 
-        if (!otpDestination && user.profile?.email) {
-          otpDestination = user.profile.email;
-          otpMethod = "email";
-        }
-
-        if (!otpDestination) {
+        if (!sendSMS && !sendEmail) {
           return {
             success: false,
-            message:
-              "No phone number or email associated with this account",
+            message: "No phone number or email is enabled for verification on this account",
             resetToken: null,
             otpSentTo: null,
           };
@@ -119,18 +114,35 @@ export const passwordResetResolvers = {
         const otp = generateOTP();
         const resetToken = crypto.randomUUID();
 
+        const maskedContacts: string[] = [];
+        const sentToDetails: string[] = [];
+
+        if (sendSMS) {
+          maskedContacts.push(`***${user.phoneNumber!.slice(-4)}`);
+          sentToDetails.push(user.phoneNumber!);
+        }
+        if (sendEmail) {
+          const [local, domain] = email!.split("@");
+          maskedContacts.push(`${local[0]}***@${domain}`);
+          sentToDetails.push(email!);
+        }
+
+        const otpSentTo = maskedContacts.join(" and ");
+        const fullSentTo = sentToDetails.join(", ");
+
         // Store OTP (expires in 5 minutes)
         otpStorage.set(resetToken, {
           otp,
           userId: user.id,
-          phoneNumber: otpDestination,
+          phoneNumber: fullSentTo,
           deviceId: deviceId,
           expiresAt: new Date(Date.now() + 5 * 60 * 1000),
         });
 
-        if (otpMethod === "sms") {
-          const smsResult = await ESBSMSService.sendOTP(otpDestination, otp, user.id);
-          if (!smsResult.success) {
+        // 5. Send OTP to all enabled channels
+        if (sendSMS) {
+          const smsResult = await ESBSMSService.sendOTP(user.phoneNumber!, otp, user.id);
+          if (!smsResult.success && !sendEmail) {
             otpStorage.delete(resetToken);
             return {
               success: false,
@@ -139,17 +151,16 @@ export const passwordResetResolvers = {
               otpSentTo: null,
             };
           }
-        } else {
+        }
+
+        if (sendEmail) {
           try {
-            await emailService.sendOTP(otpDestination, otp, user.username ?? username);
+            await emailService.sendOTP(email!, otp, user.username ?? username);
           } catch (e) {
-            otpStorage.delete(resetToken);
-            return {
-              success: false,
-              message: "Failed to send OTP via email",
-              resetToken: null,
-              otpSentTo: null,
-            };
+            if (!sendSMS) {
+              otpStorage.delete(resetToken);
+              throw e;
+            }
           }
         }
 
@@ -166,9 +177,9 @@ export const passwordResetResolvers = {
 
         return {
           success: true,
-          message: `OTP sent to ${otpMethod === "email" ? "email" : "phone"}`,
+          message: `OTP sent to ${otpSentTo}`,
           resetToken,
-          otpSentTo: otpMethod === "email" ? otpDestination : `***${otpDestination.slice(-4)}`,
+          otpSentTo,
         };
       } catch (error) {
         console.error("Error initiating password reset:", error);

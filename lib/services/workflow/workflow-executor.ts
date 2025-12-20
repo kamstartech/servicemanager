@@ -149,20 +149,20 @@ export class WorkflowExecutor {
       const otpKey = `otp_${stepId}`;
       const otpState = (context?.[otpKey] ?? null) as
         | {
-            code: string;
-            expiresAt: string;
-            attempts: number;
-            sentTo?: string;
-            sentAt?: string;
-          }
+          code: string;
+          expiresAt: string;
+          attempts: number;
+          sentTo?: string;
+          sentAt?: string;
+        }
         | null;
 
       if (timing === 'BEFORE_STEP') {
-        // Resolve destination: prefer phoneNumber (SMS), fallback to email
+        // Resolve destinations based on preferences and availability
         const userIdInt = parseInt(String(execution.userId), 10);
         const user = await prisma.mobileUser.findUnique({
           where: { id: userIdInt },
-          select: { phoneNumber: true, username: true },
+          select: { phoneNumber: true, username: true, smsNotifications: true, emailNotifications: true },
         });
         const profile = await prisma.mobileUserProfile.findUnique({
           where: { mobileUserId: userIdInt },
@@ -171,18 +171,25 @@ export class WorkflowExecutor {
 
         const phone = user?.phoneNumber?.toString();
         const email = profile?.email?.toString();
-        const sentTo = phone && phone.length > 0 ? phone : email;
 
-        if (!sentTo) {
+        const sendSMS = !!(phone && user?.smsNotifications);
+        const sendEmail = !!(email && user?.emailNotifications);
+
+        if (!sendSMS && !sendEmail) {
           return {
             success: false,
             shouldProceed: false,
-            error: 'No phone number or email available for OTP delivery',
+            error: 'No phone number or email is enabled for OTP delivery on this account',
           };
         }
 
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+        const sentToDetails: string[] = [];
+        if (sendSMS) sentToDetails.push(phone!);
+        if (sendEmail) sentToDetails.push(email!);
+        const sentTo = sentToDetails.join(", ");
 
         await workflowSessionStore.updateContext(execution.sessionId, {
           [otpKey]: {
@@ -194,19 +201,21 @@ export class WorkflowExecutor {
           },
         });
 
-        if (sentTo.includes('@')) {
+        if (sendEmail) {
           await emailService.sendOTP(
-            sentTo,
+            email!,
             code,
             user?.username?.toString() || String(execution.userId)
-          );
-        } else {
-          const smsResult = await ESBSMSService.sendOTP(sentTo, code, userIdInt);
-          if (!smsResult.success) {
+          ).catch(err => console.error("Workflow Email OTP failed:", err));
+        }
+
+        if (sendSMS) {
+          const smsResult = await ESBSMSService.sendOTP(phone!, code, userIdInt);
+          if (!smsResult.success && !sendEmail) {
             return {
               success: false,
               shouldProceed: false,
-              error: smsResult.error || 'Failed to send OTP',
+              error: smsResult.error || 'Failed to send OTP via SMS',
             };
           }
         }
@@ -215,7 +224,7 @@ export class WorkflowExecutor {
           success: true,
           shouldProceed: true,
           output: {
-            sentTo: sentTo.includes('@') ? 'email' : 'phone',
+            sentTo: sendSMS && sendEmail ? 'phone and email' : sendSMS ? 'phone' : 'email',
             expiresInSeconds: 600,
           },
         };
