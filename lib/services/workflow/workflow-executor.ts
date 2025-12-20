@@ -447,6 +447,7 @@ export class WorkflowExecutor {
     if (finalStep && finalStep.triggerEndpoint) {
       try {
         finalResult = await this.submitToAPI(finalStep, mappedData);
+        console.log('✅ POST_TRANSACTION response:', JSON.stringify(finalResult, null, 2));
       } catch (error: any) {
         console.error('Final API submission failed:', error);
 
@@ -477,9 +478,55 @@ export class WorkflowExecutor {
     // Clean up Redis session data
     await workflowSessionStore.clearSession(execution.sessionId);
 
+    console.log('✅ POST_TRANSACTION response:', JSON.stringify(finalResult, null, 2));
+
+    // Transform the result into a display-ready format for mobile
+    const displayResult = this.formatForDisplay(finalResult || mappedData);
+
+    console.log('🎯 Workflow completion - display result:', JSON.stringify(displayResult, null, 2));
+
     return {
       success: true,
-      result: finalResult || mappedData
+      result: displayResult
+    };
+  }
+
+  /**
+   * Format transaction result for mobile display
+   */
+  private formatForDisplay(apiResult: any): any {
+    // Check if this is a POST_TRANSACTION response
+    if (apiResult && typeof apiResult === 'object') {
+      const transactionSuccess = apiResult.success === true;
+      const transaction = apiResult.transaction;
+      const result = apiResult.result || {};
+
+      if (transactionSuccess) {
+        return {
+          displayType: 'SUCCESS',
+          title: 'Transaction Successful',
+          message: result.message || apiResult.message || 'Your transaction was completed successfully',
+          transactionReference: transaction?.ourTransactionId || transaction?.id || result.transactionId || 'N/A',
+          rawData: apiResult // Include raw data for debugging
+        };
+      } else {
+        return {
+          displayType: 'FAILURE',
+          title: 'Transaction Failed',
+          message: apiResult.error || result.error || apiResult.message || 'Transaction could not be completed. Please try again.',
+          transactionReference: transaction?.ourTransactionId || transaction?.id || null,
+          rawData: apiResult // Include raw data for debugging
+        };
+      }
+    }
+
+    // Fallback for unknown format
+    return {
+      displayType: 'FAILURE',
+      title: 'Transaction Status Unknown',
+      message: 'Unable to determine transaction status. Please contact support.',
+      transactionReference: null,
+      rawData: apiResult
     };
   }
 
