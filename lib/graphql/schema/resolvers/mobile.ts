@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/db/prisma";
 import type { GraphQLContext } from "@/lib/graphql/context";
+import { pubsub, EVENTS } from "@/lib/graphql/pubsub";
 
 async function getHiddenAccountCategoryIds(): Promise<string[]> {
   const hidden = await prisma.accountCategory.findMany({
@@ -551,6 +551,15 @@ export const mobileResolvers = {
         console.error("Failed to send device approval notification:", error);
       });
 
+      // Publish real-time update for GraphQL Subscription
+      pubsub.publish(EVENTS.DEVICE_APPROVAL_STATUS, {
+        deviceApprovalStatus: {
+          deviceId: device.deviceId,
+          status: "APPROVED",
+          message: "Your device has been approved.",
+        }
+      }, device.deviceId);
+
       return true;
     },
 
@@ -578,6 +587,28 @@ export const mobileResolvers = {
       if (!device) {
         throw new Error("Pending device not found");
       }
+
+      // Send notification to the denied device (async)
+      const { PushNotificationService } = await import("@/lib/services/push-notification");
+      PushNotificationService.send({
+        userId: context.userId,
+        type: "DEVICE_DENIED",
+        priority: "HIGH",
+        title: "Access Denied",
+        body: `Access for device "${device.name || 'Mobile Device'}" was denied`,
+        deviceId: device.deviceId,
+      }).catch((error) => {
+        console.error("Failed to send device denial notification:", error);
+      });
+
+      // Publish real-time update for GraphQL Subscription
+      pubsub.publish(EVENTS.DEVICE_APPROVAL_STATUS, {
+        deviceApprovalStatus: {
+          deviceId: device.deviceId,
+          status: "DENIED",
+          message: "Your login request was denied.",
+        }
+      }, device.deviceId);
 
       // Delete the pending device
       await prisma.mobileDevice.delete({

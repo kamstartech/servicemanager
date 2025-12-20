@@ -717,6 +717,18 @@ export const typeDefs = /* GraphQL */ `
   type Subscription {
     mobileUserCreated: MobileUser!
     mobileUserUpdated: MobileUser!
+    deviceApprovalStatus(deviceId: String!): DeviceApprovalResult!
+  }
+
+  type DeviceApprovalResult {
+    deviceId: String!
+    status: DeviceApprovalStatus!
+    message: String
+  }
+
+  enum DeviceApprovalStatus {
+    APPROVED
+    DENIED
   }
 
   type AccountCategory {

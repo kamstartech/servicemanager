@@ -8,5 +8,10 @@ export const subscriptionResolvers = {
     mobileUserUpdated: {
       subscribe: () => pubsub.subscribe(EVENTS.MOBILE_USER_UPDATED),
     },
+    deviceApprovalStatus: {
+      subscribe: (_parent: any, { deviceId }: { deviceId: string }) =>
+        pubsub.subscribe(EVENTS.DEVICE_APPROVAL_STATUS, deviceId),
+      resolve: (payload: any) => payload.deviceApprovalStatus,
+    },
   },
 };
