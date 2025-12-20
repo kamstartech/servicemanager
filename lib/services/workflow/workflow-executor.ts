@@ -504,7 +504,8 @@ export class WorkflowExecutor {
     console.log('✅ POST_TRANSACTION response:', JSON.stringify(finalResult, null, 2));
 
     // Transform the result into a display-ready format for mobile
-    const displayResult = this.formatForDisplay(finalResult || mappedData);
+    // Pass the final step so we can use configured success/failure messages
+    const displayResult = this.formatForDisplay(finalResult || mappedData, finalStep);
 
     console.log('🎯 Workflow completion - display result:', JSON.stringify(displayResult, null, 2));
 
@@ -517,7 +518,11 @@ export class WorkflowExecutor {
   /**
    * Format transaction result for mobile display
    */
-  private formatForDisplay(apiResult: any): any {
+  private formatForDisplay(apiResult: any, finalStep?: any): any {
+    // Extract configured messages from workflow step config
+    const configuredSuccessMsg = finalStep?.config?.successMessage as string | undefined;
+    const configuredFailureMsg = finalStep?.config?.failureMessage as string | undefined;
+
     // Check if this is a POST_TRANSACTION response
     if (apiResult && typeof apiResult === 'object') {
       const transactionSuccess = apiResult.success === true;
@@ -528,7 +533,8 @@ export class WorkflowExecutor {
         return {
           displayType: 'SUCCESS',
           title: 'Transaction Successful',
-          message: result.message || apiResult.message || 'Your transaction was completed successfully',
+          // Priority: configured message > API response > default
+          message: configuredSuccessMsg || result.message || apiResult.message || 'Your transaction was completed successfully',
           transactionReference: transaction?.ourTransactionId || transaction?.id || result.transactionId || 'N/A',
           rawData: apiResult // Include raw data for debugging
         };
@@ -536,7 +542,8 @@ export class WorkflowExecutor {
         return {
           displayType: 'FAILURE',
           title: 'Transaction Failed',
-          message: apiResult.error || result.error || apiResult.message || 'Transaction could not be completed. Please try again.',
+          // Priority: configured message > API error > default
+          message: configuredFailureMsg || apiResult.error || result.error || apiResult.message || 'Transaction could not be completed. Please try again.',
           transactionReference: transaction?.ourTransactionId || transaction?.id || null,
           rawData: apiResult // Include raw data for debugging
         };
@@ -547,7 +554,7 @@ export class WorkflowExecutor {
     return {
       displayType: 'FAILURE',
       title: 'Transaction Status Unknown',
-      message: 'Unable to determine transaction status. Please contact support.',
+      message: configuredFailureMsg || 'Unable to determine transaction status. Please contact support.',
       transactionReference: null,
       rawData: apiResult
     };
