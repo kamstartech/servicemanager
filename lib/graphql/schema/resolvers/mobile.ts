@@ -235,7 +235,8 @@ export const mobileResolvers = {
       args: { type?: string },
       context: GraphQLContext
     ) {
-      if (!context.userId) {
+      // Authentication - check for mobile user
+      if (!context.mobileUser) {
         throw new GraphQLError('Authentication required', {
           extensions: {
             code: 'UNAUTHENTICATED',
@@ -244,7 +245,9 @@ export const mobileResolvers = {
         });
       }
 
-      const where: any = { userId: context.userId };
+      console.log(`🔍 myBeneficiaries query - userId: ${context.mobileUser.id}, type: ${args.type || 'all'}`);
+
+      const where: any = { userId: context.mobileUser.id };
       if (args.type) {
         if (args.type === "BANK") {
           where.beneficiaryType = {
