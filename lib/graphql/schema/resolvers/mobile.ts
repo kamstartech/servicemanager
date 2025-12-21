@@ -244,7 +244,7 @@ export const mobileResolvers = {
         });
       }
 
-      const where: any = { mobileUserId: context.userId };
+      const where: any = { userId: context.userId };
       if (args.type) {
         if (args.type === "BANK") {
           where.beneficiaryType = {

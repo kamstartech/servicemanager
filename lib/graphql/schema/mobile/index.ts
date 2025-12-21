@@ -12,6 +12,7 @@ const MOBILE_QUERY_FIELDS = new Set([
   "pageWorkflows",
   "workflowExecution",
   "myBeneficiaries",
+  "beneficiary",
   "accountAlertSettings",
   "accountAlerts",
   "myCheckbookRequests",
@@ -66,6 +67,10 @@ const MOBILE_MUTATION_FIELDS = new Set([
   "setMemoWord",
   "requestPasswordChangeOtp",
   "changePassword",
+  "createBeneficiary",
+  "updateBeneficiary",
+  "deleteBeneficiary",
+  "toggleBeneficiaryStatus",
 ]);
 
 function pickRootFields(

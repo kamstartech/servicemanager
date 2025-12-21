@@ -6,10 +6,25 @@ export const beneficiaryResolvers = {
   Query: {
     beneficiaries: async (
       _: unknown,
-      { userId, type }: { userId: string; type?: string }
+      { userId, type }: { userId: string; type?: string },
+      context: GraphQLContext
     ) => {
+      if (!context.userId && !context.adminId) {
+        throw new GraphQLError("Authentication required", {
+          extensions: { code: "UNAUTHENTICATED" },
+        });
+      }
+
+      // Authorization
+      const requestedUserId = parseInt(userId);
+      if (!context.adminUser && Number(context.userId) !== requestedUserId) {
+        throw new GraphQLError("Forbidden", {
+          extensions: { code: "FORBIDDEN" },
+        });
+      }
+
       const where: any = {
-        userId: parseInt(userId),
+        userId: requestedUserId,
       };
 
       if (type) {
@@ -37,13 +52,30 @@ export const beneficiaryResolvers = {
       });
     },
 
-    beneficiary: async (_: unknown, { id }: { id: string }) => {
-      return await prisma.beneficiary.findUnique({
+    beneficiary: async (_: unknown, { id }: { id: string }, context: GraphQLContext) => {
+      if (!context.userId && !context.adminId) {
+        throw new GraphQLError("Authentication required", {
+          extensions: { code: "UNAUTHENTICATED" },
+        });
+      }
+
+      const beneficiary = await prisma.beneficiary.findUnique({
         where: { id: parseInt(id) },
         include: {
           user: true,
         },
       });
+
+      if (!beneficiary) return null;
+
+      // Authorization
+      if (!context.adminUser && Number(context.userId) !== beneficiary.userId) {
+        throw new GraphQLError("Forbidden", {
+          extensions: { code: "FORBIDDEN" },
+        });
+      }
+
+      return beneficiary;
     },
   },
 
@@ -53,25 +85,39 @@ export const beneficiaryResolvers = {
       { input }: { input: any },
       context: GraphQLContext
     ) => {
-      // Authentication: Ensure user is logged in
-      if (!context.mobileUser) {
-        throw new GraphQLError("Unauthorized", {
+      // Authentication
+      if (!context.userId && !context.adminId && !context.mobileUser) {
+        throw new GraphQLError("Authentication required", {
           extensions: { code: "UNAUTHENTICATED" },
         });
       }
 
-      // Remove userId from input and use authenticated user's ID instead
-      // This prevents users from creating beneficiaries for other users
-      const { userId: _ignoredUserId, ...benInput } = input;
+      // Authorization & Input preparation
+      let actualUserId: number;
+      if (context.mobileUser) {
+        actualUserId = context.mobileUser.id;
+      } else if (context.adminUser) {
+        actualUserId = parseInt(input.userId);
+      } else {
+        actualUserId = Number(context.userId);
+        if (actualUserId !== Number(input.userId)) {
+          throw new GraphQLError("Forbidden", {
+            extensions: { code: "FORBIDDEN" },
+          });
+        }
+      }
+
       const actualInput = {
-        ...benInput,
-        userId: context.mobileUser.id,
+        ...input,
+        userId: actualUserId,
       };
 
       // Validate type-specific required fields
       const validation = validateBeneficiaryInput(actualInput);
       if (!validation.valid) {
-        throw new Error(validation.error);
+        throw new GraphQLError(validation.error || "Invalid input", {
+          extensions: { code: "BAD_USER_INPUT" },
+        });
       }
 
       // Create beneficiary
@@ -96,12 +142,38 @@ export const beneficiaryResolvers = {
 
     updateBeneficiary: async (
       _: unknown,
-      { id, input }: { id: string; input: any }
+      { id, input }: { id: string; input: any },
+      context: GraphQLContext
     ) => {
+      if (!context.userId && !context.adminId) {
+        throw new GraphQLError("Authentication required", {
+          extensions: { code: "UNAUTHENTICATED" },
+        });
+      }
+
+      const existing = await prisma.beneficiary.findUnique({
+        where: { id: parseInt(id) },
+      });
+
+      if (!existing) {
+        throw new GraphQLError("Beneficiary not found", {
+          extensions: { code: "NOT_FOUND" },
+        });
+      }
+
+      // Authorization
+      if (!context.adminUser && Number(context.userId) !== existing.userId) {
+        throw new GraphQLError("Forbidden", {
+          extensions: { code: "FORBIDDEN" },
+        });
+      }
+
       // Validate type-specific required fields
       const validation = validateBeneficiaryInput(input);
       if (!validation.valid) {
-        throw new Error(validation.error);
+        throw new GraphQLError(validation.error || "Invalid input", {
+          extensions: { code: "BAD_USER_INPUT" },
+        });
       }
 
       return await prisma.beneficiary.update({
@@ -123,20 +195,58 @@ export const beneficiaryResolvers = {
       });
     },
 
-    deleteBeneficiary: async (_: unknown, { id }: { id: string }) => {
+    deleteBeneficiary: async (_: unknown, { id }: { id: string }, context: GraphQLContext) => {
+      if (!context.userId && !context.adminId) {
+        throw new GraphQLError("Authentication required", {
+          extensions: { code: "UNAUTHENTICATED" },
+        });
+      }
+
+      const existing = await prisma.beneficiary.findUnique({
+        where: { id: parseInt(id) },
+      });
+
+      if (!existing) {
+        throw new GraphQLError("Beneficiary not found", {
+          extensions: { code: "NOT_FOUND" },
+        });
+      }
+
+      // Authorization
+      if (!context.adminUser && Number(context.userId) !== existing.userId) {
+        throw new GraphQLError("Forbidden", {
+          extensions: { code: "FORBIDDEN" },
+        });
+      }
+
       await prisma.beneficiary.delete({
         where: { id: parseInt(id) },
       });
       return true;
     },
 
-    toggleBeneficiaryStatus: async (_: unknown, { id }: { id: string }) => {
+    toggleBeneficiaryStatus: async (_: unknown, { id }: { id: string }, context: GraphQLContext) => {
+      if (!context.userId && !context.adminId) {
+        throw new GraphQLError("Authentication required", {
+          extensions: { code: "UNAUTHENTICATED" },
+        });
+      }
+
       const beneficiary = await prisma.beneficiary.findUnique({
         where: { id: parseInt(id) },
       });
 
       if (!beneficiary) {
-        throw new Error("Beneficiary not found");
+        throw new GraphQLError("Beneficiary not found", {
+          extensions: { code: "NOT_FOUND" },
+        });
+      }
+
+      // Authorization
+      if (!context.adminUser && Number(context.userId) !== beneficiary.userId) {
+        throw new GraphQLError("Forbidden", {
+          extensions: { code: "FORBIDDEN" },
+        });
       }
 
       return await prisma.beneficiary.update({

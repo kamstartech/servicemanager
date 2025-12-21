@@ -160,7 +160,7 @@ async function hydrateWorkflowStepsForClient(
           )) as string[];
 
           for (const type of typeFilters) {
-            const where: any = { mobileUserId: userIdInt };
+            const where: any = { userId: userIdInt };
             if (type !== "ALL") {
               if (type === "BANK") {
                 where.beneficiaryType = { in: ["BANK_INTERNAL", "BANK_EXTERNAL"] };
