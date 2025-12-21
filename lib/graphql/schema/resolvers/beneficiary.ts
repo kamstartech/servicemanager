@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/db/prisma";
+import { GraphQLError } from "graphql";
+import { GraphQLContext } from "../../context";
 
 export const beneficiaryResolvers = {
   Query: {
@@ -46,9 +48,28 @@ export const beneficiaryResolvers = {
   },
 
   Mutation: {
-    createBeneficiary: async (_: unknown, { input }: { input: any }) => {
+    createBeneficiary: async (
+      _: unknown,
+      { input }: { input: any },
+      context: GraphQLContext
+    ) => {
+      // Authentication: Ensure user is logged in
+      if (!context.mobileUser) {
+        throw new GraphQLError("Unauthorized", {
+          extensions: { code: "UNAUTHENTICATED" },
+        });
+      }
+
+      // Remove userId from input and use authenticated user's ID instead
+      // This prevents users from creating beneficiaries for other users
+      const { userId: _ignoredUserId, ...benInput } = input;
+      const actualInput = {
+        ...benInput,
+        userId: context.mobileUser.id,
+      };
+
       // Validate type-specific required fields
-      const validation = validateBeneficiaryInput(input);
+      const validation = validateBeneficiaryInput(actualInput);
       if (!validation.valid) {
         throw new Error(validation.error);
       }
@@ -56,16 +77,16 @@ export const beneficiaryResolvers = {
       // Create beneficiary
       return await prisma.beneficiary.create({
         data: {
-          userId: input.userId,
-          name: input.name.trim(),
-          beneficiaryType: input.beneficiaryType,
-          phoneNumber: input.phoneNumber?.trim() || null,
-          accountNumber: input.accountNumber?.trim() || null,
-          bankCode: input.bankCode?.trim() || null,
-          bankName: input.bankName?.trim() || null,
-          branch: input.branch?.trim() || null,
-          description: input.description?.trim() || null,
-          isActive: input.isActive ?? true,
+          userId: actualInput.userId,
+          name: actualInput.name.trim(),
+          beneficiaryType: actualInput.beneficiaryType,
+          phoneNumber: actualInput.phoneNumber?.trim() || null,
+          accountNumber: actualInput.accountNumber?.trim() || null,
+          bankCode: actualInput.bankCode?.trim() || null,
+          bankName: actualInput.bankName?.trim() || null,
+          branch: actualInput.branch?.trim() || null,
+          description: actualInput.description?.trim() || null,
+          isActive: actualInput.isActive ?? true,
         },
         include: {
           user: true,
