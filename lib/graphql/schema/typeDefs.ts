@@ -142,6 +142,8 @@ export const typeDefs = /* GraphQL */ `
     EXTERNAL_BANK
     FDH_WALLET
     EXTERNAL_WALLET
+    BANK
+    WALLET
   }
 
   type TestResult {
@@ -638,7 +640,7 @@ export const typeDefs = /* GraphQL */ `
     coreBankingConnection(id: ID!): CoreBankingConnection
     coreBankingEndpoints(connectionId: Int!): [CoreBankingEndpoint!]!
     coreBankingEndpoint(id: ID!): CoreBankingEndpoint
-    beneficiaries(userId: ID!, type: String): [Beneficiary!]!
+    beneficiaries(userId: ID!, type: BeneficiaryType): [Beneficiary!]!
     beneficiary(id: ID!): Beneficiary
   }
 

@@ -417,6 +417,14 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
 
   const getBeneficiaryTypeLabel = (type: string) => {
     switch (type) {
+      case "FDH_WALLET":
+        return "FDH Wallet";
+      case "EXTERNAL_WALLET":
+        return "Other Wallet";
+      case "FDH_BANK":
+        return "FDH Bank";
+      case "EXTERNAL_BANK":
+        return "Other Bank";
       case "WALLET":
         return "Wallet";
       case "BANK_INTERNAL":
@@ -429,15 +437,13 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
   };
 
   const getIdentifier = (beneficiary: any) => {
-    switch (beneficiary.beneficiaryType) {
-      case "WALLET":
-        return beneficiary.phoneNumber;
-      case "BANK_INTERNAL":
-      case "BANK_EXTERNAL":
-        return beneficiary.accountNumber;
-      default:
-        return "-";
+    if (beneficiary.beneficiaryType.includes("WALLET")) {
+      return beneficiary.phoneNumber;
     }
+    if (beneficiary.beneficiaryType.includes("BANK")) {
+      return beneficiary.accountNumber;
+    }
+    return beneficiary.phoneNumber || beneficiary.accountNumber || "-";
   };
 
   const basePath = context === "MOBILE_BANKING"
@@ -645,8 +651,8 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
     },
   ];
 
-  // Define columns for Beneficiaries table
-  const beneficiariesColumns: DataTableColumn<any>[] = [
+  // Define columns for Bank Beneficiaries table
+  const bankBeneficiaryColumns: DataTableColumn<any>[] = [
     {
       id: "name",
       header: COMMON_TABLE_HEADERS.name,
@@ -666,7 +672,65 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
       id: "bank",
       header: COMMON_TABLE_HEADERS.bank,
       accessor: (row) => (
-        <span className="text-sm text-muted-foreground">{row.bankName || "-"}</span>
+        <span className="text-sm text-muted-foreground">{row.bankName || row.bankCode || "-"}</span>
+      ),
+    },
+    {
+      id: "accountNumber",
+      header: COMMON_TABLE_HEADERS.accountNumber,
+      accessor: (row) => (
+        <span className="text-sm font-mono">{row.accountNumber || "-"}</span>
+      ),
+    },
+    {
+      id: "status",
+      header: COMMON_TABLE_HEADERS.status,
+      accessor: (row) => (
+        <>
+          {!row.isActive && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+              <XCircle size={14} />
+              Inactive
+            </span>
+          )}
+        </>
+      ),
+      alignCenter: true,
+    },
+    {
+      id: "actions",
+      header: COMMON_TABLE_HEADERS.actions,
+      accessor: (row) => (
+        <Button size="sm" variant="ghost" asChild>
+          <Link href={`${basePath}/${id}/beneficiaries/${row.id}/edit`}>View</Link>
+        </Button>
+      ),
+      alignRight: true,
+    },
+  ];
+
+  // Define columns for Wallet Beneficiaries table
+  const walletBeneficiaryColumns: DataTableColumn<any>[] = [
+    {
+      id: "name",
+      header: COMMON_TABLE_HEADERS.name,
+      accessor: (row) => <span className="font-medium">{row.name}</span>,
+      sortKey: "name",
+    },
+    {
+      id: "type",
+      header: COMMON_TABLE_HEADERS.type,
+      accessor: (row) => (
+        <Badge variant="outline" className="text-xs">
+          {getBeneficiaryTypeLabel(row.beneficiaryType)}
+        </Badge>
+      ),
+    },
+    {
+      id: "phoneNumber",
+      header: COMMON_TABLE_HEADERS.phoneNumber,
+      accessor: (row) => (
+        <span className="text-sm font-mono">{row.phoneNumber || "-"}</span>
       ),
     },
     {
@@ -1060,61 +1124,98 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
           </CardContent>
         </Card>
 
-        {/* Beneficiaries Section */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Beneficiaries</CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {activeBeneficiaries.length} active beneficiaries
-                </p>
+        {/* Beneficiaries Sections */}
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Bank Beneficiaries */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Bank Beneficiaries</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {beneficiaries.filter((b: any) => b.beneficiaryType.includes("BANK")).length} records
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href={`${basePath}/${id}/beneficiaries?type=BANK`}>
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                      View
+                    </Link>
+                  </Button>
+                  <Button size="sm" asChild>
+                    <Link href={`${basePath}/${id}/beneficiaries/new?type=BANK`}>
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add
+                    </Link>
+                  </Button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" asChild>
-                  <Link href={`${basePath}/${id}/beneficiaries`}>
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    View All
-                  </Link>
-                </Button>
-                <Button size="sm" asChild>
-                  <Link href={`${basePath}/${id}/beneficiaries/new`}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Beneficiary
-                  </Link>
-                </Button>
+            </CardHeader>
+            <CardContent>
+              {beneficiariesLoading ? (
+                <p className="text-sm text-muted-foreground">Loading bank beneficiaries...</p>
+              ) : beneficiaries.filter((b: any) => b.beneficiaryType.includes("BANK")).length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">No bank beneficiaries found.</p>
+              ) : (
+                <DataTable
+                  data={beneficiaries.filter((b: any) => b.beneficiaryType.includes("BANK"))}
+                  columns={bankBeneficiaryColumns}
+                  searchableKeys={["name", "accountNumber", "bankName", "bankCode"]}
+                  initialSortKey="name"
+                  pageSize={5}
+                  searchPlaceholder="Search bank..."
+                  showRowNumbers
+                />
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Wallet Beneficiaries */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Wallet Beneficiaries</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {beneficiaries.filter((b: any) => b.beneficiaryType.includes("WALLET")).length} records
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href={`${basePath}/${id}/beneficiaries?type=WALLET`}>
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                      View
+                    </Link>
+                  </Button>
+                  <Button size="sm" asChild>
+                    <Link href={`${basePath}/${id}/beneficiaries/new?type=WALLET`}>
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add
+                    </Link>
+                  </Button>
+                </div>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {beneficiariesLoading ? (
-              <p className="text-sm text-muted-foreground">Loading beneficiaries...</p>
-            ) : beneficiaries.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-sm text-muted-foreground mb-4">
-                  No beneficiaries found for this user.
-                </p>
-                <Button size="sm" variant="outline" asChild>
-                  <Link href={`${basePath}/${id}/beneficiaries/new`}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add First Beneficiary
-                  </Link>
-                </Button>
-              </div>
-            ) : (
-              <DataTable
-                data={beneficiaries}
-                columns={beneficiariesColumns}
-                searchableKeys={["name", "phoneNumber", "accountNumber", "bankName"]}
-                initialSortKey="name"
-                pageSize={10}
-                searchPlaceholder="Search beneficiaries..."
-                showRowNumbers
-                rowNumberHeader="#"
-              />
-            )}
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent>
+              {beneficiariesLoading ? (
+                <p className="text-sm text-muted-foreground">Loading wallet beneficiaries...</p>
+              ) : beneficiaries.filter((b: any) => b.beneficiaryType.includes("WALLET")).length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">No wallet beneficiaries found.</p>
+              ) : (
+                <DataTable
+                  data={beneficiaries.filter((b: any) => b.beneficiaryType.includes("WALLET"))}
+                  columns={walletBeneficiaryColumns}
+                  searchableKeys={["name", "phoneNumber"]}
+                  initialSortKey="name"
+                  pageSize={5}
+                  searchPlaceholder="Search wallet..."
+                  showRowNumbers
+                />
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

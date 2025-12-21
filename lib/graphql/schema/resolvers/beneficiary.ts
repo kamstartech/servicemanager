@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { Prisma } from "@prisma/client";
 import { GraphQLError } from "graphql";
 import { GraphQLContext } from "../../context";
 
@@ -120,24 +121,52 @@ export const beneficiaryResolvers = {
         });
       }
 
-      // Create beneficiary
-      return await prisma.beneficiary.create({
-        data: {
+      // Pre-check for duplicates to avoid SQL Server unique constraint issues with NULLs
+      const existing = await prisma.beneficiary.findFirst({
+        where: {
           userId: actualInput.userId,
-          name: actualInput.name.trim(),
           beneficiaryType: actualInput.beneficiaryType,
           phoneNumber: actualInput.phoneNumber?.trim() || null,
           accountNumber: actualInput.accountNumber?.trim() || null,
           bankCode: actualInput.bankCode?.trim() || null,
-          bankName: actualInput.bankName?.trim() || null,
-          branch: actualInput.branch?.trim() || null,
-          description: actualInput.description?.trim() || null,
-          isActive: actualInput.isActive ?? true,
-        },
-        include: {
-          user: true,
         },
       });
+
+      if (existing) {
+        throw new GraphQLError("A beneficiary with these details already exists for your account.", {
+          extensions: { code: "BAD_USER_INPUT" },
+        });
+      }
+
+      // Create beneficiary
+      try {
+        return await prisma.beneficiary.create({
+          data: {
+            userId: actualInput.userId,
+            name: actualInput.name.trim(),
+            beneficiaryType: actualInput.beneficiaryType,
+            phoneNumber: actualInput.phoneNumber?.trim() || null,
+            accountNumber: actualInput.accountNumber?.trim() || null,
+            bankCode: actualInput.bankCode?.trim() || null,
+            bankName: actualInput.bankName?.trim() || null,
+            branch: actualInput.branch?.trim() || null,
+            description: actualInput.description?.trim() || null,
+            isActive: actualInput.isActive ?? true,
+          },
+          include: {
+            user: true,
+          },
+        });
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError) {
+          if (error.code === "P2002") {
+            throw new GraphQLError("A beneficiary with these details already exists.", {
+              extensions: { code: "BAD_USER_INPUT" },
+            });
+          }
+        }
+        throw error;
+      }
     },
 
     updateBeneficiary: async (
