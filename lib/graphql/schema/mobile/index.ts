@@ -64,6 +64,8 @@ const MOBILE_MUTATION_FIELDS = new Set([
   "reverseTransaction",
   "purchaseAirtime",
   "setMemoWord",
+  "requestPasswordChangeOtp",
+  "changePassword",
 ]);
 
 function pickRootFields(

@@ -32,6 +32,7 @@ import { pushNotificationResolvers } from "./pushNotification";
 import { backupScheduleResolvers } from "./backupSchedule";
 import { airtimeResolvers } from "./airtime";
 import { deviceManagementResolvers } from "./deviceManagement";
+import { changePasswordResolvers } from "./changePassword";
 import { JSONResolver, DateTimeResolver } from "graphql-scalars";
 import { GraphQLScalarType, Kind } from "graphql";
 
@@ -120,6 +121,7 @@ export const resolvers = {
     ...pushNotificationResolvers.Mutation,
     ...deviceManagementResolvers.Mutation,
     ...airtimeResolvers.Mutation,
+    ...changePasswordResolvers.Mutation,
   },
   CoreBankingConnection: {
     ...coreBankingEndpointResolvers.CoreBankingConnection,

@@ -1266,6 +1266,31 @@ export const typeDefs = /* GraphQL */ `
     # Session Management
     revokeMySession(sessionId: String!): Boolean!
     revokeAllMyOtherSessions: RevokeSessionsResult!
+    
+    # Password Change (Authenticated)
+    requestPasswordChangeOtp: RequestPasswordChangeOtpResult!
+    changePassword(input: ChangePasswordInput!): ChangePasswordResult!
+  }
+
+  #  ========================================
+  # CHANGE PASSWORD (Authenticated)
+  # ========================================
+  
+  type RequestPasswordChangeOtpResult {
+    success: Boolean!
+    message: String!
+  }
+
+  input ChangePasswordInput {
+    oldPassword: String!
+    newPassword: String!
+    confirmPassword: String!
+    otp: String!
+  }
+
+  type ChangePasswordResult {
+    success: Boolean!
+    message: String!
   }
 
   # ========================================
