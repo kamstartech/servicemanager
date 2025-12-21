@@ -638,7 +638,7 @@ export const typeDefs = /* GraphQL */ `
     coreBankingConnection(id: ID!): CoreBankingConnection
     coreBankingEndpoints(connectionId: Int!): [CoreBankingEndpoint!]!
     coreBankingEndpoint(id: ID!): CoreBankingEndpoint
-    beneficiaries(userId: ID!, type: BeneficiaryType): [Beneficiary!]!
+    beneficiaries(userId: ID!, type: String): [Beneficiary!]!
     beneficiary(id: ID!): Beneficiary
   }
 
@@ -1264,7 +1264,7 @@ export const typeDefs = /* GraphQL */ `
     myPrimaryAccount: Account
     
     # Beneficiaries
-    myBeneficiaries(type: BeneficiaryType): [Beneficiary!]!
+    myBeneficiaries(type: String): [Beneficiary!]!
   }
 
   extend type Mutation {
