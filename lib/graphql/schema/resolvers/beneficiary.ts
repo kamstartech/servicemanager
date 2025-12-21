@@ -13,7 +13,11 @@ export const beneficiaryResolvers = {
       if (type) {
         if (type === "BANK") {
           where.beneficiaryType = {
-            in: ["BANK_INTERNAL", "BANK_EXTERNAL"],
+            in: ["FDH_BANK", "EXTERNAL_BANK"],
+          };
+        } else if (type === "WALLET") {
+          where.beneficiaryType = {
+            in: ["FDH_WALLET", "EXTERNAL_WALLET"],
           };
         } else {
           where.beneficiaryType = type;
@@ -135,35 +139,36 @@ function validateBeneficiaryInput(input: any): {
   const { beneficiaryType, phoneNumber, accountNumber, bankCode } = input;
 
   switch (beneficiaryType) {
-    case "WALLET":
+    case "FDH_WALLET":
+    case "EXTERNAL_WALLET":
       if (!phoneNumber || phoneNumber.trim() === "") {
         return {
           valid: false,
-          error: "Phone number is required for WALLET beneficiaries",
+          error: `Phone number is required for ${beneficiaryType} beneficiaries`,
         };
       }
       break;
 
-    case "BANK_INTERNAL":
+    case "FDH_BANK":
       if (!accountNumber || accountNumber.trim() === "") {
         return {
           valid: false,
-          error: "Account number is required for BANK_INTERNAL beneficiaries",
+          error: "Account number is required for FDH_BANK beneficiaries",
         };
       }
       break;
 
-    case "BANK_EXTERNAL":
+    case "EXTERNAL_BANK":
       if (!accountNumber || accountNumber.trim() === "") {
         return {
           valid: false,
-          error: "Account number is required for BANK_EXTERNAL beneficiaries",
+          error: "Account number is required for EXTERNAL_BANK beneficiaries",
         };
       }
       if (!bankCode || bankCode.trim() === "") {
         return {
           valid: false,
-          error: "Bank code is required for BANK_EXTERNAL beneficiaries",
+          error: "Bank code is required for EXTERNAL_BANK beneficiaries",
         };
       }
       break;

@@ -248,7 +248,11 @@ export const mobileResolvers = {
       if (args.type) {
         if (args.type === "BANK") {
           where.beneficiaryType = {
-            in: ["BANK_INTERNAL", "BANK_EXTERNAL"],
+            in: ["FDH_BANK", "EXTERNAL_BANK"],
+          };
+        } else if (args.type === "WALLET") {
+          where.beneficiaryType = {
+            in: ["FDH_WALLET", "EXTERNAL_WALLET"],
           };
         } else {
           where.beneficiaryType = args.type;

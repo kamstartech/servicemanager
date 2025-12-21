@@ -49,9 +49,10 @@ enum AttemptType {
 }
 
 enum BeneficiaryType {
-  WALLET
-  BANK_INTERNAL
-  BANK_EXTERNAL
+  FDH_BANK
+  EXTERNAL_BANK
+  FDH_WALLET
+  EXTERNAL_WALLET
 }
 
 enum BillerTransactionStatus {
