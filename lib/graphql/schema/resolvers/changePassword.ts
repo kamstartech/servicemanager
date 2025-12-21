@@ -24,7 +24,7 @@ export const changePasswordResolvers = {
         // Request OTP for password change
         requestPasswordChangeOtp: async (_: unknown, __: unknown, context: any) => {
             try {
-                const userId = context.user?.userId;
+                const userId = context.userId;
 
                 if (!userId) {
                     throw new GraphQLError("Authentication required", {
@@ -129,7 +129,7 @@ export const changePasswordResolvers = {
             context: any
         ) => {
             try {
-                const userId = context.user?.userId;
+                const userId = context.userId;
 
                 if (!userId) {
                     throw new GraphQLError("Authentication required", {
