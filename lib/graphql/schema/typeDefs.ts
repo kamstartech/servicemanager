@@ -138,10 +138,10 @@ export const typeDefs = /* GraphQL */ `
   }
 
   enum BeneficiaryType {
-    WALLET
-    BANK
-    BANK_INTERNAL
-    BANK_EXTERNAL
+    FDH_BANK
+    EXTERNAL_BANK
+    FDH_WALLET
+    EXTERNAL_WALLET
   }
 
   type TestResult {
