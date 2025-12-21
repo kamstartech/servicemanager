@@ -222,7 +222,7 @@ export const changePasswordResolvers = {
                     where: {
                         mobileUserId: userId,
                         isActive: true,
-                        sessionId: { not: context.user?.sessionId },
+                        sessionId: { not: context.sessionId },
                     },
                     data: {
                         isActive: false,
