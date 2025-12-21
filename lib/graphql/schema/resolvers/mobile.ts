@@ -245,10 +245,9 @@ export const mobileResolvers = {
         });
       }
 
-      console.log(`🔍 myBeneficiaries query - userId: ${context.mobileUser.id}, type: ${args.type || 'all'}`);
 
       const where: any = { userId: context.mobileUser.id };
-      if (args.type) {
+      if (args.type && args.type.toUpperCase() !== 'ALL') {
         if (args.type === "BANK") {
           where.beneficiaryType = {
             in: ["FDH_BANK", "EXTERNAL_BANK"],
@@ -264,13 +263,31 @@ export const mobileResolvers = {
 
       const beneficiaries = await prisma.beneficiary.findMany({
         where,
+        include: { user: true },
         orderBy: { createdAt: "desc" },
       });
 
+
       return beneficiaries.map((b: any) => ({
-        ...b,
+        id: b.id.toString(),
+        userId: b.userId,
+        name: b.name,
+        beneficiaryType: b.beneficiaryType,
+        phoneNumber: b.phoneNumber,
+        accountNumber: b.accountNumber,
+        bankCode: b.bankCode,
+        bankName: b.bankName,
+        branch: b.branch,
+        description: b.description,
+        isActive: b.isActive,
         createdAt: b.createdAt.toISOString(),
         updatedAt: b.updatedAt.toISOString(),
+        user: b.user ? {
+          ...b.user,
+          id: b.user.id.toString(),
+          createdAt: b.user.createdAt.toISOString(),
+          updatedAt: b.user.updatedAt.toISOString(),
+        } : null,
       }));
     },
 
@@ -540,7 +557,7 @@ export const mobileResolvers = {
       { sessionId }: { sessionId: string },
       context: GraphQLContext
     ) {
-      if (!context.userId) {
+      if (!context.mobileUser) {
         throw new GraphQLError('Authentication required', {
           extensions: {
             code: 'UNAUTHENTICATED',
@@ -560,7 +577,7 @@ export const mobileResolvers = {
 
       const session = await prisma.deviceSession.findFirst({
         where: {
-          mobileUserId: context.userId,
+          mobileUserId: context.mobileUser.id,
           sessionId: sessionId,
           isActive: true,
         },
@@ -592,7 +609,7 @@ export const mobileResolvers = {
       __: unknown,
       context: GraphQLContext
     ) {
-      if (!context.userId) {
+      if (!context.mobileUser) {
         throw new GraphQLError('Authentication required', {
           extensions: {
             code: 'UNAUTHENTICATED',
@@ -603,7 +620,7 @@ export const mobileResolvers = {
 
       const result = await prisma.deviceSession.updateMany({
         where: {
-          mobileUserId: context.userId,
+          mobileUserId: context.mobileUser.id,
           sessionId: { not: context.sessionId },
           isActive: true,
         },
@@ -627,7 +644,7 @@ export const mobileResolvers = {
       { deviceId }: { deviceId: string },
       context: GraphQLContext
     ) {
-      if (!context.userId) {
+      if (!context.mobileUser) {
         throw new GraphQLError('Authentication required', {
           extensions: {
             code: 'UNAUTHENTICATED',
@@ -640,7 +657,7 @@ export const mobileResolvers = {
       const device = await prisma.mobileDevice.findFirst({
         where: {
           id: deviceId,
-          mobileUserId: context.userId,
+          mobileUserId: context.mobileUser.id,
           isActive: false, // Must be pending
         },
       });
@@ -712,7 +729,7 @@ export const mobileResolvers = {
       { deviceId }: { deviceId: string },
       context: GraphQLContext
     ) {
-      if (!context.userId) {
+      if (!context.mobileUser) {
         throw new GraphQLError('Authentication required', {
           extensions: {
             code: 'UNAUTHENTICATED',
@@ -725,7 +742,7 @@ export const mobileResolvers = {
       const device = await prisma.mobileDevice.findFirst({
         where: {
           id: deviceId,
-          mobileUserId: context.userId,
+          mobileUserId: context.mobileUser.id,
           isActive: false,
         },
       });
@@ -742,7 +759,7 @@ export const mobileResolvers = {
       // Send notification to the denied device (async)
       const { PushNotificationService } = await import("@/lib/services/push-notification");
       PushNotificationService.send({
-        userId: context.userId,
+        userId: context.mobileUser.id,
         type: "DEVICE_DENIED",
         priority: "HIGH",
         title: "Access Denied",

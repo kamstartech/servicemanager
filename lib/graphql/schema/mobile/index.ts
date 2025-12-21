@@ -12,6 +12,8 @@ const MOBILE_QUERY_FIELDS = new Set([
   "pageWorkflows",
   "workflowExecution",
   "myBeneficiaries",
+  "allBeneficiaries",
+  "beneficiaries",
   "beneficiary",
   "accountAlertSettings",
   "accountAlerts",

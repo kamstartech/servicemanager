@@ -28,7 +28,7 @@ export const beneficiaryResolvers = {
         userId: requestedUserId,
       };
 
-      if (type) {
+      if (type && type.toUpperCase() !== 'ALL') {
         if (type === "BANK") {
           where.beneficiaryType = {
             in: ["FDH_BANK", "EXTERNAL_BANK"],
@@ -42,7 +42,7 @@ export const beneficiaryResolvers = {
         }
       }
 
-      return await prisma.beneficiary.findMany({
+      const beneficiaries = await prisma.beneficiary.findMany({
         where,
         include: {
           user: true,
@@ -51,6 +51,80 @@ export const beneficiaryResolvers = {
           createdAt: "desc",
         },
       });
+
+      return beneficiaries.map((b: any) => ({
+        id: b.id.toString(),
+        userId: b.userId,
+        name: b.name,
+        beneficiaryType: b.beneficiaryType,
+        phoneNumber: b.phoneNumber,
+        accountNumber: b.accountNumber,
+        bankCode: b.bankCode,
+        bankName: b.bankName,
+        branch: b.branch,
+        description: b.description,
+        isActive: b.isActive,
+        createdAt: b.createdAt.toISOString(),
+        updatedAt: b.updatedAt.toISOString(),
+        user: b.user ? {
+          ...b.user,
+          id: b.user.id.toString(),
+          createdAt: b.user.createdAt.toISOString(),
+          updatedAt: b.user.updatedAt.toISOString(),
+        } : null,
+      }));
+    },
+
+    allBeneficiaries: async (
+      _: unknown,
+      { type }: { type?: string },
+      context: GraphQLContext
+    ) => {
+      if (!context.adminId && !context.adminUser) {
+        throw new GraphQLError("Forbidden: Admin access required", {
+          extensions: { code: "FORBIDDEN" },
+        });
+      }
+
+      const where: any = {};
+
+      if (type && type.toUpperCase() !== 'ALL') {
+        if (type === "BANK") {
+          where.beneficiaryType = { in: ["FDH_BANK", "EXTERNAL_BANK"] };
+        } else if (type === "WALLET") {
+          where.beneficiaryType = { in: ["FDH_WALLET", "EXTERNAL_WALLET"] };
+        } else {
+          where.beneficiaryType = type;
+        }
+      }
+
+      const beneficiaries = await prisma.beneficiary.findMany({
+        where,
+        include: { user: true },
+        orderBy: { createdAt: "desc" },
+      });
+
+      return beneficiaries.map((b: any) => ({
+        id: b.id.toString(),
+        userId: b.userId,
+        name: b.name,
+        beneficiaryType: b.beneficiaryType,
+        phoneNumber: b.phoneNumber,
+        accountNumber: b.accountNumber,
+        bankCode: b.bankCode,
+        bankName: b.bankName,
+        branch: b.branch,
+        description: b.description,
+        isActive: b.isActive,
+        createdAt: b.createdAt.toISOString(),
+        updatedAt: b.updatedAt.toISOString(),
+        user: b.user ? {
+          ...b.user,
+          id: b.user.id.toString(),
+          createdAt: b.user.createdAt.toISOString(),
+          updatedAt: b.user.updatedAt.toISOString(),
+        } : null,
+      }));
     },
 
     beneficiary: async (_: unknown, { id }: { id: string }, context: GraphQLContext) => {
@@ -76,7 +150,27 @@ export const beneficiaryResolvers = {
         });
       }
 
-      return beneficiary;
+      return {
+        id: beneficiary.id.toString(),
+        userId: beneficiary.userId,
+        name: beneficiary.name,
+        beneficiaryType: beneficiary.beneficiaryType,
+        phoneNumber: beneficiary.phoneNumber,
+        accountNumber: beneficiary.accountNumber,
+        bankCode: beneficiary.bankCode,
+        bankName: beneficiary.bankName,
+        branch: beneficiary.branch,
+        description: beneficiary.description,
+        isActive: beneficiary.isActive,
+        createdAt: beneficiary.createdAt.toISOString(),
+        updatedAt: beneficiary.updatedAt.toISOString(),
+        user: beneficiary.user ? {
+          ...beneficiary.user,
+          id: beneficiary.user.id.toString(),
+          createdAt: beneficiary.user.createdAt.toISOString(),
+          updatedAt: beneficiary.user.updatedAt.toISOString(),
+        } : null,
+      };
     },
   },
 
@@ -140,7 +234,7 @@ export const beneficiaryResolvers = {
 
       // Create beneficiary
       try {
-        return await prisma.beneficiary.create({
+        const beneficiary = await prisma.beneficiary.create({
           data: {
             userId: actualInput.userId,
             name: actualInput.name.trim(),
@@ -157,6 +251,28 @@ export const beneficiaryResolvers = {
             user: true,
           },
         });
+
+        return {
+          id: beneficiary.id.toString(),
+          userId: beneficiary.userId,
+          name: beneficiary.name,
+          beneficiaryType: beneficiary.beneficiaryType,
+          phoneNumber: beneficiary.phoneNumber,
+          accountNumber: beneficiary.accountNumber,
+          bankCode: beneficiary.bankCode,
+          bankName: beneficiary.bankName,
+          branch: beneficiary.branch,
+          description: beneficiary.description,
+          isActive: beneficiary.isActive,
+          createdAt: beneficiary.createdAt.toISOString(),
+          updatedAt: beneficiary.updatedAt.toISOString(),
+          user: beneficiary.user ? {
+            ...beneficiary.user,
+            id: beneficiary.user.id.toString(),
+            createdAt: beneficiary.user.createdAt.toISOString(),
+            updatedAt: beneficiary.user.updatedAt.toISOString(),
+          } : null,
+        };
       } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError) {
           if (error.code === "P2002") {
@@ -205,7 +321,7 @@ export const beneficiaryResolvers = {
         });
       }
 
-      return await prisma.beneficiary.update({
+      const beneficiary = await prisma.beneficiary.update({
         where: { id: parseInt(id) },
         data: {
           name: input.name?.trim(),
@@ -222,6 +338,28 @@ export const beneficiaryResolvers = {
           user: true,
         },
       });
+
+      return {
+        id: beneficiary.id.toString(),
+        userId: beneficiary.userId,
+        name: beneficiary.name,
+        beneficiaryType: beneficiary.beneficiaryType,
+        phoneNumber: beneficiary.phoneNumber,
+        accountNumber: beneficiary.accountNumber,
+        bankCode: beneficiary.bankCode,
+        bankName: beneficiary.bankName,
+        branch: beneficiary.branch,
+        description: beneficiary.description,
+        isActive: beneficiary.isActive,
+        createdAt: beneficiary.createdAt.toISOString(),
+        updatedAt: beneficiary.updatedAt.toISOString(),
+        user: beneficiary.user ? {
+          ...beneficiary.user,
+          id: beneficiary.user.id.toString(),
+          createdAt: beneficiary.user.createdAt.toISOString(),
+          updatedAt: beneficiary.user.updatedAt.toISOString(),
+        } : null,
+      };
     },
 
     deleteBeneficiary: async (_: unknown, { id }: { id: string }, context: GraphQLContext) => {
@@ -278,7 +416,7 @@ export const beneficiaryResolvers = {
         });
       }
 
-      return await prisma.beneficiary.update({
+      const updated = await prisma.beneficiary.update({
         where: { id: parseInt(id) },
         data: {
           isActive: !beneficiary.isActive,
@@ -287,6 +425,28 @@ export const beneficiaryResolvers = {
           user: true,
         },
       });
+
+      return {
+        id: updated.id.toString(),
+        userId: updated.userId,
+        name: updated.name,
+        beneficiaryType: updated.beneficiaryType,
+        phoneNumber: updated.phoneNumber,
+        accountNumber: updated.accountNumber,
+        bankCode: updated.bankCode,
+        bankName: updated.bankName,
+        branch: updated.branch,
+        description: updated.description,
+        isActive: updated.isActive,
+        createdAt: updated.createdAt.toISOString(),
+        updatedAt: updated.updatedAt.toISOString(),
+        user: updated.user ? {
+          ...updated.user,
+          id: updated.user.id.toString(),
+          createdAt: updated.user.createdAt.toISOString(),
+          updatedAt: updated.user.updatedAt.toISOString(),
+        } : null,
+      };
     },
   },
 };

@@ -641,6 +641,7 @@ export const typeDefs = /* GraphQL */ `
     coreBankingEndpoints(connectionId: Int!): [CoreBankingEndpoint!]!
     coreBankingEndpoint(id: ID!): CoreBankingEndpoint
     beneficiaries(userId: ID!, type: String): [Beneficiary!]!
+    allBeneficiaries(type: String): [Beneficiary!]!
     beneficiary(id: ID!): Beneficiary
   }
 
