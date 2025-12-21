@@ -507,7 +507,7 @@ export const typeDefs = /* GraphQL */ `
   }
 
   input BeneficiaryInput {
-    userId: Int!
+    userId: Int # Optional - will be ignored and overridden with authenticated user's ID
     name: String!
     beneficiaryType: BeneficiaryType!
     phoneNumber: String
