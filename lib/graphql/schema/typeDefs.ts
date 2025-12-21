@@ -1266,7 +1266,7 @@ export const typeDefs = /* GraphQL */ `
     myPrimaryAccount: Account
     
     # Beneficiaries
-    myBeneficiaries(type: String): [Beneficiary!]!
+    myBeneficiaries(type: BeneficiaryType): [Beneficiary!]!
   }
 
   extend type Mutation {
