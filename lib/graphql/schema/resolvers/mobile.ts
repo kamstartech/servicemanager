@@ -266,6 +266,38 @@ export const mobileResolvers = {
         updatedAt: b.updatedAt.toISOString(),
       }));
     },
+
+    // Get current user's notification settings
+    async myNotificationSettings(_: unknown, __: unknown, context: GraphQLContext) {
+      if (!context.userId) {
+        throw new GraphQLError('Authentication required', {
+          extensions: {
+            code: 'UNAUTHENTICATED',
+            http: { status: 401 },
+          },
+        });
+      }
+
+      const user = await prisma.mobileUser.findUnique({
+        where: { id: context.userId },
+        select: {
+          smsNotifications: true,
+          emailNotifications: true,
+          pushNotifications: true,
+        },
+      });
+
+      if (!user) {
+        throw new GraphQLError('User not found', {
+          extensions: {
+            code: 'NOT_FOUND',
+            http: { status: 404 },
+          },
+        });
+      }
+
+      return user;
+    },
   },
 
   Mutation: {
