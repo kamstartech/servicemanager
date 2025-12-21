@@ -4,6 +4,7 @@ export enum ServiceChannel {
   BALANCE_SYNC = "service:balance-sync",
   ACCOUNT_DISCOVERY = "service:account-discovery",
   ACCOUNT_ENRICHMENT = "service:account-enrichment",
+  ACCOUNT_CLEANUP = "service:account-cleanup",
   REGISTRATION_UPDATES = "service:registration-updates",
   ALL_SERVICES = "service:*",
 }
@@ -86,7 +87,7 @@ export class ServicePubSub {
    */
   async unsubscribe(channels?: ServiceChannel[]): Promise<void> {
     const subscriber = redisClient.getSubscriber();
-    
+
     if (!channels) {
       await subscriber.unsubscribe();
       await subscriber.punsubscribe();

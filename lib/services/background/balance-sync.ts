@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 import { t24BalanceService } from "@/lib/services/t24/balance";
 import { servicePubSub, ServiceChannel } from "@/lib/redis/pubsub";
 import { logsPubSub } from "@/lib/redis/logs-pubsub";
+import { accountEvents, AccountEvent } from "@/lib/events/account-events";
 
 /**
  * Account Balance Sync Service
@@ -17,7 +18,11 @@ import { logsPubSub } from "@/lib/redis/logs-pubsub";
  */
 
 // Configuration
-const SYNC_INTERVAL = parseInt(process.env.BALANCE_SYNC_INTERVAL || "300000"); // 5 minutes
+// Event-based sync with periodic fallback for missed events
+const EVENT_BASED_ENABLED = process.env.EVENT_BASED_ENABLED !== 'false'; // Default: enabled
+const SYNC_INTERVAL = EVENT_BASED_ENABLED
+  ? parseInt(process.env.BALANCE_SYNC_FALLBACK_INTERVAL || "3600000") // 1 hour fallback
+  : parseInt(process.env.BALANCE_SYNC_INTERVAL || "300000"); // 5 minutes (legacy)
 const AUTH_SYNC_TIMEOUT = 2000; // 2 seconds
 const QUEUE_PROCESS_INTERVAL = 1000; // 1 second
 
@@ -102,17 +107,23 @@ export class AccountBalanceSyncService {
     }
 
     console.log("🚀 Starting account balance sync service...");
-    console.log(`   Sync interval: ${SYNC_INTERVAL / 1000}s`);
+    console.log(`   Event-based: ${EVENT_BASED_ENABLED ? 'ENABLED' : 'DISABLED'}`);
+    console.log(`   Sync interval: ${SYNC_INTERVAL / 1000 / 60} minutes ${EVENT_BASED_ENABLED ? '(fallback only)' : ''}`);
     console.log(`   Auth timeout: ${AUTH_SYNC_TIMEOUT}ms`);
 
     void logsPubSub.publishLog({
       service: "balance-sync",
       level: "info",
-      message: `Service starting (interval=${SYNC_INTERVAL}ms)` ,
+      message: `Service starting (interval=${SYNC_INTERVAL}ms, eventBased=${EVENT_BASED_ENABLED})`,
       timestamp: Date.now(),
     });
 
-    // Start periodic sync of pending users
+    // Register event listeners for event-based sync
+    if (EVENT_BASED_ENABLED) {
+      this.registerEventListeners();
+    }
+
+    // Start periodic sync (either main sync or fallback based on EVENT_BASED_ENABLED)
     this.syncInterval = setInterval(() => {
       this.syncPendingUsers();
     }, SYNC_INTERVAL);
@@ -134,6 +145,47 @@ export class AccountBalanceSyncService {
       message: "Service started",
       timestamp: Date.now(),
     });
+  }
+
+  /**
+   * Register event listeners for event-based sync
+   */
+  private registerEventListeners(): void {
+    console.log("📡 Registering balance sync event listeners...");
+
+    // User login - high priority sync for auth flow
+    accountEvents.on(AccountEvent.USER_LOGIN, ({ userId }) => {
+      if (userId) {
+        console.log(`🔔 Event: User login - queueing priority sync for user ${userId}`);
+        this.syncQueue.addToPriority(userId);
+      }
+    });
+
+    // Transaction completed - sync affected account
+    accountEvents.on(AccountEvent.TRANSACTION_COMPLETED, ({ userId }) => {
+      if (userId) {
+        console.log(`🔔 Event: Transaction completed - queueing sync for user ${userId}`);
+        this.syncQueue.addToBackground(userId);
+      }
+    });
+
+    // Account discovered - sync new account
+    accountEvents.on(AccountEvent.ACCOUNT_DISCOVERED, ({ userId }) => {
+      if (userId) {
+        console.log(`🔔 Event: Account discovered - queueing sync for user ${userId}`);
+        this.syncQueue.addToBackground(userId);
+      }
+    });
+
+    // Admin trigger
+    accountEvents.on(AccountEvent.ADMIN_TRIGGER_SYNC, ({ userId }) => {
+      if (userId) {
+        console.log(`🔔 Event: Admin trigger - queueing sync for user ${userId}`);
+        this.syncQueue.addToPriority(userId);
+      }
+    });
+
+    console.log("✅ Event listeners registered");
   }
 
   /**

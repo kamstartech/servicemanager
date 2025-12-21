@@ -152,5 +152,6 @@ export const resolvers = {
   },
   Subscription: {
     ...subscriptionResolvers.Subscription,
+    ...mobileUserAccountResolvers.Subscription,
   },
 };

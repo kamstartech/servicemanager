@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 import { t24AccountDetailsService } from "@/lib/services/t24/account-details";
 import { servicePubSub, ServiceChannel } from "@/lib/redis/pubsub";
 import { logsPubSub } from "@/lib/redis/logs-pubsub";
+import { accountEvents, AccountEvent } from "@/lib/events/account-events";
 
 /**
  * Account Enrichment Service
@@ -18,7 +19,11 @@ import { logsPubSub } from "@/lib/redis/logs-pubsub";
  */
 
 // Configuration
-const ENRICHMENT_INTERVAL = parseInt(process.env.ACCOUNT_ENRICHMENT_INTERVAL || "43200000"); // 12 hours
+// Event-based enrichment with weekly fallback for cleanup
+const EVENT_BASED_ENABLED = process.env.EVENT_BASED_ENABLED !== 'false'; // Default: enabled
+const ENRICHMENT_INTERVAL = EVENT_BASED_ENABLED
+  ? parseInt(process.env.ENRICHMENT_FALLBACK_INTERVAL || "604800000") // 7 days fallback
+  : parseInt(process.env.ACCOUNT_ENRICHMENT_INTERVAL || "43200000"); // 12 hours (legacy)
 const ENRICHMENT_BATCH_SIZE = parseInt(process.env.ACCOUNT_ENRICHMENT_BATCH_SIZE || "20"); // Accounts per batch
 const ENRICHMENT_DELAY = 2000; // 2 seconds between requests to avoid overloading T24
 
@@ -42,17 +47,23 @@ export class AccountEnrichmentService {
     }
 
     console.log("🚀 Starting account enrichment service...");
-    console.log(`   Enrichment interval: ${ENRICHMENT_INTERVAL / 1000 / 60 / 60}h`);
+    console.log(`   Event-based: ${EVENT_BASED_ENABLED ? 'ENABLED' : 'DISABLED'}`);
+    console.log(`   Enrichment interval: ${ENRICHMENT_INTERVAL / 1000 / 60 / 60 / 24} days ${EVENT_BASED_ENABLED ? '(fallback only)' : ''}`);
     console.log(`   Batch size: ${ENRICHMENT_BATCH_SIZE} accounts`);
 
     void logsPubSub.publishLog({
       service: "account-enrichment",
       level: "info",
-      message: `Service starting (interval=${ENRICHMENT_INTERVAL}ms, batchSize=${ENRICHMENT_BATCH_SIZE})`,
+      message: `Service starting (interval=${ENRICHMENT_INTERVAL}ms, batchSize=${ENRICHMENT_BATCH_SIZE}, eventBased=${EVENT_BASED_ENABLED})`,
       timestamp: Date.now(),
     });
 
-    // Start periodic enrichment
+    // Register event listeners for event-based enrichment
+    if (EVENT_BASED_ENABLED) {
+      this.registerEventListeners();
+    }
+
+    // Start periodic enrichment (either main or fallback based on EVENT_BASED_ENABLED)
     this.enrichmentInterval = setInterval(() => {
       this.enrichAccounts();
     }, ENRICHMENT_INTERVAL);
@@ -69,6 +80,51 @@ export class AccountEnrichmentService {
       message: "Service started",
       timestamp: Date.now(),
     });
+  }
+
+  /**
+   * Register event listeners for event-based enrichment
+   */
+  private registerEventListeners(): void {
+    console.log("📡 Registering account enrichment event listeners...");
+
+    // Account discovered - enrich immediately
+    accountEvents.on(AccountEvent.ACCOUNT_DISCOVERED, async ({ userId, accountNumber }) => {
+      if (accountNumber) {
+        console.log(`🔔 Event: Account discovered - enriching ${accountNumber}`);
+        try {
+          await this.enrichAccountManual(accountNumber);
+        } catch (error) {
+          console.error(`Failed to enrich discovered account ${accountNumber}:`, error);
+        }
+      }
+    });
+
+    // Account linked - enrich immediately
+    accountEvents.on(AccountEvent.ACCOUNT_LINKED, async ({ accountNumber }) => {
+      if (accountNumber) {
+        console.log(`🔔 Event: Account linked - enriching ${accountNumber}`);
+        try {
+          await this.enrichAccountManual(accountNumber);
+        } catch (error) {
+          console.error(`Failed to enrich linked account ${accountNumber}:`, error);
+        }
+      }
+    });
+
+    // Admin trigger
+    accountEvents.on(AccountEvent.ADMIN_TRIGGER_ENRICHMENT, async ({ accountNumber }) => {
+      if (accountNumber) {
+        console.log(`🔔 Event: Admin trigger - enriching ${accountNumber}`);
+        try {
+          await this.enrichAccountManual(accountNumber);
+        } catch (error) {
+          console.error(`Failed to enrich account ${accountNumber}:`, error);
+        }
+      }
+    });
+
+    console.log("✅ Event listeners registered");
   }
 
   /**
@@ -280,10 +336,10 @@ export class AccountEnrichmentService {
           categoryName: data.categoryName,
           accountStatus: data.accountStatus,
           holderName: data.holderName,
-          nickName: data.nickName,
+          ...(data.nickName && { nickName: data.nickName }), // Only set if T24 provides it
           onlineLimit: data.onlineLimit,
           openingDate: data.openingDate,
-          currency: data.currency || "MWK",
+          ...(data.currency && { currency: data.currency }), // Only set if provided, no fallback
           accountName: data.holderName,
           updatedAt: new Date(),
         },
@@ -305,7 +361,7 @@ export class AccountEnrichmentService {
             displayToMobile: true, // Default: show new categories
           },
         });
-        
+
         // Check if category was just created (has recent createdAt)
         const wasJustCreated = categoryResult.createdAt.getTime() === categoryResult.updatedAt.getTime();
         if (wasJustCreated) {
@@ -323,10 +379,10 @@ export class AccountEnrichmentService {
       // Update user profile if customer details are available and profile needs update
       if (data.customer && account.mobileUser) {
         const profile = account.mobileUser.profile;
-        const needsUpdate = !profile || 
-          !profile.firstName || 
-          !profile.lastName || 
-          !profile.email || 
+        const needsUpdate = !profile ||
+          !profile.firstName ||
+          !profile.lastName ||
+          !profile.email ||
           !profile.phone;
 
         if (needsUpdate) {

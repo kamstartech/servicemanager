@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { accountEvents, AccountEvent } from "@/lib/events/account-events";
 
 /**
  * Alert Settings Service
@@ -14,8 +15,12 @@ import { prisma } from "@/lib/db/prisma";
  * - Logs all operations
  */
 
-// Configuration
-const ALERT_SETTINGS_INTERVAL = parseInt(process.env.ALERT_SETTINGS_INTERVAL || "21600000"); // 6 hours
+// Configuration  
+// Event-based creation with daily fallback for cleanup
+const EVENT_BASED_ENABLED = process.env.EVENT_BASED_ENABLED !== 'false'; // Default: enabled
+const ALERT_SETTINGS_INTERVAL = EVENT_BASED_ENABLED
+  ? parseInt(process.env.ALERT_SETTINGS_FALLBACK_INTERVAL || "86400000") // 24 hours fallback
+  : parseInt(process.env.ALERT_SETTINGS_INTERVAL || "21600000"); // 6 hours (legacy)
 const ALERT_SETTINGS_BATCH_SIZE = parseInt(process.env.ALERT_SETTINGS_BATCH_SIZE || "100"); // Accounts per batch
 
 export class AlertSettingsService {
@@ -32,10 +37,16 @@ export class AlertSettingsService {
     }
 
     console.log("🚀 Starting alert settings service...");
-    console.log(`   Check interval: ${ALERT_SETTINGS_INTERVAL / 1000 / 60 / 60}h`);
+    console.log(`   Event-based: ${EVENT_BASED_ENABLED ? 'ENABLED' : 'DISABLED'}`);
+    console.log(`   Check interval: ${ALERT_SETTINGS_INTERVAL / 1000 / 60 / 60}h ${EVENT_BASED_ENABLED ? '(fallback only)' : ''}`);
     console.log(`   Batch size: ${ALERT_SETTINGS_BATCH_SIZE} accounts`);
 
-    // Start periodic check
+    // Register event listeners for event-based creation
+    if (EVENT_BASED_ENABLED) {
+      this.registerEventListeners();
+    }
+
+    // Start periodic check (either main or fallback based on EVENT_BASED_ENABLED)
     this.interval = setInterval(() => {
       this.createMissingAlertSettings();
     }, ALERT_SETTINGS_INTERVAL);
@@ -46,6 +57,39 @@ export class AlertSettingsService {
     }, 60000);
 
     console.log("✅ Alert settings service started");
+  }
+
+  /**
+   * Register event listeners for event-based alert settings creation
+   */
+  private registerEventListeners(): void {
+    console.log("📡 Registering alert settings event listeners...");
+
+    // Account linked - create alert settings immediately
+    accountEvents.on(AccountEvent.ACCOUNT_LINKED, async ({ userId, accountNumber }) => {
+      if (userId && accountNumber) {
+        console.log(`🔔 Event: Account linked - creating alert settings for ${accountNumber}`);
+        try {
+          await this.createAlertSettingsForAccount(userId, accountNumber);
+        } catch (error) {
+          console.error(`Failed to create alert settings for ${accountNumber}:`, error);
+        }
+      }
+    });
+
+    // Account discovered - create alert settings
+    accountEvents.on(AccountEvent.ACCOUNT_DISCOVERED, async ({ userId, accountNumber }) => {
+      if (userId && accountNumber) {
+        console.log(`🔔 Event: Account discovered - creating alert settings for ${accountNumber}`);
+        try {
+          await this.createAlertSettingsForAccount(userId, accountNumber);
+        } catch (error) {
+          console.error(`Failed to create alert settings for ${accountNumber}:`, error);
+        }
+      }
+    });
+
+    console.log("✅ Event listeners registered");
   }
 
   /**
@@ -160,6 +204,42 @@ export class AlertSettingsService {
       running: this.isRunning,
       interval: ALERT_SETTINGS_INTERVAL,
     };
+  }
+
+  /**
+   * Create alert settings for a single account (for event-based creation)
+   */
+  private async createAlertSettingsForAccount(mobileUserId: number, accountNumber: string): Promise<void> {
+    try {
+      // Check if settings already exist
+      const existingSettings = await prisma.accountAlertSettings.findUnique({
+        where: {
+          mobileUserId_accountNumber: {
+            mobileUserId,
+            accountNumber,
+          },
+        },
+      });
+
+      // Skip if settings already exist
+      if (existingSettings) {
+        return;
+      }
+
+      // Create default alert settings
+      await prisma.accountAlertSettings.create({
+        data: {
+          mobileUserId,
+          accountNumber,
+          // All defaults are set in Prisma schema
+        },
+      });
+
+      console.log(`   ✅ Created alert settings for account ${accountNumber}`);
+    } catch (error) {
+      console.error(`   ❌ Error creating alert settings for ${accountNumber}:`, error);
+      throw error;
+    }
   }
 
   /**

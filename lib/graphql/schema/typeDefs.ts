@@ -541,6 +541,13 @@ export const typeDefs = /* GraphQL */ `
     maskedContact: String
     verificationMethod: String
   }
+  
+  type TriggerAccountDiscoveryResult {
+    success: Boolean!
+    message: String
+    accountsAdded: Int!
+    accountsDeactivated: Int!
+  }
 
   type PasskeyRegistrationOptions {
     rp: String!
@@ -720,12 +727,16 @@ export const typeDefs = /* GraphQL */ `
     # Device OTP Verification
     verifyDeviceOtp(verificationToken: String!, otpCode: String!): VerifyDeviceOtpResult!
     resendDeviceOtp(verificationToken: String!): Boolean!
+    
+    # Account Discovery
+    triggerAccountDiscovery(userId: ID!): TriggerAccountDiscoveryResult!
   }
 
   type Subscription {
     mobileUserCreated: MobileUser!
     mobileUserUpdated: MobileUser!
     deviceApprovalStatus(deviceId: String!): DeviceApprovalResult!
+    accountsUpdated(userId: ID!): AccountsUpdatePayload!
   }
 
   type DeviceApprovalResult {
@@ -737,6 +748,12 @@ export const typeDefs = /* GraphQL */ `
   enum DeviceApprovalStatus {
     APPROVED
     DENIED
+  }
+  
+  type AccountsUpdatePayload {
+    userId: ID!
+    accounts: [Account!]!
+    timestamp: String!
   }
 
   type AccountCategory {

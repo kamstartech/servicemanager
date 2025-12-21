@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 import { t24AccountsService } from "@/lib/services/t24/accounts";
 import { servicePubSub, ServiceChannel } from "@/lib/redis/pubsub";
 import { logsPubSub } from "@/lib/redis/logs-pubsub";
+import { accountEvents, AccountEvent } from "@/lib/events/account-events";
 
 /**
  * Account Discovery Service
@@ -20,6 +21,7 @@ import { logsPubSub } from "@/lib/redis/logs-pubsub";
  */
 
 // Configuration
+const EVENT_BASED_ENABLED = process.env.EVENT_BASED_ENABLED !== 'false'; // Default: enabled
 const DISCOVERY_INTERVAL = parseInt(process.env.ACCOUNT_DISCOVERY_INTERVAL || "86400000"); // 24 hours
 const DISCOVERY_BATCH_SIZE = parseInt(process.env.ACCOUNT_DISCOVERY_BATCH_SIZE || "50"); // Users per batch
 const PAGINATION_QUEUE_INTERVAL = 5000; // 5 seconds between pagination fetches
@@ -85,15 +87,21 @@ export class AccountDiscoveryService {
     }
 
     console.log("🚀 Starting account discovery service...");
+    console.log(`   Event-based: ${EVENT_BASED_ENABLED ? 'ENABLED' : 'DISABLED'}`);
     console.log(`   Discovery interval: ${DISCOVERY_INTERVAL / 1000 / 60 / 60}h`);
     console.log(`   Batch size: ${DISCOVERY_BATCH_SIZE} users`);
 
     void logsPubSub.publishLog({
       service: "account-discovery",
       level: "info",
-      message: `Service starting (interval=${DISCOVERY_INTERVAL}ms, batchSize=${DISCOVERY_BATCH_SIZE})`,
+      message: `Service starting (interval=${DISCOVERY_INTERVAL}ms, batchSize=${DISCOVERY_BATCH_SIZE}, eventBased=${EVENT_BASED_ENABLED})`,
       timestamp: Date.now(),
     });
+
+    // Register event listeners for event-based discovery
+    if (EVENT_BASED_ENABLED) {
+      this.registerEventListeners();
+    }
 
     // Start periodic discovery
     this.discoveryInterval = setInterval(() => {
@@ -117,6 +125,46 @@ export class AccountDiscoveryService {
       message: "Service started",
       timestamp: Date.now(),
     });
+  }
+
+  /**
+   * Register event listeners for event-based discovery
+   */
+  private registerEventListeners(): void {
+    console.log("📡 Registering account discovery event listeners...");
+
+    // User login - discover accounts for this user
+    accountEvents.on(AccountEvent.USER_LOGIN, async ({ userId }) => {
+      if (userId) {
+        console.log(`🔔 Event: User login - triggering account discovery for user ${userId}`);
+        try {
+          const user = await prisma.mobileUser.findUnique({
+            where: { id: userId },
+            select: { customerNumber: true, context: true },
+          });
+
+          if (user?.customerNumber && user.context === 'MOBILE_BANKING') {
+            await this.discoverUserAccounts(userId, user.customerNumber);
+          }
+        } catch (error) {
+          console.error(`Failed to discover accounts for user ${userId}:`, error);
+        }
+      }
+    });
+
+    // Admin trigger
+    accountEvents.on(AccountEvent.ADMIN_TRIGGER_DISCOVERY, async ({ userId }) => {
+      if (userId) {
+        console.log(`🔔 Event: Admin trigger - discovering accounts for user ${userId}`);
+        try {
+          await this.discoverForUser(userId);
+        } catch (error) {
+          console.error(`Failed to discover accounts for user ${userId}:`, error);
+        }
+      }
+    });
+
+    console.log("✅ Event listeners registered");
   }
 
   /**
@@ -400,6 +448,12 @@ export class AccountDiscoveryService {
             timestamp: Date.now(),
           });
           added++;
+
+          // Emit ACCOUNT_DISCOVERED event for enrichment and balance sync
+          accountEvents.emit(AccountEvent.ACCOUNT_DISCOVERED, {
+            userId,
+            accountNumber,
+          });
         }
       } catch (error) {
         console.error(`   ❌ Failed to add account ${accountNumber}:`, error);
@@ -446,9 +500,9 @@ export class AccountDiscoveryService {
   /**
    * Get service status
    */
-  getStatus(): { 
-    running: boolean; 
-    discovering: boolean; 
+  getStatus(): {
+    running: boolean;
+    discovering: boolean;
     interval: number;
     paginationQueueSize: number;
   } {

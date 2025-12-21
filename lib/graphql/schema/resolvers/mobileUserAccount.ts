@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { PushNotificationService } from "@/lib/services/push-notification";
+import { accountEvents, AccountEvent } from "@/lib/events/account-events";
+import { pubsub, EVENTS } from "@/lib/graphql/pubsub";
 
 export const mobileUserAccountResolvers = {
   Query: {
@@ -155,6 +157,13 @@ export const mobileUserAccountResolvers = {
         }
       });
 
+      // Emit ACCOUNT_LINKED event for enrichment and alert settings
+      accountEvents.emit(AccountEvent.ACCOUNT_LINKED, {
+        userId,
+        accountId: account.id,
+        accountNumber: account.accountNumber,
+      });
+
       return {
         id: account.id.toString(),
         accountNumber: account.accountNumber,
@@ -208,6 +217,13 @@ export const mobileUserAccountResolvers = {
 
       await prisma.mobileUserAccount.delete({
         where: { id: accountId }
+      });
+
+      // Emit ACCOUNT_UNLINKED event
+      accountEvents.emit(AccountEvent.ACCOUNT_UNLINKED, {
+        userId,
+        accountId,
+        accountNumber: account.accountNumber,
       });
 
       return true;
@@ -511,6 +527,61 @@ export const mobileUserAccountResolvers = {
         createdAt: updatedAccount.createdAt.toISOString(),
         updatedAt: updatedAccount.updatedAt.toISOString(),
       };
-    }
-  }
+    },
+
+    // Trigger account discovery for a user
+    async triggerAccountDiscovery(_parent: unknown, args: { userId: string }) {
+      const userId = parseInt(args.userId);
+      if (isNaN(userId)) {
+        throw new Error("Invalid userId");
+      }
+
+      // Get user info
+      const user = await prisma.mobileUser.findUnique({
+        where: { id: userId },
+        select: { customerNumber: true, context: true },
+      });
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      if (!user.customerNumber) {
+        return {
+          success: false,
+          message: "User does not have a customer number",
+          accountsAdded: 0,
+          accountsDeactivated: 0,
+        };
+      }
+
+      // Import and trigger discovery
+      const { accountDiscoveryService } = await import(
+        "@/lib/services/background/account-discovery"
+      );
+
+      const result = await accountDiscoveryService.discoverForUser(userId);
+
+      // Publish subscription event for real-time updates in admin UI
+      const { publishAccountsUpdate } = await import(
+        "@/lib/graphql/publish-accounts-update"
+      );
+      await publishAccountsUpdate(userId);
+
+      return {
+        success: true,
+        message: `Discovery completed: ${result.added} account(s) added, ${result.deactivated} deactivated`,
+        accountsAdded: result.added,
+        accountsDeactivated: result.deactivated,
+      };
+    },
+  },
+
+  Subscription: {
+    accountsUpdated: {
+      subscribe: (_parent: unknown, { userId }: { userId: string }) =>
+        pubsub.subscribe(EVENTS.ACCOUNTS_UPDATED, userId),
+      resolve: (payload: any) => payload,
+    },
+  },
 };

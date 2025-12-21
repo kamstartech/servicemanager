@@ -6,6 +6,7 @@ import { ESBSMSService } from "@/lib/services/sms";
 import { emailService } from "@/lib/services/email";
 import type { Prisma } from "@prisma/client";
 import { GraphQLError } from 'graphql';
+import { accountEvents, AccountEvent } from "@/lib/events/account-events";
 
 type LoginInput = {
   username: string;
@@ -237,6 +238,12 @@ export const authResolvers = {
             userAgent: deviceName, // Use deviceName as userAgent proxy
             isActive: true,
           },
+        });
+
+        // Emit USER_LOGIN event for balance sync
+        accountEvents.emit(AccountEvent.USER_LOGIN, {
+          userId: user.id,
+          context: user.context as 'MOBILE_BANKING' | 'WALLET',
         });
 
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { gql, useMutation, useQuery } from "@apollo/client";
 import Link from "next/link";
@@ -110,9 +110,21 @@ const ACCOUNTS_QUERY = gql`
       currency
       categoryName
       balance
+      nickName
       isPrimary
       isActive
       createdAt
+    }
+  }
+`;
+
+const TRIGGER_DISCOVERY_MUTATION = gql`
+  mutation TriggerAccountDiscovery($userId: ID!) {
+    triggerAccountDiscovery(userId: $userId) {
+      success
+      message
+      accountsAdded
+      accountsDeactivated
     }
   }
 `;
@@ -194,7 +206,27 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
   } = useQuery(ACCOUNTS_QUERY, {
     variables: { userId: id },
     skip: !id || context !== "MOBILE_BANKING",
+    pollInterval: 10000, // Poll every 10 seconds for updates
   });
+
+  const [triggerDiscovery] = useMutation(TRIGGER_DISCOVERY_MUTATION);
+
+  // Trigger account discovery when admin navigates to user details
+  useEffect(() => {
+    if (id && context === "MOBILE_BANKING") {
+      triggerDiscovery({ variables: { userId: id } })
+        .then((result) => {
+          if (result.data?.triggerAccountDiscovery?.accountsAdded > 0) {
+            console.log(`🔍 Discovery: ${result.data.triggerAccountDiscovery.message}`);
+            // Refetch accounts to show new ones immediately
+            refetchAccounts();
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to trigger account discovery:", error);
+        });
+    }
+  }, [id, context, triggerDiscovery, refetchAccounts]);
 
   const {
     data: devicesData,
@@ -443,17 +475,14 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
         ),
     },
     {
-      id: "balance",
-      header: COMMON_TABLE_HEADERS.balance,
+      id: "nickname",
+      header: "Nickname",
       accessor: (row) =>
-        row.balance ? (
-          <span className="font-medium">
-            {row.currency} {parseFloat(row.balance).toLocaleString()}
-          </span>
+        row.nickName ? (
+          <span className="text-sm text-muted-foreground">{row.nickName}</span>
         ) : (
-          "-"
+          <span className="text-xs text-gray-400 italic">N/A</span>
         ),
-      sortKey: "balance",
     },
     {
       id: "status",

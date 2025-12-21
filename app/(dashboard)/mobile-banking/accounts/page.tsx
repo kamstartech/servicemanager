@@ -104,30 +104,6 @@ export default function AccountsPage() {
       ),
     },
     {
-      id: "balance",
-      header: translate("common.table.columns.balance"),
-      accessor: (row) => (
-        <div className="text-right">
-          {row.balance != null ? (
-            <div className="font-medium">
-              {row.currency} {parseFloat(String(row.balance)).toLocaleString()}
-            </div>
-          ) : (
-            <span className="text-gray-400">-</span>
-          )}
-          {row.workingBalance != null &&
-            row.workingBalance !== row.balance && (
-              <div className="text-xs text-muted-foreground">
-                Working: {row.currency}{" "}
-                {parseFloat(String(row.workingBalance)).toLocaleString()}
-              </div>
-            )}
-        </div>
-      ),
-      sortKey: "balance",
-      alignRight: true,
-    },
-    {
       id: "status",
       header: translate("common.table.columns.status"),
       accessor: (row) => (
@@ -140,11 +116,10 @@ export default function AccountsPage() {
           )}
           {row.accountStatus && (
             <span
-              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                row.accountStatus.toLowerCase() === "active"
+              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${row.accountStatus.toLowerCase() === "active"
                   ? "bg-green-100 text-green-800"
                   : "bg-gray-100 text-gray-800"
-              }`}
+                }`}
             >
               <CheckCircle size={14} />
               {translateStatusOneWord(row.accountStatus, translate, "UNKNOWN")}

@@ -7,21 +7,23 @@ export async function register() {
         const { balanceSyncService } = await import('@/lib/services/background/balance-sync');
         const { accountDiscoveryService } = await import('@/lib/services/background/account-discovery');
         const { accountEnrichmentService } = await import('@/lib/services/background/account-enrichment');
+        const { accountCleanupService } = await import('@/lib/services/background/account-cleanup');
         const { alertSettingsService } = await import('@/lib/services/background/alert-settings');
         const { startTransactionProcessorJob } = await import('@/lib/jobs/transaction-processor-job');
-        
+
         // Initialize MinIO buckets on startup
         try {
             await initializeBuckets();
         } catch (error) {
             console.error('⚠️ MinIO initialization failed (will retry on first use):', error);
         }
-        
+
         migrationScheduler.init();
         backupScheduler.init();
         balanceSyncService.start();
         accountDiscoveryService.start();
         accountEnrichmentService.start();
+        accountCleanupService.start();
         alertSettingsService.start();
         startTransactionProcessorJob();
     }
