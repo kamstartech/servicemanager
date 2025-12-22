@@ -4,7 +4,7 @@
  * Generates account statements in Excel (.xlsx) format
  */
 
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import { T24StatementTransaction } from '../t24/statement';
 
 export interface StatementExcelOptions {
