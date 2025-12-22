@@ -222,6 +222,105 @@ export class EmailService {
   }
 
   /**
+   * Send account statement email with file attachment (PDF/Excel/CSV)
+   */
+  async sendStatementEmail(
+    to: string,
+    accountName: string,
+    accountNumber: string,
+    startDate: string,
+    endDate: string,
+    format: 'PDF' | 'EXCEL' | 'CSV',
+    fileBuffer: Buffer,
+    filename: string,
+    password?: string
+  ): Promise<boolean> {
+    const isPDF = format === 'PDF';
+
+    const subject = `Account Statement - ${accountNumber} (${format})`;
+
+    const textMessage = isPDF
+      ? `Dear ${accountName},
+
+Your account statement for period ${startDate} to ${endDate} is attached as a password-protected PDF.
+
+To open the PDF, use the following password:
+${password}
+
+This password is your: FirstName + LastName + Username (no spaces)
+Example: If your name is John Doe and username is john.doe, the password is: JohnDoejohn.doe
+
+Please keep this password secure.
+
+Best regards,
+FDH Bank`
+      : `Dear ${accountName},
+
+Your account statement for period ${startDate} to ${endDate} is attached as ${format} format.
+
+You can open this file with any spreadsheet application (${format === 'EXCEL' ? 'Microsoft Excel, Google Sheets, etc.' : 'Microsoft Excel, Google Sheets, any text editor, etc.'}).
+
+Best regards,
+FDH Bank`;
+
+    const htmlMessage = isPDF
+      ? `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Account Statement</h2>
+          <p>Dear ${accountName},</p>
+          <p>Your account statement for period <strong>${startDate}</strong> to <strong>${endDate}</strong> is attached as a password-protected PDF.</p>
+          
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0;">
+            <p><strong>Account Number:</strong> ${accountNumber}</p>
+            <p><strong>PDF Password:</strong></p>
+            <div style="background-color: #007bff; color: white; padding: 15px; text-align: center; font-size: 18px; font-weight: bold; letter-spacing: 2px; margin: 10px 0; border-radius: 5px;">
+              ${password}
+            </div>
+            <p style="font-size: 14px; color: #666;">
+              This password is your: FirstName + LastName + Username (no spaces)<br>
+              <em>Example: If your name is John Doe and username is john.doe, the password is: JohnDoejohn.doe</em>
+            </p>
+          </div>
+          
+          <p style="color: #dc3545; font-size: 14px;">⚠️ Please keep this password secure. Do not share it with anyone.</p>
+          <p>Best regards,<br>FDH Bank</p>
+        </div>
+      `
+      : `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Account Statement</h2>
+          <p>Dear ${accountName},</p>
+          <p>Your account statement for period <strong>${startDate}</strong> to <strong>${endDate}</strong> is attached as <strong>${format}</strong> format.</p>
+          
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0;">
+            <p><strong>Account Number:</strong> ${accountNumber}</p>
+            <p><strong>File Format:</strong> ${format}</p>
+            <p style="font-size: 14px; color: #666;">
+              ${format === 'EXCEL'
+        ? 'You can open this file with Microsoft Excel, Google Sheets, or any spreadsheet application.'
+        : 'You can open this file with any spreadsheet application or text editor.'}
+            </p>
+          </div>
+          
+          <p>Best regards,<br>FDH Bank</p>
+        </div>
+      `;
+
+    return this.sendEmail({
+      to,
+      subject,
+      text: textMessage,
+      html: htmlMessage,
+      attachments: [
+        {
+          filename,
+          content: fileBuffer,
+        },
+      ],
+    });
+  }
+
+  /**
    * Test email connection
    */
   async testConnection(): Promise<boolean> {
