@@ -34,6 +34,7 @@ import { airtimeResolvers } from "./airtime";
 import { deviceManagementResolvers } from "./deviceManagement";
 import { changePasswordResolvers } from "./changePassword";
 import { statementResolvers } from "./statement";
+import { checkbookResolvers } from "./checkbook";
 import { JSONResolver, DateTimeResolver } from "graphql-scalars";
 import { GraphQLScalarType, Kind } from "graphql";
 
@@ -124,6 +125,7 @@ export const resolvers = {
     ...airtimeResolvers.Mutation,
     ...changePasswordResolvers.Mutation,
     ...statementResolvers.Mutation,
+    ...checkbookResolvers.Mutation,
   },
   CoreBankingConnection: {
     ...coreBankingEndpointResolvers.CoreBankingConnection,
