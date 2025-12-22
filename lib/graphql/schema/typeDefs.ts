@@ -142,6 +142,8 @@ export const typeDefs = /* GraphQL */ `
     EXTERNAL_BANK
     FDH_WALLET
     EXTERNAL_WALLET
+    BILL
+    SELF
     BANK
     WALLET
   }
