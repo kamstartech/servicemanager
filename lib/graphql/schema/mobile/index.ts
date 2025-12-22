@@ -86,6 +86,7 @@ const MOBILE_MUTATION_FIELDS = new Set([
   "toggleBeneficiaryStatus",
   "requestStatement",
   "requestCheckbook",
+  "verifyPassword",
 ]);
 
 function pickRootFields(

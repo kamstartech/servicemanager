@@ -35,6 +35,7 @@ import { deviceManagementResolvers } from "./deviceManagement";
 import { changePasswordResolvers } from "./changePassword";
 import { statementResolvers } from "./statement";
 import { checkbookResolvers } from "./checkbook";
+import { passwordResolvers } from "./password";
 import { JSONResolver, DateTimeResolver } from "graphql-scalars";
 import { GraphQLScalarType, Kind } from "graphql";
 
@@ -126,6 +127,7 @@ export const resolvers = {
     ...changePasswordResolvers.Mutation,
     ...statementResolvers.Mutation,
     ...checkbookResolvers.Mutation,
+    ...passwordResolvers.Mutation,
   },
   CoreBankingConnection: {
     ...coreBankingEndpointResolvers.CoreBankingConnection,
