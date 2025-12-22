@@ -2319,5 +2319,18 @@ export const typeDefs = /* GraphQL */ `
       endDate: String!
       format: StatementFormat!
     ): StatementRequestResult!
+    
+    requestCheckbook(
+      accountNumber: String!
+      numberOfCheckbooks: Int!
+      collectionPoint: String!
+      notes: String
+    ): CheckbookRequestResult!
+  }
+
+  type CheckbookRequestResult {
+    success: Boolean!
+    message: String!
+    requestId: String
   }
 `;

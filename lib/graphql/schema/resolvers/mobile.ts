@@ -3,6 +3,7 @@ import { pubsub, EVENTS } from "@/lib/graphql/pubsub";
 import { GraphQLError } from 'graphql';
 import { prisma } from "@/lib/db/prisma";
 import { statementResolvers } from "@/graphql/resolvers/statement";
+import { checkbookResolvers } from "@/graphql/resolvers/checkbook";
 
 async function getHiddenAccountCategoryIds(): Promise<string[]> {
   const hidden = await prisma.accountCategory.findMany({
@@ -792,5 +793,8 @@ export const mobileResolvers = {
 
     // Statement request mutation
     ...statementResolvers.Mutation,
+
+    // Checkbook request mutation
+    ...checkbookResolvers.Mutation,
   },
 };
