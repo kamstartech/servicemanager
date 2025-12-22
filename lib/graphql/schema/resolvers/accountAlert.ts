@@ -10,14 +10,14 @@ export const accountAlertResolvers = {
       context: GraphQLContext
     ) {
       try {
-        if (!context.adminId && !context.userId) {
+        if (!context.adminId && !context.mobileUser) {
           throw new Error("Authentication required");
         }
 
-        if (!context.adminId && context.userId) {
+        if (!context.adminId && context.mobileUser) {
           const ownsAccount = await prisma.mobileUserAccount.findFirst({
             where: {
-              mobileUserId: context.userId,
+              mobileUserId: context.mobileUser.id,
               accountNumber: args.accountNumber,
               isActive: true,
             },
@@ -32,7 +32,7 @@ export const accountAlertResolvers = {
         const settings = await prisma.accountAlertSettings.findFirst({
           where: context.adminId
             ? { accountNumber: args.accountNumber }
-            : { accountNumber: args.accountNumber, mobileUserId: context.userId },
+            : { accountNumber: args.accountNumber, mobileUserId: context.mobileUser.id },
           include: { mobileUser: true }
         });
 
@@ -85,14 +85,14 @@ export const accountAlertResolvers = {
       context: GraphQLContext
     ) {
       try {
-        if (!context.adminId && !context.userId) {
+        if (!context.adminId && !context.mobileUser) {
           throw new Error("Authentication required");
         }
 
         const where: any = {};
 
-        if (!context.adminId && context.userId) {
-          where.mobileUserId = context.userId;
+        if (!context.adminId && context.mobileUser) {
+          where.mobileUserId = context.mobileUser.id;
         }
 
         if (args.accountNumber) {
@@ -159,7 +159,7 @@ export const accountAlertResolvers = {
       context: GraphQLContext
     ) {
       try {
-        if (!context.adminId && !context.userId) {
+        if (!context.adminId && !context.mobileUser) {
           throw new Error("Authentication required");
         }
 
@@ -169,8 +169,8 @@ export const accountAlertResolvers = {
           if (args.mobileUserId) {
             where.mobileUserId = args.mobileUserId;
           }
-        } else if (context.userId) {
-          where.mobileUserId = context.userId;
+        } else if (context.mobileUser) {
+          where.mobileUserId = context.mobileUser.id;
         }
 
         if (args.isResolved !== undefined) {
@@ -240,7 +240,7 @@ export const accountAlertResolvers = {
       context: GraphQLContext
     ) {
       try {
-        if (!context.adminId && !context.userId) {
+        if (!context.adminId && !context.mobileUser) {
           throw new Error("Authentication required");
         }
 
@@ -250,7 +250,7 @@ export const accountAlertResolvers = {
         const account = await prisma.mobileUserAccount.findFirst({
           where: context.adminId
             ? { accountNumber }
-            : { accountNumber, mobileUserId: context.userId, isActive: true },
+            : { accountNumber, mobileUserId: context.mobileUser.id, isActive: true },
         });
 
         if (!account) {
@@ -370,7 +370,7 @@ export const accountAlertResolvers = {
       context: GraphQLContext
     ) {
       try {
-        if (!context.adminId && !context.userId) {
+        if (!context.adminId && !context.mobileUser) {
           throw new Error("Authentication required");
         }
 
@@ -385,7 +385,7 @@ export const accountAlertResolvers = {
           return false;
         }
 
-        if (!context.adminId && context.userId && alert.mobileUserId !== context.userId) {
+        if (!context.adminId && context.mobileUser && alert.mobileUserId !== context.mobileUser.id) {
           throw new Error("Access denied");
         }
 
@@ -410,7 +410,7 @@ export const accountAlertResolvers = {
       context: GraphQLContext
     ) {
       try {
-        if (!context.adminId && !context.userId) {
+        if (!context.adminId && !context.mobileUser) {
           throw new Error("Authentication required");
         }
 
@@ -420,7 +420,7 @@ export const accountAlertResolvers = {
             ? { accountNumber: args.accountNumber }
             : {
                 accountNumber: args.accountNumber,
-                mobileUserId: context.userId,
+                mobileUserId: context.mobileUser.id,
                 isActive: true,
               },
         });

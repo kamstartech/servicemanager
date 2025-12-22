@@ -740,6 +740,8 @@ export const typeDefs = /* GraphQL */ `
     mobileUserUpdated: MobileUser!
     deviceApprovalStatus(deviceId: String!): DeviceApprovalResult!
     accountsUpdated(userId: ID!): AccountsUpdatePayload!
+    beneficiariesUpdated(userId: ID!): [Beneficiary!]!
+    appStructureUpdated: [AppScreen!]!
   }
 
   type DeviceApprovalResult {

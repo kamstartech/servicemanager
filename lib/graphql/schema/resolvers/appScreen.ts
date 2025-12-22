@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { MobileUserContext } from "@prisma/client";
+import { pubsub, EVENTS } from "../../pubsub";
+import { publishAppStructureUpdate } from "../../publish-app-structure-update";
 
 type CreateAppScreenInput = {
   name: string;
@@ -155,6 +157,9 @@ export const appScreenResolvers = {
         },
       });
 
+      // Publish update to subscribers
+      await publishAppStructureUpdate();
+
       return {
         ...screen,
         createdAt: screen.createdAt.toISOString(),
@@ -204,6 +209,9 @@ export const appScreenResolvers = {
         },
       });
 
+      // Publish update to subscribers
+      await publishAppStructureUpdate();
+
       return {
         ...updated,
         createdAt: updated.createdAt.toISOString(),
@@ -215,6 +223,9 @@ export const appScreenResolvers = {
       await prisma.appScreen.delete({
         where: { id: args.id },
       });
+
+      // Publish update to subscribers
+      await publishAppStructureUpdate();
 
       return true;
     },
@@ -240,6 +251,9 @@ export const appScreenResolvers = {
         where: { context },
         orderBy: { order: "asc" },
       });
+
+      // Publish update to subscribers
+      await publishAppStructureUpdate();
 
       return screens.map((screen) => ({
         ...screen,
@@ -279,6 +293,9 @@ export const appScreenResolvers = {
           screenId: input.screenId,
         },
       });
+
+      // Publish update to subscribers
+      await publishAppStructureUpdate();
 
       return {
         ...page,
@@ -327,6 +344,9 @@ export const appScreenResolvers = {
         },
       });
 
+      // Publish update to subscribers
+      await publishAppStructureUpdate();
+
       return {
         ...updated,
         createdAt: updated.createdAt.toISOString(),
@@ -338,6 +358,9 @@ export const appScreenResolvers = {
       await prisma.appScreenPage.delete({
         where: { id: args.id },
       });
+
+      // Publish update to subscribers
+      await publishAppStructureUpdate();
 
       return true;
     },
@@ -364,6 +387,9 @@ export const appScreenResolvers = {
         orderBy: { order: "asc" },
       });
 
+      // Publish update to subscribers
+      await publishAppStructureUpdate();
+
       return pages.map((page) => ({
         ...page,
         createdAt: page.createdAt.toISOString(),
@@ -387,6 +413,13 @@ export const appScreenResolvers = {
         createdAt: screen.createdAt.toISOString(),
         updatedAt: screen.updatedAt.toISOString(),
       };
+    },
+  },
+
+  Subscription: {
+    appStructureUpdated: {
+      subscribe: () => pubsub.subscribe(EVENTS.APP_STRUCTURE_UPDATED),
+      resolve: (payload: any) => payload,
     },
   },
 };

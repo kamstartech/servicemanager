@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 import { PushNotificationService } from "@/lib/services/push-notification";
 import { accountEvents, AccountEvent } from "@/lib/events/account-events";
 import { pubsub, EVENTS } from "@/lib/graphql/pubsub";
+import { publishAccountsUpdate } from "@/lib/graphql/publish-accounts-update";
 
 export const mobileUserAccountResolvers = {
   Query: {
@@ -164,6 +165,9 @@ export const mobileUserAccountResolvers = {
         accountNumber: account.accountNumber,
       });
 
+      // Publish update to subscribers
+      await publishAccountsUpdate(userId);
+
       return {
         id: account.id.toString(),
         accountNumber: account.accountNumber,
@@ -226,6 +230,9 @@ export const mobileUserAccountResolvers = {
         accountNumber: account.accountNumber,
       });
 
+      // Publish update to subscribers
+      await publishAccountsUpdate(userId);
+
       return true;
     },
 
@@ -257,6 +264,9 @@ export const mobileUserAccountResolvers = {
         data: { isPrimary: true }
       });
 
+      // Publish update to subscribers
+      await publishAccountsUpdate(userId);
+
       return true;
     },
 
@@ -277,6 +287,9 @@ export const mobileUserAccountResolvers = {
           ...(args.accountType !== undefined && { accountType: args.accountType }),
         }
       });
+
+      // Publish update to subscribers
+      await publishAccountsUpdate(account.mobileUserId);
 
       return {
         id: account.id.toString(),
@@ -320,6 +333,9 @@ export const mobileUserAccountResolvers = {
         where: { id: accountId },
         data: { nickName: args.nickName }
       });
+
+      // Publish update to subscribers
+      await publishAccountsUpdate(updatedAccount.mobileUserId);
 
       return {
         id: updatedAccount.id.toString(),
@@ -388,6 +404,9 @@ export const mobileUserAccountResolvers = {
         console.error("Failed to send freeze notification:", error);
       }
 
+      // Publish update to subscribers
+      await publishAccountsUpdate(updatedAccount.mobileUserId);
+
       return result;
     },
 
@@ -441,6 +460,9 @@ export const mobileUserAccountResolvers = {
         console.error("Failed to send unfreeze notification:", error);
       }
 
+      // Publish update to subscribers
+      await publishAccountsUpdate(updatedAccount.mobileUserId);
+
       return result;
     },
 
@@ -471,6 +493,9 @@ export const mobileUserAccountResolvers = {
         where: { id: accountId },
         data: { isHidden: true }
       });
+
+      // Publish update to subscribers
+      await publishAccountsUpdate(updatedAccount.mobileUserId);
 
       return {
         id: updatedAccount.id.toString(),
@@ -511,6 +536,9 @@ export const mobileUserAccountResolvers = {
         where: { id: accountId },
         data: { isHidden: false }
       });
+
+      // Publish update to subscribers
+      await publishAccountsUpdate(updatedAccount.mobileUserId);
 
       return {
         id: updatedAccount.id.toString(),

@@ -23,6 +23,17 @@ const MOBILE_QUERY_FIELDS = new Set([
   "proxyTransactionByReference",
   "proxyTransaction",
   "proxyAccountTransactions",
+  "mobileUserAccounts",
+  "mobileUserAccount",
+]);
+
+const MOBILE_SUBSCRIPTION_FIELDS = new Set([
+  "mobileUserCreated",
+  "mobileUserUpdated",
+  "deviceApprovalStatus",
+  "accountsUpdated",
+  "beneficiariesUpdated",
+  "appStructureUpdated",
 ]);
 
 const MOBILE_MUTATION_FIELDS = new Set([
@@ -115,6 +126,7 @@ function pickRootFields(
 
 const baseQuery = baseSchema.getQueryType();
 const baseMutation = baseSchema.getMutationType();
+const baseSubscription = baseSchema.getSubscriptionType();
 
 if (!baseQuery) {
   throw new Error("Base schema has no Query type");
@@ -129,6 +141,12 @@ export const mobileSchema = new GraphQLSchema({
     ? new GraphQLObjectType({
       name: baseMutation.name,
       fields: () => pickRootFields(baseMutation, MOBILE_MUTATION_FIELDS),
+    })
+    : undefined,
+  subscription: baseSubscription
+    ? new GraphQLObjectType({
+      name: baseSubscription.name,
+      fields: () => pickRootFields(baseSubscription, MOBILE_SUBSCRIPTION_FIELDS),
     })
     : undefined,
 });

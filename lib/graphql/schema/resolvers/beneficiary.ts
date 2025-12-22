@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db/prisma";
 import { Prisma } from "@prisma/client";
 import { GraphQLError } from "graphql";
 import { GraphQLContext } from "../../context";
+import { pubsub, EVENTS } from "../../pubsub";
+import { publishBeneficiariesUpdate } from "../../publish-beneficiaries-update";
 
 export const beneficiaryResolvers = {
   Query: {
@@ -252,6 +254,9 @@ export const beneficiaryResolvers = {
           },
         });
 
+        // Publish update to subscribers
+        await publishBeneficiariesUpdate(actualInput.userId);
+
         return {
           id: beneficiary.id.toString(),
           userId: beneficiary.userId,
@@ -339,6 +344,9 @@ export const beneficiaryResolvers = {
         },
       });
 
+      // Publish update to subscribers
+      await publishBeneficiariesUpdate(beneficiary.userId);
+
       return {
         id: beneficiary.id.toString(),
         userId: beneficiary.userId,
@@ -389,6 +397,10 @@ export const beneficiaryResolvers = {
       await prisma.beneficiary.delete({
         where: { id: parseInt(id) },
       });
+
+      // Publish update to subscribers
+      await publishBeneficiariesUpdate(existing.userId);
+
       return true;
     },
 
@@ -426,6 +438,9 @@ export const beneficiaryResolvers = {
         },
       });
 
+      // Publish update to subscribers
+      await publishBeneficiariesUpdate(updated.userId);
+
       return {
         id: updated.id.toString(),
         userId: updated.userId,
@@ -447,6 +462,13 @@ export const beneficiaryResolvers = {
           updatedAt: updated.user.updatedAt.toISOString(),
         } : null,
       };
+    },
+  },
+  Subscription: {
+    beneficiariesUpdated: {
+      subscribe: (_parent: any, { userId }: { userId: string }) =>
+        pubsub.subscribe(EVENTS.BENEFICIARIES_UPDATED, userId),
+      resolve: (payload: any) => payload,
     },
   },
 };
@@ -492,7 +514,6 @@ function validateBeneficiaryInput(input: any): {
         };
       }
       break;
-
     default:
       return {
         valid: false,
@@ -502,3 +523,11 @@ function validateBeneficiaryInput(input: any): {
 
   return { valid: true };
 }
+
+// Ensure Query and Mutation are already defined in beneficiaryResolvers before this point or merge them correctly
+// The previous structure was export const beneficiaryResolvers = { Query: { ... }, Mutation: { ... } };
+// I should add Subscription to the existing object if possible, but since I'm at the end of the file, 
+// I'll just append it to the exported object structure.
+
+// Wait, the original code had everything inside beneficiaryResolvers.
+// Let's just fix the end of the existing beneficiaryResolvers object.
