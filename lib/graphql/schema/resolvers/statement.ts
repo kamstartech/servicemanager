@@ -26,13 +26,6 @@ export const statementResolvers = {
             context: GraphQLContext
         ) => {
             try {
-                console.log('[StatementResolver] Processing statement request:', {
-                    userId: context.mobileUser?.id,
-                    accountNumber: args.accountNumber,
-                    format: args.format,
-                    dateRange: `${args.startDate} to ${args.endDate}`,
-                });
-
                 // 1. Verify user is authenticated
                 if (!context.mobileUser) {
                     throw new GraphQLError('You must be logged in to request a statement', {
@@ -75,12 +68,21 @@ export const statementResolvers = {
                 });
 
                 if (!statementData.success) {
-                    throw new GraphQLError(
-                        statementData.message || 'Failed to fetch statement from T24',
-                        {
-                            extensions: { code: 'T24_ERROR', errorCode: statementData.errorCode },
-                        }
-                    );
+                    let userFriendlyMessage = 'Unable to fetch your statement at this time. Please try again later.';
+
+                    if (statementData.errorCode === '404') {
+                        userFriendlyMessage = 'The statement service is currently unavailable for this account. Please verify your account details or contact support.';
+                    } else if (statementData.message && !statementData.message.includes('Runtime Error')) {
+                        userFriendlyMessage = statementData.message;
+                    }
+
+                    throw new GraphQLError(userFriendlyMessage, {
+                        extensions: {
+                            code: 'T24_ERROR',
+                            errorCode: statementData.errorCode,
+                            technicalMessage: statementData.message
+                        },
+                    });
                 }
 
                 // 5. Generate file based on format
