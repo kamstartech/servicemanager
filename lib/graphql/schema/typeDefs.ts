@@ -2297,4 +2297,25 @@ export const typeDefs = /* GraphQL */ `
     
     unreadNotificationCount: Int!
   }
+
+  # Statement Request Feature
+  enum StatementFormat {
+    PDF
+    EXCEL
+    CSV
+  }
+
+  type StatementRequestResult {
+    success: Boolean!
+    message: String!
+  }
+
+  extend type Mutation {
+    requestStatement(
+      accountNumber: String!
+      startDate: String!
+      endDate: String!
+      format: StatementFormat!
+    ): StatementRequestResult!
+  }
 `;
