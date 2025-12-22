@@ -84,6 +84,7 @@ const MOBILE_MUTATION_FIELDS = new Set([
   "updateBeneficiary",
   "deleteBeneficiary",
   "toggleBeneficiaryStatus",
+  "requestStatement",
 ]);
 
 function pickRootFields(

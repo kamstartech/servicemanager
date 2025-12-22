@@ -100,6 +100,7 @@ export class T24StatementService {
                     responseJson?.error?.code ||
                     "T24_STATEMENT_ERROR";
                 const message =
+                    responseJson?.description ||
                     responseJson?.message ||
                     responseJson?.error ||
                     responseJson?.error_description ||

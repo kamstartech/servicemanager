@@ -2,8 +2,8 @@ import type { GraphQLContext } from "@/lib/graphql/context";
 import { pubsub, EVENTS } from "@/lib/graphql/pubsub";
 import { GraphQLError } from 'graphql';
 import { prisma } from "@/lib/db/prisma";
-import { statementResolvers } from "@/graphql/resolvers/statement";
-import { checkbookResolvers } from "@/graphql/resolvers/checkbook";
+import { statementResolvers } from "./statement";
+import { checkbookResolvers } from "./checkbook";
 
 async function getHiddenAccountCategoryIds(): Promise<string[]> {
   const hidden = await prisma.accountCategory.findMany({

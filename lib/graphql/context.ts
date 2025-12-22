@@ -50,7 +50,7 @@ export async function createGraphQLContext({
   const tokenFromHeader = extractTokenFromHeader(authHeader);
   const token = adminToken || tokenFromHeader;
 
-  const deviceSession = (prisma as unknown as { deviceSession: any }).deviceSession;
+  const deviceSession = (prisma as any).deviceSession;
 
   // No token = unauthenticated context
   if (!token) {
