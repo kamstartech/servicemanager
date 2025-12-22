@@ -2326,6 +2326,13 @@ export const typeDefs = /* GraphQL */ `
       collectionPoint: String!
       notes: String
     ): CheckbookRequestResult!
+    
+    verifyPassword(password: String!): PasswordVerificationResult!
+  }
+
+  type PasswordVerificationResult {
+    success: Boolean!
+    message: String!
   }
 
   type CheckbookRequestResult {
