@@ -279,6 +279,8 @@ export const authResolvers = {
               accountName: acc.accountName,
               accountType: acc.accountType,
               currency: acc.currency,
+              categoryId: acc.categoryId,
+              categoryName: acc.categoryName,
               accountStatus: acc.accountStatus,
               holderName: acc.holderName,
               nickName: acc.nickName,
