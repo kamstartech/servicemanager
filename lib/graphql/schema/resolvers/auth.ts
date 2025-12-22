@@ -491,7 +491,7 @@ export const authResolvers = {
             ipAddress,
             location,
             attemptType: "PASSWORD_LOGIN",
-            status: "FAILED_POLICY",
+            status: "FAILED_DEVICE_BLOCKED",
             failureReason: "Multi-device session is disabled for this account",
             attemptedAt: new Date(),
           },
