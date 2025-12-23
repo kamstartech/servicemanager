@@ -61,41 +61,33 @@ export const ticketsResolvers = {
             const ticketId = parseInt(id);
             if (isNaN(ticketId)) return null;
 
-            return prisma.supportTicket.findUnique({
+            const ticket = await prisma.supportTicket.findUnique({
                 where: { id: ticketId },
                 include: { user: true }
             });
-        },
 
-        myTickets: async (_: any, args: any, context: GraphQLContext) => {
-            if (!context.mobileUser) {
-                // Return empty if not authenticated as mobile user
-                // Or throw error
-                throw new GraphQLError("Unauthorized");
+            if (!ticket) return null;
+
+            const userId = context.userId;
+
+            // If authenticated as mobile user (has userId but no adminUser)
+            if (userId && !context.adminUser) {
+                if (ticket.userId !== userId) {
+                    throw new GraphQLError("Unauthorized access to ticket");
+                }
+                return ticket;
             }
 
-            const userId = context.mobileUser.id;
-            const { page = 1, limit = 10 } = args;
+            // If admin
+            if (context.adminUser) {
+                return ticket;
+            }
 
-            const where = { userId };
+            // Not authenticated
+            throw new GraphQLError("Unauthorized");
+        },
 
-            const total = await prisma.supportTicket.count({ where });
-            const tickets = await prisma.supportTicket.findMany({
-                where,
-                skip: (page - 1) * limit,
-                take: limit,
-                orderBy: { updatedAt: 'desc' }
-            });
-
-            const pages = Math.ceil(total / limit);
-
-            return {
-                tickets,
-                total,
-                page,
-                pages
-            };
-        }
+        // myTickets moved to mobileTickets.ts
     },
 
     Mutation: {
@@ -103,7 +95,7 @@ export const ticketsResolvers = {
             const id = parseInt(ticketId);
 
             // Allow admin or ticket owner
-            if (!context.user) throw new GraphQLError("Unauthorized");
+            if (!context.userId && !context.adminUser) throw new GraphQLError("Unauthorized");
 
             const ticket = await prisma.supportTicket.findUnique({
                 where: { id }
@@ -111,9 +103,11 @@ export const ticketsResolvers = {
 
             if (!ticket) throw new GraphQLError("Ticket not found");
 
-            const isMobileUser = !!context.mobileUser;
+            const isMobileUser = !!context.userId && !context.adminUser;
             const senderType = isMobileUser ? MessageSenderType.USER : MessageSenderType.ADMIN;
-            const senderId = context.user.id; // MobileUser ID or AdminWebUser ID
+
+            // Use userId or adminUser.id explicitly
+            const senderId = isMobileUser ? context.userId! : context.adminUser!.id;
 
             // Transaction: Create message and update ticket timestamp
             const newMessage = await prisma.$transaction(async (tx) => {
@@ -143,75 +137,8 @@ export const ticketsResolvers = {
             return newMessage;
         },
 
-        createTicket: async (_: any, args: any, context: GraphQLContext) => {
-            if (!context.mobileUser) {
-                // Fallback for dev - remove in production or handle gracefully
-                // For now, throw
-                throw new GraphQLError("Unauthorized: Must be logged in to create ticket");
-            }
-
-            const { subject, category, priority, message } = args;
-            const userId = context.mobileUser.id;
-            const mobileContext = context.mobileUser.context; // e.g. MOBILE_BANKING or WALLET
-
-            const ticket = await prisma.supportTicket.create({
-                data: {
-                    subject,
-                    category: category || "General",
-                    priority: priority || TicketPriority.MEDIUM,
-                    status: TicketStatus.OPEN,
-                    context: mobileContext,
-                    userId,
-                    messages: {
-                        create: {
-                            message,
-                            senderType: MessageSenderType.USER,
-                            senderId: userId
-                        }
-                    }
-                }
-            });
-
-            return ticket;
-        },
-
-        sendTicketMessage: async (_: any, { ticketId, message }: { ticketId: string, message: string }, context: GraphQLContext) => {
-            // Alias for replyToTicket, but we can reuse logic or call specific
-            // Here we just reuse logic but ensure user is mobile user owner
-            if (!context.mobileUser) throw new GraphQLError("Unauthorized");
-
-            const id = parseInt(ticketId);
-            const ticket = await prisma.supportTicket.findUnique({ where: { id } });
-            if (!ticket) throw new GraphQLError("Ticket not found");
-
-            if (ticket.userId !== context.mobileUser.id) {
-                throw new GraphQLError("Unauthorized access to ticket");
-            }
-
-            // Create message (USER)
-            const newMessage = await prisma.$transaction(async (tx) => {
-                const msg = await tx.ticketMessage.create({
-                    data: {
-                        ticketId: id,
-                        message,
-                        senderType: MessageSenderType.USER,
-                        senderId: context.mobileUser!.id
-                    }
-                });
-
-                await tx.supportTicket.update({
-                    where: { id },
-                    data: {
-                        updatedAt: new Date(),
-                        status: ticket.status === TicketStatus.CLOSED ? TicketStatus.OPEN : undefined
-                    }
-                });
-
-                return msg;
-            });
-
-            return newMessage;
-        },
+        // createTicket moved to mobileTickets.ts
+        // sendTicketMessage moved to mobileTickets.ts
 
         updateTicketStatus: async (_: any, { ticketId, status }: { ticketId: string, status: TicketStatus }, context: GraphQLContext) => {
             if (!context.adminUser) throw new GraphQLError("Unauthorized: Admin only");

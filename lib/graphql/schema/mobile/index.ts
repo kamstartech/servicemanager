@@ -25,6 +25,8 @@ const MOBILE_QUERY_FIELDS = new Set([
   "proxyAccountTransactions",
   "mobileUserAccounts",
   "mobileUserAccount",
+  "myTickets",
+  "ticket",
 ]);
 
 const MOBILE_SUBSCRIPTION_FIELDS = new Set([
@@ -87,6 +89,9 @@ const MOBILE_MUTATION_FIELDS = new Set([
   "requestStatement",
   "requestCheckbook",
   "verifyPassword",
+  "createTicket",
+  "replyToTicket",
+  "sendTicketMessage",
 ]);
 
 function pickRootFields(

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db/prisma";
 import { statementResolvers } from "./statement";
 import { checkbookResolvers } from "./checkbook";
 import { passwordResolvers } from "./password";
+import { mobileTicketsResolvers } from "./mobileTickets";
 
 async function getHiddenAccountCategoryIds(): Promise<string[]> {
   const hidden = await prisma.accountCategory.findMany({
@@ -328,6 +329,8 @@ export const mobileResolvers = {
 
       return user;
     },
+
+    ...mobileTicketsResolvers.Query,
   },
 
   Mutation: {
@@ -802,5 +805,8 @@ export const mobileResolvers = {
 
     // Password verification mutation
     ...passwordResolvers.Mutation,
+
+    // Ticket mutations
+    ...mobileTicketsResolvers.Mutation,
   },
 };
