@@ -2390,7 +2390,7 @@ export const typeDefs = /* GraphQL */ `
     pages: Int!
   }
 
-  type Query {
+  extend type Query {
     tickets(
       status: TicketStatus
       context: MobileUserContext
@@ -2400,18 +2400,12 @@ export const typeDefs = /* GraphQL */ `
     ): TicketResponse!
     ticket(id: ID!): SupportTicket
     myTickets(page: Int, limit: Int): TicketResponse!
-
-    
-    # Existing queries...
-    # (Note: we are appending to the string, so we need to be careful with the closing backtick)
   }
 
-  type Mutation {
+  extend type Mutation {
     createTicket(subject: String!, category: String, priority: TicketPriority!, message: String!): SupportTicket!
     replyToTicket(ticketId: ID!, message: String!): TicketMessage!
     sendTicketMessage(ticketId: ID!, message: String!): TicketMessage!
     updateTicketStatus(ticketId: ID!, status: TicketStatus!): SupportTicket!
-    
-    # Existing mutations...
   }
 `;
