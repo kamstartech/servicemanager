@@ -8,4 +8,5 @@ enum TransactionType {
   ACCOUNT_TO_WALLET
   WALLET_TO_ACCOUNT
   AIRTIME
+  BILL_PAYMENT
 }

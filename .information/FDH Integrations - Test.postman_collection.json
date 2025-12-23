@@ -1,0 +1,2528 @@
+{
+	"info": {
+		"_postman_id": "91d14bbb-f173-4f35-82fa-163a9a9600cb",
+		"name": "FDH Integrations - Test",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "7824185"
+	},
+	"item": [
+		{
+			"name": "Registrar General",
+			"item": [
+				{
+					"name": "Get Invoice",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/xml",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{host}}/api/registrar-general-test/accounts/BEDPVE",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"registrar-general-test",
+								"accounts",
+								"BEDPVE"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Get Invoice - Failed",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/xml",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://172.25.130.123/api/registrar-general-test/accounts/BEDPVE",
+									"protocol": "http",
+									"host": [
+										"172",
+										"25",
+										"130",
+										"123"
+									],
+									"path": [
+										"api",
+										"registrar-general-test",
+										"accounts",
+										"BEDPVE"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "xml",
+							"header": [
+								{
+									"key": "Server",
+									"value": "nginx/1.18.0 (Ubuntu)"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/xml"
+								},
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Wed, 11 Sep 2024 11:31:29 GMT"
+								},
+								{
+									"key": "X-RateLimit-Limit",
+									"value": "999999"
+								},
+								{
+									"key": "X-RateLimit-Remaining",
+									"value": "999998"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								}
+							],
+							"cookie": [],
+							"body": "<?xml version=\"1.0\"?>\n<response>\n    <status>request failed</status>\n    <message>IP address 172.25.5.112 not whitelisted</message>\n</response>"
+						},
+						{
+							"name": "Get Invoice - Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/xml",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://172.25.130.123/api/registrar-general-test/accounts/BEDPVE",
+									"protocol": "http",
+									"host": [
+										"172",
+										"25",
+										"130",
+										"123"
+									],
+									"path": [
+										"api",
+										"registrar-general-test",
+										"accounts",
+										"BEDPVE"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "xml",
+							"header": [
+								{
+									"key": "Server",
+									"value": "nginx/1.18.0 (Ubuntu)"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/xml"
+								},
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Wed, 11 Sep 2024 15:43:18 GMT"
+								},
+								{
+									"key": "X-RateLimit-Limit",
+									"value": "999999"
+								},
+								{
+									"key": "X-RateLimit-Remaining",
+									"value": "999998"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								}
+							],
+							"cookie": [],
+							"body": "<?xml version=\"1.0\"?>\n<response>\n    <status>success</status>\n    <account>\n        <id>410438</id>\n        <integration_id>26</integration_id>\n        <number>BEDPVE</number>\n        <name>John Doe </name>\n        <description></description>\n        <attribute_1>800.00</attribute_1>\n        <attribute_2>MWK</attribute_2>\n        <attribute_3>pending</attribute_3>\n        <attribute_4>FDH Test Service</attribute_4>\n        <attribute_5></attribute_5>\n        <attribute_6></attribute_6>\n        <created_at>2024-07-04T09:03:49.000000Z</created_at>\n        <updated_at>2024-07-04T09:03:49.000000Z</updated_at>\n    </account>\n</response>"
+						}
+					]
+				},
+				{
+					"name": "Confirm Invoice",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "<?xml version=\"1.0\"?>\n<post-payment-request>\n\t<our-transaction-id>TT24254MKT2H</our-transaction-id>\n\t<account-number>BEDPVE</account-number>\n\t<amount>800.00</amount>\n\t<currency>MWK</currency>\n\t<credit-account>1040000152833</credit-account>\n\t<credit-account-type>account</credit-account-type>\n\t<debit-account>000000000001</debit-account>\n\t<debit-account-type>account</debit-account-type>\n\t<customer-account-number>000000000001</customer-account-number>\n\t<customer-account-name>Fanuel Jeckey Mzizah</customer-account-name>\n</post-payment-request>\n",
+							"options": {
+								"raw": {
+									"language": "xml"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/api/registrar-general-test/transactions",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"registrar-general-test",
+								"transactions"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Confirm Invoice - Failed",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\"?>\n<post-payment-request>\n\t<our-transaction-id>TT24254MFV2H</our-transaction-id>\n\t<account-number>BEDPVE</account-number>\n\t<amount>800.00</amount>\n\t<currency>MWK</currency>\n\t<credit-account>1040000152833</credit-account>\n\t<credit-account-type>account</credit-account-type>\n\t<debit-account>000000000001</debit-account>\n\t<debit-account-type>account</debit-account-type>\n\t<customer-account-number>000000000001</customer-account-number>\n\t<customer-account-name>Fanuel Jeckey Mzizah</customer-account-name>\n</post-payment-request>\n",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://172.25.130.123/api/registrar-general-test/transactions",
+									"protocol": "http",
+									"host": [
+										"172",
+										"25",
+										"130",
+										"123"
+									],
+									"path": [
+										"api",
+										"registrar-general-test",
+										"transactions"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "xml",
+							"header": [
+								{
+									"key": "Server",
+									"value": "nginx/1.18.0 (Ubuntu)"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/xml"
+								},
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Wed, 11 Sep 2024 15:43:52 GMT"
+								},
+								{
+									"key": "X-RateLimit-Limit",
+									"value": "999999"
+								},
+								{
+									"key": "X-RateLimit-Remaining",
+									"value": "999997"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								}
+							],
+							"cookie": [],
+							"body": "<?xml version=\"1.0\"?>\n<response>\n    <status>request failed</status>\n    <message>Error posting TT24254MFV2H: Unauthorized Invalid Hash or signature</message>\n</response>"
+						}
+					]
+				}
+			],
+			"description": "API for posting payments for the Department of the Registrar General."
+		},
+		{
+			"name": "BWB Postpaid",
+			"item": [
+				{
+					"name": "Get Water Account Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/xml",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{host}}/api/bwb-postpaid-test/accounts/016207721",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"bwb-postpaid-test",
+								"accounts",
+								"016207721"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Get Water Account Details - Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/xml",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://172.25.130.123/api/bwb-postpaid-test/accounts/016207721",
+									"protocol": "http",
+									"host": [
+										"172",
+										"25",
+										"130",
+										"123"
+									],
+									"path": [
+										"api",
+										"bwb-postpaid-test",
+										"accounts",
+										"016207721"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "xml",
+							"header": [
+								{
+									"key": "Server",
+									"value": "nginx/1.18.0 (Ubuntu)"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/xml"
+								},
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Wed, 11 Sep 2024 15:44:32 GMT"
+								},
+								{
+									"key": "X-RateLimit-Limit",
+									"value": "999999"
+								},
+								{
+									"key": "X-RateLimit-Remaining",
+									"value": "999998"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								}
+							],
+							"cookie": [],
+							"body": "<?xml version=\"1.0\"?>\n<response>\n    <status>success</status>\n    <account>\n        <id>45625</id>\n        <integration_id>22</integration_id>\n        <number>016207721</number>\n        <name>I MMADI.</name>\n        <description></description>\n        <attribute_1>265999829270</attribute_1>\n        <attribute_2>002/06172/000</attribute_2>\n        <attribute_3> 1374.8400</attribute_3>\n        <attribute_4>2020-06-30T00:00:00</attribute_4>\n        <attribute_5></attribute_5>\n        <attribute_6></attribute_6>\n        <created_at>2024-01-23T11:33:01.000000Z</created_at>\n        <updated_at>2024-01-23T11:33:01.000000Z</updated_at>\n    </account>\n</response>"
+						},
+						{
+							"name": "Get Water Account Details - Failed",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/xml",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://172.25.130.123/api/bwb-postpaid-test/accounts/01620772122",
+									"protocol": "http",
+									"host": [
+										"172",
+										"25",
+										"130",
+										"123"
+									],
+									"path": [
+										"api",
+										"bwb-postpaid-test",
+										"accounts",
+										"01620772122"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "xml",
+							"header": [
+								{
+									"key": "Server",
+									"value": "nginx/1.18.0 (Ubuntu)"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/xml"
+								},
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Wed, 11 Sep 2024 15:45:11 GMT"
+								},
+								{
+									"key": "X-RateLimit-Limit",
+									"value": "999999"
+								},
+								{
+									"key": "X-RateLimit-Remaining",
+									"value": "999997"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								}
+							],
+							"cookie": [],
+							"body": "<?xml version=\"1.0\"?>\n<response>\n    <status>request failed</status>\n    <message>Error: [&#xD;\n  {&#xD;\n    \"Code\": 5,&#xD;\n    \"Status\": \"Invalid Customer No. entered\"&#xD;\n  }&#xD;\n]</message>\n</response>"
+						}
+					]
+				},
+				{
+					"name": "Post Transaction",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "<?xml version=\"1.0\"?>\n<post-payment-request>\n\t<our-transaction-id>TT2425GBVFV2H</our-transaction-id>\n\t<account-number>016207721</account-number>\n\t<amount>100.00</amount>\n\t<currency>MWK</currency>\n\t<credit-account>1040000152833</credit-account>\n\t<credit-account-type>account</credit-account-type>\n\t<debit-account>000000000001</debit-account>\n\t<debit-account-type>account</debit-account-type>\n\t<customer-account-number>000000000001</customer-account-number>\n\t<customer-account-name>Fanuel Jeckey Mzizah</customer-account-name>\n</post-payment-request>\n",
+							"options": {
+								"raw": {
+									"language": "xml"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/api/bwb-postpaid-test/transactions",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"bwb-postpaid-test",
+								"transactions"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Post Transaction - Failed",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\"?>\n<post-payment-request>\n\t<our-transaction-id>TT24254MFV2H</our-transaction-id>\n\t<account-number>016207721</account-number>\n\t<amount>100.00</amount>\n\t<currency>MWK</currency>\n\t<credit-account>1040000152833</credit-account>\n\t<credit-account-type>account</credit-account-type>\n\t<debit-account>000000000001</debit-account>\n\t<debit-account-type>account</debit-account-type>\n\t<customer-account-number>000000000001</customer-account-number>\n\t<customer-account-name>Fanuel Jeckey Mzizah</customer-account-name>\n</post-payment-request>\n",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://172.25.130.123/api/bwb-postpaid-test/transactions",
+									"protocol": "http",
+									"host": [
+										"172",
+										"25",
+										"130",
+										"123"
+									],
+									"path": [
+										"api",
+										"bwb-postpaid-test",
+										"transactions"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "xml",
+							"header": [
+								{
+									"key": "Server",
+									"value": "nginx/1.18.0 (Ubuntu)"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/xml"
+								},
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Wed, 11 Sep 2024 15:47:12 GMT"
+								},
+								{
+									"key": "X-RateLimit-Limit",
+									"value": "999999"
+								},
+								{
+									"key": "X-RateLimit-Remaining",
+									"value": "999997"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								}
+							],
+							"cookie": [],
+							"body": "<?xml version=\"1.0\"?>\n<response>\n    <status>request failed</status>\n    <message>Error posting TT24254MFV2H: [&#xD;\n  {&#xD;\n    \"Code\": 11,&#xD;\n    \"Status\": \"Payment with this reference been previously used\"&#xD;\n  }&#xD;\n]</message>\n</response>"
+						},
+						{
+							"name": "Post Transaction - Success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\"?>\n<post-payment-request>\n\t<our-transaction-id>TT34254MFV2H</our-transaction-id>\n\t<account-number>016207721</account-number>\n\t<amount>100.00</amount>\n\t<currency>MWK</currency>\n\t<credit-account>1040000152833</credit-account>\n\t<credit-account-type>account</credit-account-type>\n\t<debit-account>000000000001</debit-account>\n\t<debit-account-type>account</debit-account-type>\n\t<customer-account-number>000000000001</customer-account-number>\n\t<customer-account-name>Fanuel Jeckey Mzizah</customer-account-name>\n</post-payment-request>\n",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://172.25.130.123/api/bwb-postpaid-test/transactions",
+									"protocol": "http",
+									"host": [
+										"172",
+										"25",
+										"130",
+										"123"
+									],
+									"path": [
+										"api",
+										"bwb-postpaid-test",
+										"transactions"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "xml",
+							"header": [
+								{
+									"key": "Server",
+									"value": "nginx/1.18.0 (Ubuntu)"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/xml"
+								},
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Wed, 11 Sep 2024 15:47:43 GMT"
+								},
+								{
+									"key": "X-RateLimit-Limit",
+									"value": "999999"
+								},
+								{
+									"key": "X-RateLimit-Remaining",
+									"value": "999996"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								}
+							],
+							"cookie": [],
+							"body": "<?xml version=\"1.0\"?>\n<response>\n    <status>success</status>\n    <transaction>\n        <id>306543</id>\n        <integration_id>22</integration_id>\n        <our_transaction_id>TT34254MFV2H</our_transaction_id>\n        <their_transaction_id>83100138</their_transaction_id>\n        <account_number>016207721</account_number>\n        <amount>100</amount>\n        <attribute_1>016207721</attribute_1>\n        <attribute_2>TT34254MFV2H</attribute_2>\n        <attribute_3></attribute_3>\n        <attribute_4></attribute_4>\n        <attribute_5></attribute_5>\n        <attribute_6></attribute_6>\n        <request>&lt;?xml version=\"1.0\"?&gt;\n&lt;post-payment-request&gt;\n&lt;our-transaction-id&gt;TT34254MFV2H&lt;/our-transaction-id&gt;\n&lt;account-number&gt;016207721&lt;/account-number&gt;\n&lt;amount&gt;100.00&lt;/amount&gt;\n&lt;currency&gt;MWK&lt;/currency&gt;\n&lt;credit-account&gt;1040000152833&lt;/credit-account&gt;\n&lt;credit-account-type&gt;account&lt;/credit-account-type&gt;\n&lt;debit-account&gt;000000000001&lt;/debit-account&gt;\n&lt;debit-account-type&gt;account&lt;/debit-account-type&gt;\n&lt;customer-account-number&gt;000000000001&lt;/customer-account-number&gt;\n&lt;customer-account-name&gt;Fanuel Jeckey Mzizah&lt;/customer-account-name&gt;\n&lt;/post-payment-request&gt;\n</request>\n        <response></response>\n        <debit_account>000000000001</debit_account>\n        <debit_account_type>account</debit_account_type>\n        <credit_account>1040000152833</credit_account>\n        <credit_account_type>account</credit_account_type>\n        <failure_reason></failure_reason>\n        <reversal_ofs_request></reversal_ofs_request>\n        <reversal_ofs_response></reversal_ofs_response>\n        <is_third_party_synced></is_third_party_synced>\n        <is_t24_synced></is_t24_synced>\n        <status>success</status>\n        <failure_code></failure_code>\n        <http_status_code>200</http_status_code>\n        <source>172.25.5.112</source>\n        <created_at>2024-09-11T15:47:43.000000Z</created_at>\n        <updated_at>2024-09-11T15:47:43.000000Z</updated_at>\n        <attribute_7></attribute_7>\n        <attribute_8></attribute_8>\n        <attribute_9></attribute_9>\n        <attribute_10></attribute_10>\n        <raw_request>{&#xD;\n \"CommandName\" : \"API_Payments\",&#xD;\n \"Parameters\" : [&#xD;\n     \"2\",&#xD;\n     \"L3tm3in2$\",&#xD;\n     \"P\",&#xD;\n     \"016207721\",&#xD;\n     \"100.00\",&#xD;\n     \"2024-09-11\",&#xD;\n     \"TT34254MFV2H\"&#xD;\n     ]&#xD;\n}</raw_request>\n        <raw_response>[&#xD;\n  {&#xD;\n    \"ACCOUNT_NO\": \"016207721\",&#xD;\n    \"BANK_DOC_NO\": \"TT34254MFV2H\",&#xD;\n    \"EDAMS_RECEIPT_NO\": \"83100138\"&#xD;\n  }&#xD;\n]</raw_response>\n    </transaction>\n</response>"
+						}
+					]
+				}
+			],
+			"description": "API for posting payments for postpaid meter numbers for Blantyre Water Board (BWB)."
+		},
+		{
+			"name": "LWB Postpaid",
+			"item": [
+				{
+					"name": "Get Water Account Details",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/xml",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": []
+						},
+						"url": {
+							"raw": "{{host}}/api/lwb-postpaid-test/accounts/00127161",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"lwb-postpaid-test",
+								"accounts",
+								"00127161"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Get Water Account Details - Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/xml",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://172.25.130.123/api/lwb-postpaid-test/accounts/0012716",
+									"protocol": "http",
+									"host": [
+										"172",
+										"25",
+										"130",
+										"123"
+									],
+									"path": [
+										"api",
+										"lwb-postpaid-test",
+										"accounts",
+										"0012716"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "xml",
+							"header": [
+								{
+									"key": "Server",
+									"value": "nginx/1.18.0 (Ubuntu)"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/xml"
+								},
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Wed, 11 Sep 2024 15:46:13 GMT"
+								},
+								{
+									"key": "X-RateLimit-Limit",
+									"value": "999999"
+								},
+								{
+									"key": "X-RateLimit-Remaining",
+									"value": "999997"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								}
+							],
+							"cookie": [],
+							"body": "<?xml version=\"1.0\"?>\n<response>\n    <status>success</status>\n    <account>\n        <id>5</id>\n        <integration_id>4</integration_id>\n        <number>0012716</number>\n        <name>LILONGWE WATER BOARD</name>\n        <description>AREA 03 PLOT WWRK PTN 2</description>\n        <attribute_1></attribute_1>\n        <attribute_2>03//WWRK/2</attribute_2>\n        <attribute_3> 0.0000</attribute_3>\n        <attribute_4>2023-03-31T00:00:00</attribute_4>\n        <attribute_5></attribute_5>\n        <attribute_6></attribute_6>\n        <created_at>2023-07-05T07:44:20.000000Z</created_at>\n        <updated_at>2023-07-05T07:44:20.000000Z</updated_at>\n    </account>\n</response>"
+						},
+						{
+							"name": "Get Water Account Details  - Failed",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/xml",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://172.25.130.123/api/lwb-postpaid-test/accounts/001271622",
+									"protocol": "http",
+									"host": [
+										"172",
+										"25",
+										"130",
+										"123"
+									],
+									"path": [
+										"api",
+										"lwb-postpaid-test",
+										"accounts",
+										"001271622"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "xml",
+							"header": [
+								{
+									"key": "Server",
+									"value": "nginx/1.18.0 (Ubuntu)"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/xml"
+								},
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Wed, 11 Sep 2024 15:46:37 GMT"
+								},
+								{
+									"key": "X-RateLimit-Limit",
+									"value": "999999"
+								},
+								{
+									"key": "X-RateLimit-Remaining",
+									"value": "999996"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								}
+							],
+							"cookie": [],
+							"body": "<?xml version=\"1.0\"?>\n<response>\n    <status>request failed</status>\n    <message>Error: [&#xD;\n  {&#xD;\n    \"Code\": 2,&#xD;\n    \"Status\": \"Incorrect Bank Access Key\"&#xD;\n  }&#xD;\n]</message>\n</response>"
+						}
+					]
+				},
+				{
+					"name": "Post Transaction",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "<?xml version=\"1.0\"?>\n<post-payment-request>\n\t<our-transaction-id>FT24254MFV64</our-transaction-id>\n\t<account-number>00127161</account-number>\n\t<amount>300.00</amount>\n\t<currency>MWK</currency>\n\t<credit-account>1040000152833</credit-account>\n\t<credit-account-type>account</credit-account-type>\n\t<debit-account>000000000001</debit-account>\n\t<debit-account-type>account</debit-account-type>\n\t<customer-account-number>000000000001</customer-account-number>\n\t<customer-account-name>LILONGWE WATER BOARD</customer-account-name>\n</post-payment-request>\n",
+							"options": {
+								"raw": {
+									"language": "xml"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/api/lwb-postpaid-test/transactions",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"lwb-postpaid-test",
+								"transactions"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Post Transaction - Failed",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\"?>\n<post-payment-request>\n\t<our-transaction-id>TT24254MFV2H</our-transaction-id>\n\t<account-number>0012716</account-number>\n\t<amount>300.00</amount>\n\t<currency>MWK</currency>\n\t<credit-account>1040000152833</credit-account>\n\t<credit-account-type>account</credit-account-type>\n\t<debit-account>000000000001</debit-account>\n\t<debit-account-type>account</debit-account-type>\n\t<customer-account-number>000000000001</customer-account-number>\n\t<customer-account-name>LILONGWE WATER BOARD</customer-account-name>\n</post-payment-request>\n",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://172.25.130.123/api/lwb-postpaid-test/transactions",
+									"protocol": "http",
+									"host": [
+										"172",
+										"25",
+										"130",
+										"123"
+									],
+									"path": [
+										"api",
+										"lwb-postpaid-test",
+										"transactions"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "xml",
+							"header": [
+								{
+									"key": "Server",
+									"value": "nginx/1.18.0 (Ubuntu)"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/xml"
+								},
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Wed, 11 Sep 2024 15:48:13 GMT"
+								},
+								{
+									"key": "X-RateLimit-Limit",
+									"value": "999999"
+								},
+								{
+									"key": "X-RateLimit-Remaining",
+									"value": "999998"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								}
+							],
+							"cookie": [],
+							"body": "<?xml version=\"1.0\"?>\n<response>\n    <status>request failed</status>\n    <message>Error posting TT24254MFV2H: [&#xD;\n  {&#xD;\n    \"Code\": 2,&#xD;\n    \"Status\": \"Incorrect Bank Access Key\"&#xD;\n  }&#xD;\n]</message>\n</response>"
+						}
+					]
+				}
+			],
+			"description": "API for posting payments for postpaid meter numbers for Lilongwe Water Board (LWB)."
+		},
+		{
+			"name": "LWB Prepaid",
+			"item": [
+				{
+					"name": "Get Water Account Details",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/xml",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": []
+						},
+						"url": {
+							"raw": "{{host}}/api/lwb-prepaid-test/accounts/47500085205",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"lwb-prepaid-test",
+								"accounts",
+								"47500085205"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Get Water Account Details - Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/xml",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://172.25.130.123/api/lwb-postpaid-test/accounts/0012716",
+									"protocol": "http",
+									"host": [
+										"172",
+										"25",
+										"130",
+										"123"
+									],
+									"path": [
+										"api",
+										"lwb-postpaid-test",
+										"accounts",
+										"0012716"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "xml",
+							"header": [
+								{
+									"key": "Server",
+									"value": "nginx/1.18.0 (Ubuntu)"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/xml"
+								},
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Wed, 11 Sep 2024 15:46:13 GMT"
+								},
+								{
+									"key": "X-RateLimit-Limit",
+									"value": "999999"
+								},
+								{
+									"key": "X-RateLimit-Remaining",
+									"value": "999997"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								}
+							],
+							"cookie": [],
+							"body": "<?xml version=\"1.0\"?>\n<response>\n    <status>success</status>\n    <account>\n        <id>5</id>\n        <integration_id>4</integration_id>\n        <number>0012716</number>\n        <name>LILONGWE WATER BOARD</name>\n        <description>AREA 03 PLOT WWRK PTN 2</description>\n        <attribute_1></attribute_1>\n        <attribute_2>03//WWRK/2</attribute_2>\n        <attribute_3> 0.0000</attribute_3>\n        <attribute_4>2023-03-31T00:00:00</attribute_4>\n        <attribute_5></attribute_5>\n        <attribute_6></attribute_6>\n        <created_at>2023-07-05T07:44:20.000000Z</created_at>\n        <updated_at>2023-07-05T07:44:20.000000Z</updated_at>\n    </account>\n</response>"
+						},
+						{
+							"name": "Get Water Account Details  - Failed",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/xml",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://172.25.130.123/api/lwb-postpaid-test/accounts/001271622",
+									"protocol": "http",
+									"host": [
+										"172",
+										"25",
+										"130",
+										"123"
+									],
+									"path": [
+										"api",
+										"lwb-postpaid-test",
+										"accounts",
+										"001271622"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "xml",
+							"header": [
+								{
+									"key": "Server",
+									"value": "nginx/1.18.0 (Ubuntu)"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/xml"
+								},
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Wed, 11 Sep 2024 15:46:37 GMT"
+								},
+								{
+									"key": "X-RateLimit-Limit",
+									"value": "999999"
+								},
+								{
+									"key": "X-RateLimit-Remaining",
+									"value": "999996"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								}
+							],
+							"cookie": [],
+							"body": "<?xml version=\"1.0\"?>\n<response>\n    <status>request failed</status>\n    <message>Error: [&#xD;\n  {&#xD;\n    \"Code\": 2,&#xD;\n    \"Status\": \"Incorrect Bank Access Key\"&#xD;\n  }&#xD;\n]</message>\n</response>"
+						}
+					]
+				},
+				{
+					"name": "Post Transaction",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "<?xml version=\"1.0\"?>\n<post-payment-request>\n\t<our-transaction-id>FT24254MFV6K</our-transaction-id>\n\t<account-number>47500085205</account-number>\n\t<amount>10.00</amount>\n\t<currency>MWK</currency>\n\t<credit-account>1040000152833</credit-account>\n\t<credit-account-type>account</credit-account-type>\n\t<debit-account>000000000001</debit-account>\n\t<debit-account-type>account</debit-account-type>\n\t<customer-account-number>000000000001</customer-account-number>\n\t<customer-account-name>LILONGWE WATER BOARD</customer-account-name>\n</post-payment-request>\n",
+							"options": {
+								"raw": {
+									"language": "xml"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/api/lwb-prepaid-test/transactions",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"lwb-prepaid-test",
+								"transactions"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Post Transaction - Failed",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\"?>\n<post-payment-request>\n\t<our-transaction-id>TT24254MFV2H</our-transaction-id>\n\t<account-number>0012716</account-number>\n\t<amount>300.00</amount>\n\t<currency>MWK</currency>\n\t<credit-account>1040000152833</credit-account>\n\t<credit-account-type>account</credit-account-type>\n\t<debit-account>000000000001</debit-account>\n\t<debit-account-type>account</debit-account-type>\n\t<customer-account-number>000000000001</customer-account-number>\n\t<customer-account-name>LILONGWE WATER BOARD</customer-account-name>\n</post-payment-request>\n",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://172.25.130.123/api/lwb-postpaid-test/transactions",
+									"protocol": "http",
+									"host": [
+										"172",
+										"25",
+										"130",
+										"123"
+									],
+									"path": [
+										"api",
+										"lwb-postpaid-test",
+										"transactions"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "xml",
+							"header": [
+								{
+									"key": "Server",
+									"value": "nginx/1.18.0 (Ubuntu)"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/xml"
+								},
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Wed, 11 Sep 2024 15:48:13 GMT"
+								},
+								{
+									"key": "X-RateLimit-Limit",
+									"value": "999999"
+								},
+								{
+									"key": "X-RateLimit-Remaining",
+									"value": "999998"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								}
+							],
+							"cookie": [],
+							"body": "<?xml version=\"1.0\"?>\n<response>\n    <status>request failed</status>\n    <message>Error posting TT24254MFV2H: [&#xD;\n  {&#xD;\n    \"Code\": 2,&#xD;\n    \"Status\": \"Incorrect Bank Access Key\"&#xD;\n  }&#xD;\n]</message>\n</response>"
+						}
+					]
+				}
+			],
+			"description": "API for posting payments for postpaid meter numbers for Lilongwe Water Board (LWB)."
+		},
+		{
+			"name": "SRWB Postpaid",
+			"item": [
+				{
+					"name": "Get Water Account Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/xml",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "http://172.25.130.123/api/srwb-postpaid-test/accounts/MMB01132",
+							"protocol": "http",
+							"host": [
+								"172",
+								"25",
+								"130",
+								"123"
+							],
+							"path": [
+								"api",
+								"srwb-postpaid-test",
+								"accounts",
+								"MMB01132"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Get Water Account Details - Failed",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/xml",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://172.25.130.123/api/srwb-postpaid-test/accounts/MMB01132",
+									"protocol": "http",
+									"host": [
+										"172",
+										"25",
+										"130",
+										"123"
+									],
+									"path": [
+										"api",
+										"srwb-postpaid-test",
+										"accounts",
+										"MMB01132"
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "html",
+							"header": [
+								{
+									"key": "Server",
+									"value": "nginx/1.18.0 (Ubuntu)"
+								},
+								{
+									"key": "Content-Type",
+									"value": "text/html; charset=UTF-8"
+								},
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "date",
+									"value": "Wed, 11 Sep 2024 15:48:36 GMT"
+								},
+								{
+									"key": "X-RateLimit-Limit",
+									"value": "999999"
+								},
+								{
+									"key": "X-RateLimit-Remaining",
+									"value": "999997"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "Content-Encoding",
+									"value": "gzip"
+								}
+							],
+							"cookie": [],
+							"body": "<!DOCTYPE html>\n<html lang=\"en\">\n    <head>\n        <meta charset=\"utf-8\">\n        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n        <title>Not Found</title>\n        <style>\n            /*! normalize.css v8.0.1 | MIT License | github.com/necolas/normalize.css */html{line-height:1.15;-webkit-text-size-adjust:100%}body{margin:0}a{background-color:transparent}code{font-family:monospace,monospace;font-size:1em}[hidden]{display:none}html{font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;line-height:1.5}*,:after,:before{box-sizing:border-box;border:0 solid #e2e8f0}a{color:inherit;text-decoration:inherit}code{font-family:Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace}svg,video{display:block;vertical-align:middle}video{max-width:100%;height:auto}.bg-white{--bg-opacity:1;background-color:#fff;background-color:rgba(255,255,255,var(--bg-opacity))}.bg-gray-100{--bg-opacity:1;background-color:#f7fafc;background-color:rgba(247,250,252,var(--bg-opacity))}.border-gray-200{--border-opacity:1;border-color:#edf2f7;border-color:rgba(237,242,247,var(--border-opacity))}.border-gray-400{--border-opacity:1;border-color:#cbd5e0;border-color:rgba(203,213,224,var(--border-opacity))}.border-t{border-top-width:1px}.border-r{border-right-width:1px}.flex{display:flex}.grid{display:grid}.hidden{display:none}.items-center{align-items:center}.justify-center{justify-content:center}.font-semibold{font-weight:600}.h-5{height:1.25rem}.h-8{height:2rem}.h-16{height:4rem}.text-sm{font-size:.875rem}.text-lg{font-size:1.125rem}.leading-7{line-height:1.75rem}.mx-auto{margin-left:auto;margin-right:auto}.ml-1{margin-left:.25rem}.mt-2{margin-top:.5rem}.mr-2{margin-right:.5rem}.ml-2{margin-left:.5rem}.mt-4{margin-top:1rem}.ml-4{margin-left:1rem}.mt-8{margin-top:2rem}.ml-12{margin-left:3rem}.-mt-px{margin-top:-1px}.max-w-xl{max-width:36rem}.max-w-6xl{max-width:72rem}.min-h-screen{min-height:100vh}.overflow-hidden{overflow:hidden}.p-6{padding:1.5rem}.py-4{padding-top:1rem;padding-bottom:1rem}.px-4{padding-left:1rem;padding-right:1rem}.px-6{padding-left:1.5rem;padding-right:1.5rem}.pt-8{padding-top:2rem}.fixed{position:fixed}.relative{position:relative}.top-0{top:0}.right-0{right:0}.shadow{box-shadow:0 1px 3px 0 rgba(0,0,0,.1),0 1px 2px 0 rgba(0,0,0,.06)}.text-center{text-align:center}.text-gray-200{--text-opacity:1;color:#edf2f7;color:rgba(237,242,247,var(--text-opacity))}.text-gray-300{--text-opacity:1;color:#e2e8f0;color:rgba(226,232,240,var(--text-opacity))}.text-gray-400{--text-opacity:1;color:#cbd5e0;color:rgba(203,213,224,var(--text-opacity))}.text-gray-500{--text-opacity:1;color:#a0aec0;color:rgba(160,174,192,var(--text-opacity))}.text-gray-600{--text-opacity:1;color:#718096;color:rgba(113,128,150,var(--text-opacity))}.text-gray-700{--text-opacity:1;color:#4a5568;color:rgba(74,85,104,var(--text-opacity))}.text-gray-900{--text-opacity:1;color:#1a202c;color:rgba(26,32,44,var(--text-opacity))}.uppercase{text-transform:uppercase}.underline{text-decoration:underline}.antialiased{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}.tracking-wider{letter-spacing:.05em}.w-5{width:1.25rem}.w-8{width:2rem}.w-auto{width:auto}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}@-webkit-keyframes spin{0%{transform:rotate(0deg)}to{transform:rotate(1turn)}}@keyframes spin{0%{transform:rotate(0deg)}to{transform:rotate(1turn)}}@-webkit-keyframes ping{0%{transform:scale(1);opacity:1}75%,to{transform:scale(2);opacity:0}}@keyframes ping{0%{transform:scale(1);opacity:1}75%,to{transform:scale(2);opacity:0}}@-webkit-keyframes pulse{0%,to{opacity:1}50%{opacity:.5}}@keyframes pulse{0%,to{opacity:1}50%{opacity:.5}}@-webkit-keyframes bounce{0%,to{transform:translateY(-25%);-webkit-animation-timing-function:cubic-bezier(.8,0,1,1);animation-timing-function:cubic-bezier(.8,0,1,1)}50%{transform:translateY(0);-webkit-animation-timing-function:cubic-bezier(0,0,.2,1);animation-timing-function:cubic-bezier(0,0,.2,1)}}@keyframes bounce{0%,to{transform:translateY(-25%);-webkit-animation-timing-function:cubic-bezier(.8,0,1,1);animation-timing-function:cubic-bezier(.8,0,1,1)}50%{transform:translateY(0);-webkit-animation-timing-function:cubic-bezier(0,0,.2,1);animation-timing-function:cubic-bezier(0,0,.2,1)}}@media (min-width:640px){.sm\\:rounded-lg{border-radius:.5rem}.sm\\:block{display:block}.sm\\:items-center{align-items:center}.sm\\:justify-start{justify-content:flex-start}.sm\\:justify-between{justify-content:space-between}.sm\\:h-20{height:5rem}.sm\\:ml-0{margin-left:0}.sm\\:px-6{padding-left:1.5rem;padding-right:1.5rem}.sm\\:pt-0{padding-top:0}.sm\\:text-left{text-align:left}.sm\\:text-right{text-align:right}}@media (min-width:768px){.md\\:border-t-0{border-top-width:0}.md\\:border-l{border-left-width:1px}.md\\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}}@media (min-width:1024px){.lg\\:px-8{padding-left:2rem;padding-right:2rem}}@media (prefers-color-scheme:dark){.dark\\:bg-gray-800{--bg-opacity:1;background-color:#2d3748;background-color:rgba(45,55,72,var(--bg-opacity))}.dark\\:bg-gray-900{--bg-opacity:1;background-color:#1a202c;background-color:rgba(26,32,44,var(--bg-opacity))}.dark\\:border-gray-700{--border-opacity:1;border-color:#4a5568;border-color:rgba(74,85,104,var(--border-opacity))}.dark\\:text-white{--text-opacity:1;color:#fff;color:rgba(255,255,255,var(--text-opacity))}.dark\\:text-gray-400{--text-opacity:1;color:#cbd5e0;color:rgba(203,213,224,var(--text-opacity))}}\n        </style>\n        <style>\n            body {\n                font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"Noto Sans\", sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\";\n            }\n        </style>\n    </head>\n    <body class=\"antialiased\">\n        <div class=\"relative flex items-top justify-center min-h-screen bg-gray-100 dark:bg-gray-900 sm:items-center sm:pt-0\">\n            <div class=\"max-w-xl mx-auto sm:px-6 lg:px-8\">\n                <div class=\"flex items-center pt-8 sm:justify-start sm:pt-0\">\n                    <div class=\"px-4 text-lg text-gray-500 border-r border-gray-400 tracking-wider\">\n                        404                    </div>\n                    <div class=\"ml-4 text-lg text-gray-500 uppercase tracking-wider\">\n                        Not Found                    </div>\n                </div>\n            </div>\n        </div>\n    </body>\n</html>"
+						}
+					]
+				},
+				{
+					"name": "Post Transaction",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "<?xml version=\"1.0\"?>\n<post-payment-request>\n\t<our-transaction-id>TT24254MFTRH</our-transaction-id>\n\t<account-number>MMB01132</account-number>\n\t<amount>300.00</amount>\n\t<currency>MWK</currency>\n\t<credit-account>1040000152833</credit-account>\n\t<credit-account-type>account</credit-account-type>\n\t<debit-account>000000000001</debit-account>\n\t<debit-account-type>account</debit-account-type>\n\t<customer-account-number>000000000001</customer-account-number>\n\t<customer-account-name>Fanuel Jeckey Mzizah</customer-account-name>\n</post-payment-request>\n",
+							"options": {
+								"raw": {
+									"language": "xml"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://172.25.130.123/api/srwb-prepaid-test/transactions",
+							"protocol": "http",
+							"host": [
+								"172",
+								"25",
+								"130",
+								"123"
+							],
+							"path": [
+								"api",
+								"srwb-prepaid-test",
+								"transactions"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Post Transaction - Failed",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\"?>\n<post-payment-request>\n\t<our-transaction-id>TT24254MFV2H</our-transaction-id>\n\t<account-number>MMB01132</account-number>\n\t<amount>300.00</amount>\n\t<currency>MWK</currency>\n\t<credit-account>1040000152833</credit-account>\n\t<credit-account-type>account</credit-account-type>\n\t<debit-account>000000000001</debit-account>\n\t<debit-account-type>account</debit-account-type>\n\t<customer-account-number>000000000001</customer-account-number>\n\t<customer-account-name>Fanuel Jeckey Mzizah</customer-account-name>\n</post-payment-request>\n",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://172.25.130.123/api/srwb-prepaid-test/transactions",
+									"protocol": "http",
+									"host": [
+										"172",
+										"25",
+										"130",
+										"123"
+									],
+									"path": [
+										"api",
+										"srwb-prepaid-test",
+										"transactions"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "xml",
+							"header": [
+								{
+									"key": "Server",
+									"value": "nginx/1.18.0 (Ubuntu)"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/xml"
+								},
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Wed, 11 Sep 2024 15:49:21 GMT"
+								},
+								{
+									"key": "X-RateLimit-Limit",
+									"value": "999999"
+								},
+								{
+									"key": "X-RateLimit-Remaining",
+									"value": "999998"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								}
+							],
+							"cookie": [],
+							"body": "<?xml version=\"1.0\"?>\n<response>\n    <status>request failed</status>\n    <message>Error posting TT24254MFV2H: Revenue collecting agency user does not exist</message>\n</response>"
+						}
+					]
+				}
+			],
+			"description": "API for posting payments for postpaid meter numbers for Southern Region Water Board (SRWB)."
+		},
+		{
+			"name": "SRWB Prepaid",
+			"item": [
+				{
+					"name": "Get Invoice",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/xml",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{host}}/api/srwb-prepaid-test/accounts/0120014000828",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"srwb-prepaid-test",
+								"accounts",
+								"0120014000828"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Get Invoice - Failed",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/xml",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://172.25.130.123/api/srwb-prepaid-test/accounts/0120014000828",
+									"protocol": "http",
+									"host": [
+										"172",
+										"25",
+										"130",
+										"123"
+									],
+									"path": [
+										"api",
+										"srwb-prepaid-test",
+										"accounts",
+										"0120014000828"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "xml",
+							"header": [
+								{
+									"key": "Server",
+									"value": "nginx/1.18.0 (Ubuntu)"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/xml"
+								},
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Wed, 11 Sep 2024 15:49:45 GMT"
+								},
+								{
+									"key": "X-RateLimit-Limit",
+									"value": "999999"
+								},
+								{
+									"key": "X-RateLimit-Remaining",
+									"value": "999997"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								}
+							],
+							"cookie": [],
+							"body": "<?xml version=\"1.0\"?>\n<response>\n    <status>request failed</status>\n    <message>Error: {\"account_name\":null,\"balance\":null,\"is_error\":true,\"status_code\":9,\"message\":\"Revenue collecting agency user does not exist\"}</message>\n</response>"
+						}
+					]
+				},
+				{
+					"name": "Confirm Invoice",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "<?xml version=\"1.0\"?>\n<post-payment-request>\n\t<our-transaction-id>TT24254MLM2A</our-transaction-id>\n\t<account-number>0120014000828</account-number>\n\t<amount>400.00</amount>\n\t<currency>MWK</currency>\n\t<credit-account>1040000152833</credit-account>\n\t<credit-account-type>account</credit-account-type>\n\t<debit-account>000000000001</debit-account>\n\t<debit-account-type>account</debit-account-type>\n\t<customer-account-number>000000000001</customer-account-number>\n\t<customer-account-name>Fanuel Jeckey Mzizah</customer-account-name>\n</post-payment-request>\n",
+							"options": {
+								"raw": {
+									"language": "xml"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/api/srwb-prepaid-test/transactions",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"srwb-prepaid-test",
+								"transactions"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Confirm Invoice - Failed",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\"?>\n<post-payment-request>\n\t<our-transaction-id>TT24254MFV2H</our-transaction-id>\n\t<account-number>0120014000828</account-number>\n\t<amount>400.00</amount>\n\t<currency>MWK</currency>\n\t<credit-account>1040000152833</credit-account>\n\t<credit-account-type>account</credit-account-type>\n\t<debit-account>000000000001</debit-account>\n\t<debit-account-type>account</debit-account-type>\n\t<customer-account-number>000000000001</customer-account-number>\n\t<customer-account-name>Fanuel Jeckey Mzizah</customer-account-name>\n</post-payment-request>\n",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://172.25.130.123/api/srwb-prepaid-test/transactions",
+									"protocol": "http",
+									"host": [
+										"172",
+										"25",
+										"130",
+										"123"
+									],
+									"path": [
+										"api",
+										"srwb-prepaid-test",
+										"transactions"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "xml",
+							"header": [
+								{
+									"key": "Server",
+									"value": "nginx/1.18.0 (Ubuntu)"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/xml"
+								},
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Wed, 11 Sep 2024 15:50:06 GMT"
+								},
+								{
+									"key": "X-RateLimit-Limit",
+									"value": "999999"
+								},
+								{
+									"key": "X-RateLimit-Remaining",
+									"value": "999996"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								}
+							],
+							"cookie": [],
+							"body": "<?xml version=\"1.0\"?>\n<response>\n    <status>request failed</status>\n    <message>Error posting TT24254MFV2H: Revenue collecting agency user does not exist</message>\n</response>"
+						}
+					]
+				}
+			],
+			"description": "API for posting payments for prepaid meter numbers for Southern Region Water Board (SRWB)."
+		},
+		{
+			"name": "MASM",
+			"item": [
+				{
+					"name": "Get Account Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/xml",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{host}}/api/masm-test/accounts/150039717?type=M",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"masm-test",
+								"accounts",
+								"150039717"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "M"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Get Account Details - Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/xml",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://172.25.130.123/api/masm-test/accounts/150039717?type=M",
+									"protocol": "http",
+									"host": [
+										"172",
+										"25",
+										"130",
+										"123"
+									],
+									"path": [
+										"api",
+										"masm-test",
+										"accounts",
+										"150039717"
+									],
+									"query": [
+										{
+											"key": "type",
+											"value": "M"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "xml",
+							"header": [
+								{
+									"key": "Server",
+									"value": "nginx/1.18.0 (Ubuntu)"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/xml"
+								},
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Wed, 11 Sep 2024 15:50:28 GMT"
+								},
+								{
+									"key": "X-RateLimit-Limit",
+									"value": "999999"
+								},
+								{
+									"key": "X-RateLimit-Remaining",
+									"value": "999998"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								}
+							],
+							"cookie": [],
+							"body": "<?xml version=\"1.0\"?>\n<response>\n    <status>success</status>\n    <account>\n        <id>510244</id>\n        <integration_id>27</integration_id>\n        <number>150039717</number>\n        <name>150039717MS CUCUMBER SPICE</name>\n        <description>EXECUTIVE</description>\n        <attribute_1>399700</attribute_1>\n        <attribute_2></attribute_2>\n        <attribute_3></attribute_3>\n        <attribute_4></attribute_4>\n        <attribute_5></attribute_5>\n        <attribute_6></attribute_6>\n        <created_at>2024-09-10T08:49:49.000000Z</created_at>\n        <updated_at>2024-09-10T08:49:49.000000Z</updated_at>\n    </account>\n</response>"
+						},
+						{
+							"name": "Get Account Details - Failed",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/xml",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://172.25.130.123/api/masm-test/accounts/15003917?type=M",
+									"protocol": "http",
+									"host": [
+										"172",
+										"25",
+										"130",
+										"123"
+									],
+									"path": [
+										"api",
+										"masm-test",
+										"accounts",
+										"15003917"
+									],
+									"query": [
+										{
+											"key": "type",
+											"value": "M"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "xml",
+							"header": [
+								{
+									"key": "Server",
+									"value": "nginx/1.18.0 (Ubuntu)"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/xml"
+								},
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Wed, 11 Sep 2024 15:50:48 GMT"
+								},
+								{
+									"key": "X-RateLimit-Limit",
+									"value": "999999"
+								},
+								{
+									"key": "X-RateLimit-Remaining",
+									"value": "999997"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								}
+							],
+							"cookie": [],
+							"body": "<?xml version=\"1.0\"?>\n<response>\n    <status>request failed</status>\n    <message>Error: &lt;?xml version='1.0' encoding='UTF-8'?&gt;&lt;S:Envelope xmlns:S=\"http://schemas.xmlsoap.org/soap/envelope/\"&gt;&lt;S:Body&gt;&lt;BalanceResponse xmlns=\"http://oldfort.co.za/hip/pay\"&gt;&lt;Header&gt;&lt;TransactionID&gt;1&lt;/TransactionID&gt;&lt;Source&gt;MASM&lt;/Source&gt;&lt;TransmissionDate&gt;20240911175048&lt;/TransmissionDate&gt;&lt;Destination&gt;FDH BANK&lt;/Destination&gt;&lt;Status&gt;M18&lt;/Status&gt;&lt;StatusMessage&gt;NO REFERENCE FOUND WHILE CHECKING GIVEN REFERENCE TYPE 15003917&lt;/StatusMessage&gt;&lt;/Header&gt;&lt;/BalanceResponse&gt;&lt;/S:Body&gt;&lt;/S:Envelope&gt;</message>\n</response>"
+						}
+					]
+				},
+				{
+					"name": "Confirm Invoice",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "<?xml version=\"1.0\"?>\n<post-payment-request>\n\t<our-transaction-id>TT242TYMFV2H</our-transaction-id>\n\t<account-number>150039717</account-number>\n\t<amount>400.00</amount>\n    <type>M</type>\n\t<currency>MWK</currency>\n\t<credit-account>1040000152833</credit-account>\n\t<credit-account-type>account</credit-account-type>\n\t<debit-account>000000000001</debit-account>\n\t<debit-account-type>account</debit-account-type>\n\t<customer-account-number>000000000001</customer-account-number>\n\t<customer-account-name>CUCUMBER SPICE</customer-account-name>\n</post-payment-request>\n",
+							"options": {
+								"raw": {
+									"language": "xml"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/api/masm-test/transactions",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"masm-test",
+								"transactions"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "API for posting Medical Aid Societ of Malawi (MASM) payments"
+		},
+		{
+			"name": "Airtel Money Validation",
+			"item": [
+				{
+					"name": "Get Airtel Money Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/xml",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{host}}/api/airtel-validation/accounts/{{AirtelMobielNo}}",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"airtel-validation",
+								"accounts",
+								"{{AirtelMobielNo}}"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Get Airtel Money Details - Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/xml",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://172.25.130.123/api/airtel-validation/accounts/{{AirtelMobielNo}}",
+									"protocol": "http",
+									"host": [
+										"172",
+										"25",
+										"130",
+										"123"
+									],
+									"path": [
+										"api",
+										"airtel-validation",
+										"accounts",
+										"{{AirtelMobielNo}}"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "xml",
+							"header": [
+								{
+									"key": "Server",
+									"value": "nginx/1.18.0 (Ubuntu)"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/xml"
+								},
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Wed, 11 Sep 2024 15:51:31 GMT"
+								},
+								{
+									"key": "X-RateLimit-Limit",
+									"value": "999999"
+								},
+								{
+									"key": "X-RateLimit-Remaining",
+									"value": "999998"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								}
+							],
+							"cookie": [],
+							"body": "<?xml version=\"1.0\"?>\n<response>\n    <status>success</status>\n    <account>\n        <id>52759</id>\n        <integration_id>25</integration_id>\n        <number>999888884</number>\n        <name>Elias</name>\n        <description>Makumba</description>\n        <attribute_1>SUBS</attribute_1>\n        <attribute_2>false</attribute_2>\n        <attribute_3></attribute_3>\n        <attribute_4></attribute_4>\n        <attribute_5></attribute_5>\n        <attribute_6></attribute_6>\n        <created_at>2024-02-20T13:44:39.000000Z</created_at>\n        <updated_at>2024-02-20T13:44:39.000000Z</updated_at>\n    </account>\n</response>"
+						},
+						{
+							"name": "Get Airtel Money Details - Failed",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/xml",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://172.25.130.123/api/airtel-validation/accounts/0881549242",
+									"protocol": "http",
+									"host": [
+										"172",
+										"25",
+										"130",
+										"123"
+									],
+									"path": [
+										"api",
+										"airtel-validation",
+										"accounts",
+										"0881549242"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "xml",
+							"header": [
+								{
+									"key": "Server",
+									"value": "nginx/1.18.0 (Ubuntu)"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/xml"
+								},
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Wed, 11 Sep 2024 15:52:07 GMT"
+								},
+								{
+									"key": "X-RateLimit-Limit",
+									"value": "999999"
+								},
+								{
+									"key": "X-RateLimit-Remaining",
+									"value": "999997"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								}
+							],
+							"cookie": [],
+							"body": "<?xml version=\"1.0\"?>\n<response>\n    <status>not found</status>\n    <message>Account 0881549242 cannot be found</message>\n</response>"
+						}
+					]
+				}
+			],
+			"description": "API for validating if Airtel Mobile Number is registered for Airtel Money"
+		},
+		{
+			"name": "TNM Bundles",
+			"item": [
+				{
+					"name": "Get Bundle Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://172.25.131.190:5002/api/internetbundles/{{BundleId}}",
+							"protocol": "http",
+							"host": [
+								"172",
+								"25",
+								"131",
+								"190"
+							],
+							"port": "5002",
+							"path": [
+								"api",
+								"internetbundles",
+								"{{BundleId}}"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Get Bundle Details - Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://172.25.131.190:5002/api/internetbundles/{{BundleId}}",
+									"protocol": "http",
+									"host": [
+										"172",
+										"25",
+										"131",
+										"190"
+									],
+									"port": "5002",
+									"path": [
+										"api",
+										"internetbundles",
+										"{{BundleId}}"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "xml",
+							"header": [
+								{
+									"key": "Content-Length",
+									"value": "353"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/xml; charset=utf-8"
+								},
+								{
+									"key": "Server",
+									"value": "Microsoft-IIS/10.0"
+								},
+								{
+									"key": "X-Powered-By",
+									"value": "ASP.NET"
+								},
+								{
+									"key": "Date",
+									"value": "Wed, 11 Sep 2024 13:19:25 GMT"
+								}
+							],
+							"cookie": [],
+							"body": "<InternetBundleLookupResult xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns=\"https://www.fdh.co.mw/tnm\">\n    <ResponseCode>200</ResponseCode>\n    <ResponseDescription i:nil=\"true\" />\n    <BundleExists>true</BundleExists>\n    <Data>\n        <DisplayName>Smart 60MB</DisplayName>\n        <Id>239678</Id>\n        <Name>Smart 60MB</Name>\n        <Price>199.00</Price>\n    </Data>\n</InternetBundleLookupResult>"
+						},
+						{
+							"name": "Get Bundle Details - Invalid",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://172.25.131.190:5002/api/internetbundles/{{BundleId}}",
+									"protocol": "http",
+									"host": [
+										"172",
+										"25",
+										"131",
+										"190"
+									],
+									"port": "5002",
+									"path": [
+										"api",
+										"internetbundles",
+										"{{BundleId}}"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "xml",
+							"header": [
+								{
+									"key": "Content-Length",
+									"value": "266"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/xml; charset=utf-8"
+								},
+								{
+									"key": "Server",
+									"value": "Microsoft-IIS/10.0"
+								},
+								{
+									"key": "X-Powered-By",
+									"value": "ASP.NET"
+								},
+								{
+									"key": "Date",
+									"value": "Wed, 11 Sep 2024 13:24:40 GMT"
+								}
+							],
+							"cookie": [],
+							"body": "<InternetBundleLookupResult xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns=\"https://www.fdh.co.mw/tnm\">\n    <ResponseCode>200</ResponseCode>\n    <ResponseDescription i:nil=\"true\" />\n    <BundleExists>false</BundleExists>\n    <Data i:nil=\"true\" />\n</InternetBundleLookupResult>"
+						}
+					]
+				},
+				{
+					"name": "Confirm Bundle Purchase",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://172.25.131.190:5002/api/internetbundles/{{TransactionReference}}/{{TNMMobileNo}}/{{BundleId}}",
+							"protocol": "http",
+							"host": [
+								"172",
+								"25",
+								"131",
+								"190"
+							],
+							"port": "5002",
+							"path": [
+								"api",
+								"internetbundles",
+								"{{TransactionReference}}",
+								"{{TNMMobileNo}}",
+								"{{BundleId}}"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Confirm Bundle Purchase - Invalid",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://172.25.131.190:5002/api/internetbundles/{{TransactionReference}}/{{TNMMobileNo}}/{{BundleId}}",
+									"protocol": "http",
+									"host": [
+										"172",
+										"25",
+										"131",
+										"190"
+									],
+									"port": "5002",
+									"path": [
+										"api",
+										"internetbundles",
+										"{{TransactionReference}}",
+										"{{TNMMobileNo}}",
+										"{{BundleId}}"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "xml",
+							"header": [
+								{
+									"key": "Content-Length",
+									"value": "523"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/xml; charset=utf-8"
+								},
+								{
+									"key": "Server",
+									"value": "Microsoft-IIS/10.0"
+								},
+								{
+									"key": "X-Powered-By",
+									"value": "ASP.NET"
+								},
+								{
+									"key": "Date",
+									"value": "Wed, 11 Sep 2024 13:27:16 GMT"
+								}
+							],
+							"cookie": [],
+							"body": "<DataPurchaseResult xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns=\"https://www.fdh.co.mw/tnm\">\n    <ResponseCode>200</ResponseCode>\n    <ResponseDescription i:nil=\"true\" />\n    <Data>\n        <BundleName i:nil=\"true\" />\n        <EffectiveDate i:nil=\"true\" />\n        <ExpiryDate i:nil=\"true\" />\n        <MobileNumber>887341895</MobileNumber>\n        <OfferId i:nil=\"true\" />\n        <OrderId i:nil=\"true\" />\n        <OrderKey i:nil=\"true\" />\n        <ResultCode>910000000</ResultCode>\n        <ResultDescription>Invalid data bundle</ResultDescription>\n        <Succeeded>false</Succeeded>\n    </Data>\n</DataPurchaseResult>"
+						},
+						{
+							"name": "Confirm Bundle Purchase - Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://172.25.131.190:5002/api/internetbundles/{{TransactionReference}}/{{TNMMobileNo}}/{{BundleId}}",
+									"protocol": "http",
+									"host": [
+										"172",
+										"25",
+										"131",
+										"190"
+									],
+									"port": "5002",
+									"path": [
+										"api",
+										"internetbundles",
+										"{{TransactionReference}}",
+										"{{TNMMobileNo}}",
+										"{{BundleId}}"
+									]
+								}
+							},
+							"_postman_previewlanguage": "Text",
+							"header": [],
+							"cookie": [],
+							"body": "<DataPurchaseResult xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns=\"https://www.fdh.co.mw/tnm\">\r\n    <ResponseCode>200</ResponseCode>\r\n    <ResponseDescription i:nil=\"true\" />\r\n    <Data>\r\n        <BundleName>Smart 80MB</BundleName>\r\n        <EffectiveDate>15052024 08:04:41:128</EffectiveDate>\r\n        <ExpiryDate i:nil=\"true\" />\r\n        <MobileNumber>887341895</MobileNumber>\r\n        <OfferId i:nil=\"true\" />\r\n        <OrderId>101426918106137</OrderId>\r\n        <OrderKey i:nil=\"true\" />\r\n        <ResultCode>0</ResultCode>\r\n        <ResultDescription>You have successfully activated 887341895 with Smart 80MB .Your current balance is 99,174 .Order id is 101426918106137.</ResultDescription>\r\n        <Succeeded>true</Succeeded>\r\n    </Data>\r\n</DataPurchaseResult>"
+						},
+						{
+							"name": "Confirm Bundle Purchase",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://172.25.131.190:5002/api/internetbundles/{{TransactionReference}}/{{TNMMobileNo}}/{{BundleId}}",
+									"protocol": "http",
+									"host": [
+										"172",
+										"25",
+										"131",
+										"190"
+									],
+									"port": "5002",
+									"path": [
+										"api",
+										"internetbundles",
+										"{{TransactionReference}}",
+										"{{TNMMobileNo}}",
+										"{{BundleId}}"
+									]
+								}
+							},
+							"_postman_previewlanguage": "Text",
+							"header": [],
+							"cookie": [],
+							"body": "<DataPurchaseResult xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns=\"https://www.fdh.co.mw/tnm\">\r\n    <ResponseCode>200</ResponseCode>\r\n    <ResponseDescription i:nil=\"true\" />\r\n    <Data>\r\n        <BundleName i:nil=\"true\" />\r\n        <EffectiveDate i:nil=\"true\" />\r\n        <ExpiryDate i:nil=\"true\" />\r\n        <MobileNumber>887341895</MobileNumber>\r\n        <OfferId i:nil=\"true\" />\r\n        <OrderId i:nil=\"true\" />\r\n        <OrderKey i:nil=\"true\" />\r\n        <ResultCode>100</ResultCode>\r\n        <ResultDescription>Internal Error.Internal Error.</ResultDescription>\r\n        <Succeeded>true</Succeeded>\r\n    </Data>\r\n</DataPurchaseResult>"
+						}
+					]
+				}
+			],
+			"description": "API for purchase of TNM Data and Voice Bundles"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "BundleId",
+			"value": "239678"
+		},
+		{
+			"key": "TransactionReference",
+			"value": "FT2024SE10"
+		},
+		{
+			"key": "TNMMobileNo",
+			"value": "887341895"
+		},
+		{
+			"key": "AirtelMobielNo",
+			"value": "999888884"
+		},
+		{
+			"key": "host-local",
+			"value": ""
+		},
+		{
+			"key": "host-uat",
+			"value": ""
+		},
+		{
+			"key": "host",
+			"value": "http://172.25.131.190:7055"
+		}
+	]
+}

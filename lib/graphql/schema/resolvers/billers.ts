@@ -1,35 +1,127 @@
+import { GraphQLError } from "graphql";
+import { GraphQLContext } from "../../context";
 import { prisma } from "@/lib/db/prisma";
-import { billerTransactionService } from "@/lib/services/billers/transactions";
-import { BillerType, BillerTransactionStatus } from "@prisma/client";
-import type { GraphQLContext } from "@/lib/graphql/context";
+import {
+  TransactionSource,
+  TransactionStatus,
+  TransactionType,
+} from "@prisma/client";
+import { generateTransactionReference } from "@/lib/utils/reference-generator";
+import { billerEsbService } from "@/lib/services/billers/biller-esb-service";
+import { Decimal } from "@prisma/client/runtime/library";
 
+/**
+ * Biller Resolvers
+ * Following airtime pattern - calls T24 ESB directly
+ */
 export const billersResolvers = {
   Query: {
     /**
-     * Get all available billers
+     * Get available billers
+     * Returns static list of supported billers
      */
     availableBillers: async (_: unknown, __: unknown, context: GraphQLContext) => {
-      // Check if user is authenticated
-      if (!context.user) {
-        throw new Error("Authentication required");
+      if (!context.userId) {
+        throw new GraphQLError("Authentication required", {
+          extensions: { code: "UNAUTHENTICATED" },
+        });
       }
 
-      const billers = await prisma.billerConfig.findMany({
-        where: { isActive: true },
-        orderBy: { billerName: "asc" },
-      });
-
-      return billers.map((biller) => ({
-        type: biller.billerType,
-        name: biller.billerName,
-        displayName: biller.displayName,
-        description: biller.description,
-        isActive: biller.isActive,
-        features: biller.features,
-        validationRules: biller.validationRules,
-        supportedCurrencies: biller.supportedCurrencies,
-        defaultCurrency: biller.defaultCurrency,
-      }));
+      // Static list of available billers
+      return [
+        {
+          type: "LWB_POSTPAID",
+          name: "Lilongwe Water Board",
+          displayName: "LWB Water Bill",
+          description: "Lilongwe Water Board postpaid water bills",
+          isActive: true,
+          features: {
+            supportsInvoice: false,
+            supportsBalanceCheck: false,
+            requiresTwoStep: false,
+            supportsAccountLookup: true,
+            isBundleBased: false,
+            validationOnly: false,
+            requiresAccountType: false,
+          },
+          validationRules: {
+            accountNumberFormat: "^[0-9]{6,12}$",
+            minAmount: 100,
+            maxAmount: 1000000,
+          },
+          supportedCurrencies: ["MWK"],
+          defaultCurrency: "MWK",
+        },
+        {
+          type: "BWB_POSTPAID",
+          name: "Blantyre Water Board",
+          displayName: "BWB Water Bill",
+          description: "Blantyre Water Board postpaid water bills",
+          isActive: true,
+          features: {
+            supportsInvoice: false,
+            supportsBalanceCheck: false,
+            requiresTwoStep: false,
+            supportsAccountLookup: true,
+            isBundleBased: false,
+            validationOnly: false,
+            requiresAccountType: false,
+          },
+          validationRules: {
+            accountNumberFormat: "^[0-9]{6,12}$",
+            minAmount: 100,
+            maxAmount: 1000000,
+          },
+          supportedCurrencies: ["MWK"],
+          defaultCurrency: "MWK",
+        },
+        {
+          type: "SRWB_POSTPAID",
+          name: "Southern Region Water Board",
+          displayName: "SRWB Water Bill",
+          description: "Southern Region Water Board postpaid water bills",
+          isActive: true,
+          features: {
+            supportsInvoice: false,
+            supportsBalanceCheck: false,
+            requiresTwoStep: false,
+            supportsAccountLookup: true,
+            isBundleBased: false,
+            validationOnly: false,
+            requiresAccountType: false,
+          },
+          validationRules: {
+            accountNumberFormat: "^[0-9]{6,12}$",
+            minAmount: 100,
+            maxAmount: 1000000,
+          },
+          supportedCurrencies: ["MWK"],
+          defaultCurrency: "MWK",
+        },
+        {
+          type: "MASM",
+          name: "MASM Electricity",
+          displayName: "MASM Electricity",
+          description: "Electricity bill payments and tokens",
+          isActive: true,
+          features: {
+            supportsInvoice: false,
+            supportsBalanceCheck: false,
+            requiresTwoStep: false,
+            supportsAccountLookup: true,
+            isBundleBased: false,
+            validationOnly: false,
+            requiresAccountType: true,
+          },
+          validationRules: {
+            accountNumberFormat: "^[0-9]{6,12}$",
+            minAmount: 100,
+            maxAmount: 1000000,
+          },
+          supportedCurrencies: ["MWK"],
+          defaultCurrency: "MWK",
+        },
+      ];
     },
 
     /**
@@ -37,57 +129,63 @@ export const billersResolvers = {
      */
     billerInfo: async (
       _: unknown,
-      { type }: { type: BillerType },
+      { type }: { type: string },
       context: GraphQLContext
     ) => {
-      if (!context.user) {
-        throw new Error("Authentication required");
+      if (!context.userId) {
+        throw new GraphQLError("Authentication required", {
+          extensions: { code: "UNAUTHENTICATED" },
+        });
       }
 
-      const biller = await prisma.billerConfig.findUnique({
-        where: { billerType: type, isActive: true },
-      });
-
-      if (!biller) {
-        return null;
-      }
-
-      return {
-        type: biller.billerType,
-        name: biller.billerName,
-        displayName: biller.displayName,
-        description: biller.description,
-        isActive: biller.isActive,
-        features: biller.features,
-        validationRules: biller.validationRules,
-        supportedCurrencies: biller.supportedCurrencies,
-        defaultCurrency: biller.defaultCurrency,
-      };
+      const billers = await billersResolvers.Query.availableBillers(_, {}, context);
+      return billers.find((b: any) => b.type === type) || null;
     },
 
     /**
      * Lookup account before payment
+     * Calls T24 ESB directly
      */
     billerAccountLookup: async (
       _: unknown,
-      { input }: { input: { billerType: BillerType; accountNumber: string; accountType?: string } },
+      { input }: { input: { billerType: string; accountNumber: string; accountType?: string } },
       context: GraphQLContext
     ) => {
-      if (!context.user) {
-        throw new Error("Authentication required");
+      if (!context.userId) {
+        throw new GraphQLError("Authentication required", {
+          extensions: { code: "UNAUTHENTICATED" },
+        });
       }
 
-      const result = await billerTransactionService.processAccountLookup(
-        input.billerType,
-        input.accountNumber,
-        input.accountType
-      );
+      const { billerType, accountNumber, accountType } = input;
 
-      if (!result.success) {
-        throw new Error(result.error || "Account lookup failed");
+      try {
+        // Call ESB directly (like airtime)
+        const result = await billerEsbService.lookupAccount(billerType, {
+          accountNumber,
+          accountType,
+        });
+
+        if (!result.ok) {
+          throw new GraphQLError(result.error || "Account lookup failed", {
+            extensions: { code: "ESB_ERROR" },
+          });
+        }
+
+        // Parse and return account details
+        return {
+          accountNumber,
+          customerName: result.data?.customerName || result.data?.name || "Unknown",
+          balance: result.data?.balance || result.data?.amount || null,
+          status: result.data?.status || "active",
+          billerDetails: result.data,
+        };
+      } catch (error: any) {
+        console.error("Biller account lookup error:", error);
+        throw new GraphQLError(error.message || "Failed to lookup account", {
+          extensions: { code: "ESB_ERROR" },
+        });
       }
-
-      return result.accountDetails;
     },
 
     /**
@@ -101,42 +199,61 @@ export const billersResolvers = {
         limit = 50,
         offset = 0,
       }: {
-        billerType?: BillerType;
-        status?: BillerTransactionStatus;
+        billerType?: string;
+        status?: string;
         limit?: number;
         offset?: number;
       },
       context: GraphQLContext
     ) => {
-      if (!context.user) {
-        throw new Error("Authentication required");
+      if (!context.userId) {
+        throw new GraphQLError("Authentication required", {
+          extensions: { code: "UNAUTHENTICATED" },
+        });
       }
 
-      // Build where clause
+      // Query FdhTransaction for bill payments
       const where: any = {
-        initiatedBy: context.user.id?.toString(),
+        initiatedByUserId: context.userId,
+        type: TransactionType.BILL_PAYMENT,
       };
-
-      if (billerType) {
-        where.billerType = billerType;
-      }
 
       if (status) {
         where.status = status;
       }
 
       const [transactions, total] = await Promise.all([
-        prisma.billerTransaction.findMany({
+        prisma.fdhTransaction.findMany({
           where,
           orderBy: { createdAt: "desc" },
           take: limit,
           skip: offset,
         }),
-        prisma.billerTransaction.count({ where }),
+        prisma.fdhTransaction.count({ where }),
       ]);
 
+      // Map to BillerTransaction format
       return {
-        transactions,
+        transactions: transactions.map((tx) => ({
+          id: tx.id,
+          ourTransactionId: tx.reference,
+          billerType: extractBillerType(tx.description),
+          billerName: extractBillerName(tx.description),
+          accountNumber: tx.toAccountNumber || "",
+          amount: tx.amount.toNumber(),
+          currency: tx.currency,
+          status: tx.status,
+          transactionType: "POST_TRANSACTION",
+          accountType: null,
+          customerAccountName: null,
+          errorMessage: tx.errorMessage,
+          errorCode: tx.errorCode,
+          requestPayload: null,
+          responsePayload: tx.t24Response,
+          completedAt: tx.completedAt?.toISOString(),
+          createdAt: tx.createdAt.toISOString(),
+          updatedAt: tx.updatedAt.toISOString(),
+        })),
         total,
         hasMore: offset + transactions.length < total,
       };
@@ -150,107 +267,239 @@ export const billersResolvers = {
       { id }: { id: string },
       context: GraphQLContext
     ) => {
-      if (!context.user) {
-        throw new Error("Authentication required");
+      if (!context.userId) {
+        throw new GraphQLError("Authentication required", {
+          extensions: { code: "UNAUTHENTICATED" },
+        });
       }
 
-      const transaction = await prisma.billerTransaction.findUnique({
+      const transaction = await prisma.fdhTransaction.findUnique({
         where: { id },
       });
 
-      // Verify ownership
-      if (transaction && transaction.initiatedBy !== context.user.id?.toString()) {
-        throw new Error("Access denied");
+      if (!transaction || transaction.initiatedByUserId !== context.userId) {
+        throw new GraphQLError("Transaction not found or access denied", {
+          extensions: { code: "NOT_FOUND" },
+        });
       }
 
-      return transaction;
+      return {
+        id: transaction.id,
+        ourTransactionId: transaction.reference,
+        billerType: extractBillerType(transaction.description),
+        billerName: extractBillerName(transaction.description),
+        accountNumber: transaction.toAccountNumber || "",
+        amount: transaction.amount.toNumber(),
+        currency: transaction.currency,
+        status: transaction.status,
+        transactionType: "POST_TRANSACTION",
+        accountType: null,
+        customerAccountName: null,
+        errorMessage: transaction.errorMessage,
+        errorCode: transaction.errorCode,
+        requestPayload: null,
+        responsePayload: transaction.t24Response,
+        completedAt: transaction.completedAt?.toISOString(),
+        createdAt: transaction.createdAt.toISOString(),
+        updatedAt: transaction.updatedAt.toISOString(),
+      };
     },
   },
 
   Mutation: {
     /**
      * Process biller payment
+     * Following airtime pattern - calls ESB directly
      */
     billerPayment: async (
       _: unknown,
       { input }: { input: any },
       context: GraphQLContext
     ) => {
-      if (!context.user) {
-        throw new Error("Authentication required");
-      }
-
-      const result = await billerTransactionService.processPayment(
-        input.billerType,
-        {
-          accountNumber: input.accountNumber,
-          amount: input.amount,
-          currency: input.currency,
-          accountType: input.accountType,
-          creditAccount: input.creditAccount,
-          creditAccountType: input.creditAccountType,
-          debitAccount: input.debitAccount,
-          debitAccountType: input.debitAccountType,
-          customerAccountNumber: input.customerAccountNumber || (context.user as any).username,
-          customerAccountName: input.customerAccountName || (context.user as any).username,
-          metadata: {
-            ...input.metadata,
-            userId: context.user.id,
-            username: (context.user as any).username,
-          },
-        }
-      );
-
-      // Update transaction with user info
-      if (result.transaction) {
-        await prisma.billerTransaction.update({
-          where: { id: result.transaction.id },
-          data: { initiatedBy: context.user.id?.toString() },
+      if (!context.userId) {
+        throw new GraphQLError("Authentication required", {
+          extensions: { code: "UNAUTHENTICATED" },
         });
       }
 
-      return {
-        success: result.success,
-        transactionId: result.transaction?.ourTransactionId,
-        externalReference: result.result?.externalReference,
-        message: result.result?.message || result.error,
-        transaction: result.transaction,
-      };
-    },
+      const {
+        billerType,
+        accountNumber,
+        amount: amountInput,
+        debitAccount,
+        debitAccountType,
+        currency = "MWK",
+        accountType,
+        creditAccount,
+        creditAccountType,
+        customerAccountNumber,
+        customerAccountName,
+      } = input;
 
-    /**
-     * Retry failed transaction
-     */
-    billerRetryTransaction: async (
-      _: unknown,
-      { transactionId }: { transactionId: string },
-      context: GraphQLContext
-    ) => {
-      if (!context.user) {
-        throw new Error("Authentication required");
+      const amount = new Decimal(amountInput);
+
+      if (amount.lte(0)) {
+        throw new GraphQLError("Amount must be greater than zero", {
+          extensions: { code: "BAD_USER_INPUT" },
+        });
       }
 
-      // Verify ownership
-      const transaction = await prisma.billerTransaction.findUnique({
-        where: { id: transactionId },
+      // Verify account ownership
+      const sourceAccount = await prisma.mobileUserAccount.findFirst({
+        where: {
+          accountNumber: debitAccount,
+          mobileUserId: context.userId,
+        },
       });
 
-      if (!transaction) {
-        throw new Error("Transaction not found");
+      if (!sourceAccount) {
+        throw new GraphQLError("Source account not found or unauthorized", {
+          extensions: { code: "NOT_FOUND" },
+        });
       }
 
-      if (transaction.initiatedBy !== context.user.id?.toString()) {
-        throw new Error("Access denied");
+      const reference = generateTransactionReference();
+
+      // Create transaction record (like airtime)
+      const transaction = await prisma.fdhTransaction.create({
+        data: {
+          type: TransactionType.BILL_PAYMENT,
+          source: TransactionSource.MOBILE_BANKING,
+          reference,
+          status: TransactionStatus.PENDING,
+          amount,
+          currency: sourceAccount.currency,
+          description: `Bill payment: ${billerType} - ${accountNumber}`,
+          fromAccountId: sourceAccount.id,
+          fromAccountNumber: sourceAccount.accountNumber,
+          toAccountNumber: accountNumber,
+          initiatedByUserId: context.userId,
+        },
+      });
+
+      try {
+        // Call ESB directly (like airtime)
+        const result = await billerEsbService.processPayment(billerType, {
+          accountNumber,
+          amount: amount.toNumber(),
+          currency,
+          debitAccount,
+          debitAccountType,
+          creditAccount,
+          creditAccountType,
+          customerAccountNumber,
+          customerAccountName,
+          externalTxnId: reference,
+          accountType,
+        });
+
+        if (result.ok) {
+          // Update transaction status
+          await prisma.fdhTransaction.update({
+            where: { id: transaction.id },
+            data: {
+              status: TransactionStatus.COMPLETED,
+              t24Reference: reference,
+              t24Response: result.data,
+            },
+          });
+
+          return {
+            success: true,
+            message: "Bill payment successful",
+            transactionId: transaction.id,
+            reference,
+            status: "COMPLETED",
+            transaction: {
+              id: transaction.id,
+              ourTransactionId: reference,
+              billerType,
+              billerName: billerType.replace(/_/g, " "),
+              accountNumber,
+              amount: amount.toNumber(),
+              currency: sourceAccount.currency,
+              status: "COMPLETED",
+              transactionType: "POST_TRANSACTION",
+              accountType,
+              customerAccountName,
+              errorMessage: null,
+              errorCode: null,
+              requestPayload: null,
+              responsePayload: result.data,
+              completedAt: new Date().toISOString(),
+              createdAt: transaction.createdAt.toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+          };
+        } else {
+          const errorMessage = result.error || "Failed to process bill payment";
+
+          await prisma.fdhTransaction.update({
+            where: { id: transaction.id },
+            data: {
+              status: TransactionStatus.FAILED,
+              errorMessage,
+            },
+          });
+
+          return {
+            success: false,
+            message: errorMessage,
+            transactionId: transaction.id,
+            reference,
+            status: "FAILED",
+            transaction: {
+              id: transaction.id,
+              ourTransactionId: reference,
+              billerType,
+              billerName: billerType.replace(/_/g, " "),
+              accountNumber,
+              amount: amount.toNumber(),
+              currency: sourceAccount.currency,
+              status: "FAILED",
+              transactionType: "POST_TRANSACTION",
+              accountType,
+              customerAccountName,
+              errorMessage,
+              errorCode: null,
+              requestPayload: null,
+              responsePayload: result.data,
+              completedAt: null,
+              createdAt: transaction.createdAt.toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+          };
+        }
+      } catch (error: any) {
+        console.error("Bill payment error:", error);
+
+        await prisma.fdhTransaction.update({
+          where: { id: transaction.id },
+          data: {
+            status: TransactionStatus.FAILED,
+            errorMessage: error.message,
+          },
+        });
+
+        return {
+          success: false,
+          message: error.message || "An unexpected error occurred",
+          transactionId: transaction.id,
+          reference,
+          status: "FAILED",
+        };
       }
-
-      const result = await billerTransactionService.retryTransaction(transactionId);
-
-      return {
-        success: result.success,
-        transactionId: result.transaction?.ourTransactionId,
-        message: result.success ? "Transaction retry initiated" : result.error,
-        transaction: result.transaction,
-      };
     },
   },
 };
+
+// Helper functions
+function extractBillerType(description: string): string {
+  const match = description.match(/Bill payment: (\w+)/);
+  return match ? match[1] : "UNKNOWN";
+}
+
+function extractBillerName(description: string): string {
+  const type = extractBillerType(description);
+  return type.replace(/_/g, " ");
+}

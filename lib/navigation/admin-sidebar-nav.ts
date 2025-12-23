@@ -27,6 +27,7 @@ export type SidebarSectionId =
   | "mobileBanking"
   | "wallet"
   | "configuration"
+  | "customerCare"
   | "system"
   | "administration";
 
@@ -162,6 +163,20 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
         href: "/system/app-screens",
         icon: Smartphone,
         labelKey: "sidebar.appScreens",
+      },
+    ],
+  },
+  {
+    id: "customerCare",
+    icon: Users,
+    labelKey: "sidebar.customerCare",
+    activePrefixes: ["/customer-care"],
+    items: [
+      {
+        kind: "link",
+        href: "/customer-care/tickets",
+        icon: UserCog,
+        labelKey: "sidebar.tickets",
       },
     ],
   },

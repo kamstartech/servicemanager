@@ -67,9 +67,16 @@ interface ServiceTableRow {
   testable?: boolean;
   testConfig?: {
     endpoint: string;
-    paramName: string;
-    paramLabel: string;
-    paramPlaceholder: string;
+    fields: {
+      name: string;
+      label: string;
+      placeholder: string;
+      required?: boolean;
+      type?: "text" | "select" | "user-select";
+      options?: string[];
+      dynamicOptions?: boolean; // For options fetched from API
+      userType?: string; // For user-select: filter by user type (MOBILE_BANKING, WALLET, etc.)
+    }[];
   };
 }
 
@@ -82,8 +89,11 @@ export default function ServicesMonitorPage() {
   const [testDialogOpen, setTestDialogOpen] = useState(false);
   const [logsDialogOpen, setLogsDialogOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<ServiceTableRow | null>(null);
-  const [testParam, setTestParam] = useState("");
+  const [testParams, setTestParams] = useState<Record<string, string>>({});
   const [testLoading, setTestLoading] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; data: any; timestamp: string } | null>(null);
+  const [dynamicOptions, setDynamicOptions] = useState<Record<string, { value: string; label: string }[]>>({});
+  const [loadingOptions, setLoadingOptions] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const [logsConnected, setLogsConnected] = useState(false);
   const logsEventSourceRef = useRef<EventSource | null>(null);
@@ -124,7 +134,7 @@ export default function ServicesMonitorPage() {
     eventSource.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        
+
         // Handle initial full status
         if (data.balanceSync && data.accountDiscovery && data.accountEnrichment) {
           setStatus({
@@ -132,24 +142,24 @@ export default function ServicesMonitorPage() {
             accountDiscovery: data.accountDiscovery,
             accountEnrichment: data.accountEnrichment,
           });
-        } 
+        }
         // Handle individual service updates
         else if (data.service && data.status) {
           setStatus((prev) => {
             if (!prev) return prev;
-            
-            const serviceKey = data.service === "balance-sync" 
+
+            const serviceKey = data.service === "balance-sync"
               ? "balanceSync"
               : data.service === "account-discovery"
-              ? "accountDiscovery"
-              : "accountEnrichment";
-            
+                ? "accountDiscovery"
+                : "accountEnrichment";
+
             return {
               ...prev,
               [serviceKey]: {
                 ...data.status,
                 // Ensure calculated fields are present
-                intervalMinutes: serviceKey === "balanceSync" 
+                intervalMinutes: serviceKey === "balanceSync"
                   ? Math.round(data.status.interval / 1000 / 60)
                   : undefined,
                 intervalHours: serviceKey !== "balanceSync"
@@ -168,7 +178,7 @@ export default function ServicesMonitorPage() {
       console.error("SSE Error:", error);
       setConnected(false);
       eventSource.close();
-      
+
       // Reconnect after 5 seconds
       setTimeout(() => {
         console.log("🔄 Reconnecting SSE...");
@@ -197,9 +207,36 @@ export default function ServicesMonitorPage() {
     );
   }
 
-  const handleTestService = (service: ServiceTableRow) => {
+  const handleTestService = async (service: ServiceTableRow) => {
     setSelectedService(service);
-    setTestParam("");
+    setTestParams({});
+    setTestResult(null); // Clear previous results
+
+    // Fetch dynamic options for user-select fields
+    if (service.testConfig?.fields) {
+      const userFields = service.testConfig.fields.filter(f => f.type === "user-select");
+      if (userFields.length > 0) {
+        setLoadingOptions(true);
+        try {
+          // Get context from first user field (if specified)
+          const context = userFields[0].userType; // Still named userType in config for clarity
+          const url = context
+            ? `/api/services/users?context=${context}`
+            : `/api/services/users`;
+
+          const response = await fetch(url);
+          const data = await response.json();
+          if (data.success) {
+            setDynamicOptions({ users: data.users });
+          }
+        } catch (error) {
+          console.error("Failed to fetch users:", error);
+        } finally {
+          setLoadingOptions(false);
+        }
+      }
+    }
+
     setTestDialogOpen(true);
   };
 
@@ -207,7 +244,7 @@ export default function ServicesMonitorPage() {
     setSelectedService(service);
     setLogs([]);
     setLogsDialogOpen(true);
-    
+
     // Create SSE connection for logs
     const key = service.serviceKey || "all";
     const logsEventSource = new EventSource(
@@ -248,27 +285,32 @@ export default function ServicesMonitorPage() {
   };
 
   const runTest = async () => {
-    if (!selectedService || !testParam) return;
+    if (!selectedService || !selectedService.testConfig) return;
+
+    // Check required fields
+    const requiredFields = selectedService.testConfig.fields.filter(f => f.required !== false);
+    const missingFields = requiredFields.filter(f => !testParams[f.name]);
+
+    if (missingFields.length > 0) {
+      setTestResult({
+        success: false,
+        data: {
+          error: `Missing required fields: ${missingFields.map(f => f.label).join(", ")}`,
+          payload: testParams,
+        },
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
 
     setTestLoading(true);
+    setTestResult(null);
+
     try {
-      const payload: Record<string, any> = (() => {
-        if (selectedService.testConfig!.paramName === "json") {
-          const parsed = JSON.parse(testParam);
-          if (!parsed || typeof parsed !== "object") {
-            throw new Error("Test payload must be a JSON object");
-          }
-          return parsed;
-        }
+      // Build payload from testParams
+      const payload: Record<string, any> = { ...testParams };
 
-        return {
-          [selectedService.testConfig!.paramName]:
-            selectedService.testConfig!.paramName === "userId"
-              ? parseInt(testParam)
-              : testParam,
-        };
-      })();
-
+      // Special handling for SMS service
       if (
         selectedService.serviceKey === "sms" &&
         selectedService.testConfig?.endpoint === "/api/sms/send"
@@ -277,7 +319,7 @@ export default function ServicesMonitorPage() {
         payload.type = "generic";
       }
 
-      const response = await fetch(selectedService.testConfig!.endpoint, {
+      const response = await fetch(selectedService.testConfig.endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -285,22 +327,34 @@ export default function ServicesMonitorPage() {
 
       const data = await response.json();
 
-      if (data.success) {
-        toast.success("Test Successful", {
-          description: data.message || "Service test completed successfully",
-        });
-      } else {
-        toast.error("Test Failed", {
-          description: data.error || data.message || "Service test failed",
-        });
-      }
+      // Log the full result
+      setTestResult({
+        success: data.success || response.ok,
+        data: {
+          request: {
+            endpoint: selectedService.testConfig.endpoint,
+            method: "POST",
+            payload,
+          },
+          response: {
+            status: response.status,
+            statusText: response.statusText,
+            data,
+          },
+        },
+        timestamp: new Date().toISOString(),
+      });
     } catch (error) {
-      toast.error("Test Error", {
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
+      setTestResult({
+        success: false,
+        data: {
+          error: error instanceof Error ? error.message : "Unexpected error",
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+        timestamp: new Date().toISOString(),
       });
     } finally {
       setTestLoading(false);
-      setTestDialogOpen(false);
     }
   };
 
@@ -339,26 +393,26 @@ export default function ServicesMonitorPage() {
           row.variant === "default"
             ? "success"
             : row.variant === "destructive"
-            ? "error"
-            : row.variant === "secondary"
-            ? "pending"
-            : "neutral";
+              ? "error"
+              : row.variant === "secondary"
+                ? "pending"
+                : "neutral";
 
         const classes =
           tone === "success"
             ? "bg-green-100 text-green-800"
             : tone === "error"
-            ? "bg-red-100 text-red-800"
-            : tone === "pending"
-            ? "bg-yellow-100 text-yellow-800"
-            : "bg-gray-100 text-gray-800";
+              ? "bg-red-100 text-red-800"
+              : tone === "pending"
+                ? "bg-yellow-100 text-yellow-800"
+                : "bg-gray-100 text-gray-800";
 
         const Icon =
           tone === "success"
             ? CheckCircle
             : tone === "error"
-            ? XCircle
-            : Clock;
+              ? XCircle
+              : Clock;
 
         return (
           <span
@@ -432,9 +486,15 @@ export default function ServicesMonitorPage() {
       testable: true,
       testConfig: {
         endpoint: "/api/services/balance-sync",
-        paramName: "userId",
-        paramLabel: "User ID",
-        paramPlaceholder: "e.g., 1",
+        fields: [
+          {
+            name: "userId",
+            label: "User (Mobile Banking)",
+            placeholder: "Select a mobile banking user",
+            type: "user-select",
+            userType: "MOBILE_BANKING"
+          },
+        ],
       },
     },
     {
@@ -449,9 +509,9 @@ export default function ServicesMonitorPage() {
       testable: true,
       testConfig: {
         endpoint: "/api/services/account-discovery",
-        paramName: "userId",
-        paramLabel: "User ID",
-        paramPlaceholder: "e.g., 1",
+        fields: [
+          { name: "userId", label: "User", placeholder: "Select a user", type: "user-select" },
+        ],
       },
     },
     {
@@ -466,9 +526,9 @@ export default function ServicesMonitorPage() {
       testable: true,
       testConfig: {
         endpoint: "/api/services/account-enrichment",
-        paramName: "accountNumber",
-        paramLabel: "Account Number",
-        paramPlaceholder: "e.g., 1520000114607",
+        fields: [
+          { name: "accountNumber", label: "Account Number", placeholder: "e.g., 1520000114607" },
+        ],
       },
     },
     {
@@ -482,9 +542,9 @@ export default function ServicesMonitorPage() {
       testable: true,
       testConfig: {
         endpoint: "/api/services/t24-test",
-        paramName: "accountNumber",
-        paramLabel: "Account Number",
-        paramPlaceholder: "e.g., 1520000114607",
+        fields: [
+          { name: "accountNumber", label: "Account Number", placeholder: "e.g., 1520000114607" },
+        ],
       },
     },
     {
@@ -498,9 +558,9 @@ export default function ServicesMonitorPage() {
       testable: true,
       testConfig: {
         endpoint: "/api/services/t24-test",
-        paramName: "customerId",
-        paramLabel: "Customer ID",
-        paramPlaceholder: "e.g., 35042058",
+        fields: [
+          { name: "customerId", label: "Customer ID", placeholder: "e.g., 35042058" },
+        ],
       },
     },
     {
@@ -514,9 +574,9 @@ export default function ServicesMonitorPage() {
       testable: true,
       testConfig: {
         endpoint: "/api/services/account-details",
-        paramName: "accountNumber",
-        paramLabel: "Account Number",
-        paramPlaceholder: "e.g., 1520000114607",
+        fields: [
+          { name: "accountNumber", label: "Account Number", placeholder: "e.g., 1520000114607" },
+        ],
       },
     },
     {
@@ -529,10 +589,10 @@ export default function ServicesMonitorPage() {
       variant: "outline" as const,
       testable: true,
       testConfig: {
-        endpoint: "/api/services/t24-transactions",
-        paramName: "accountNumber",
-        paramLabel: "Account Number",
-        paramPlaceholder: "e.g., 1520000114607",
+        endpoint: "/api/services/t24-accounts",
+        fields: [
+          { name: "accountNumber", label: "Account Number", placeholder: "e.g., 1520000114607" },
+        ],
       },
     },
     {
@@ -551,18 +611,18 @@ export default function ServicesMonitorPage() {
       description: "Sends SMS via ESB Gateway",
       status: smsStats ? (smsStats.successRate >= 90 ? "Healthy" : "Degraded") : "Unknown",
       interval: "On-demand",
-      details: smsStats 
+      details: smsStats
         ? `Last 24h: ${smsStats.sent}/${smsStats.total} sent (${smsStats.successRate.toFixed(1)}%)`
         : "Loading stats...",
-      variant: smsStats 
+      variant: smsStats
         ? (smsStats.successRate >= 90 ? "outline" as const : "destructive" as const)
         : "outline" as const,
       testable: true,
       testConfig: {
-        endpoint: "/api/sms/send",
-        paramName: "phoneNumber",
-        paramLabel: "Phone Number",
-        paramPlaceholder: "e.g., +265999123456",
+        endpoint: "/api/services/notification-test",
+        fields: [
+          { name: "phoneNumber", label: "Phone Number", placeholder: "e.g., +265888123456" },
+        ],
       },
     },
     {
@@ -576,10 +636,174 @@ export default function ServicesMonitorPage() {
       variant: "outline" as const,
       testable: true,
       testConfig: {
-        endpoint: "/api/services/tnm-airtime-test",
-        paramName: "phoneNumber",
-        paramLabel: "Phone Number",
-        paramPlaceholder: "0881234567",
+        endpoint: "/api/services/notification-test",
+        fields: [
+          { name: "phoneNumber", label: "Phone Number", placeholder: "e.g., 0881234567" },
+        ],
+      },
+    },
+    {
+      serviceKey: "lwb-postpaid",
+      name: "LWB Postpaid Water Bill (ESB)",
+      type: "Integration Service",
+      description: "Lilongwe Water Board postpaid bill lookup and payment",
+      status: "Available",
+      interval: "On-demand",
+      details: "Endpoint: /esb/api/lwb-postpaid-test/v1/accounts",
+      variant: "outline" as const,
+      testable: true,
+      testConfig: {
+        endpoint: "/api/services/biller-test",
+        fields: [
+          { name: "billerType", label: "Biller Type", placeholder: "LWB_POSTPAID", required: true },
+          { name: "accountNumber", label: "Account Number", placeholder: "e.g., 123456", required: true },
+        ],
+      },
+    },
+    {
+      serviceKey: "lwb-prepaid",
+      name: "LWB Prepaid Water Bill (ESB)",
+      type: "Integration Service",
+      description: "Lilongwe Water Board prepaid (voucher) bill lookup and payment",
+      status: "Available",
+      interval: "On-demand",
+      details: "Endpoint: /esb/api/lwb-prepaid-test/v1/accounts",
+      variant: "outline" as const,
+      testable: true,
+      testConfig: {
+        endpoint: "/api/services/biller-test",
+        fields: [
+          { name: "billerType", label: "Biller Type", placeholder: "LWB_PREPAID", required: true },
+          { name: "accountNumber", label: "Account Number", placeholder: "e.g., 123456", required: true },
+        ],
+      },
+    },
+    {
+      serviceKey: "bwb-postpaid",
+      name: "BWB Postpaid Water Bill (ESB)",
+      type: "Integration Service",
+      description: "Blantyre Water Board postpaid bill lookup and payment",
+      status: "Available",
+      interval: "On-demand",
+      details: "Endpoint: /esb/api/bwb-postpaid-test/v1/accounts",
+      variant: "outline" as const,
+      testable: true,
+      testConfig: {
+        endpoint: "/api/services/biller-test",
+        fields: [
+          { name: "billerType", label: "Biller Type", placeholder: "BWB_POSTPAID", required: true },
+          { name: "accountNumber", label: "Account Number", placeholder: "e.g., 123456", required: true },
+        ],
+      },
+    },
+    {
+      serviceKey: "srwb-postpaid",
+      name: "SRWB Postpaid Water Bill (ESB)",
+      type: "Integration Service",
+      description: "Southern Region Water Board postpaid bill lookup and payment",
+      status: "Available",
+      interval: "On-demand",
+      details: "Endpoint: /esb/api/srwb-postpaid-test/v1/accounts",
+      variant: "outline" as const,
+      testable: true,
+      testConfig: {
+        endpoint: "/api/services/biller-test",
+        fields: [
+          { name: "billerType", label: "Biller Type", placeholder: "SRWB_POSTPAID", required: true },
+          { name: "accountNumber", label: "Account Number", placeholder: "e.g., 123456", required: true },
+        ],
+      },
+    },
+    {
+      serviceKey: "srwb-prepaid",
+      name: "SRWB Prepaid Water Bill (ESB)",
+      type: "Integration Service",
+      description: "Southern Region Water Board prepaid (voucher) bill lookup and payment",
+      status: "Available",
+      interval: "On-demand",
+      details: "Endpoint: /esb/api/srwb-prepaid-test/v1/accounts",
+      variant: "outline" as const,
+      testable: true,
+      testConfig: {
+        endpoint: "/api/services/biller-test",
+        fields: [
+          { name: "billerType", label: "Biller Type", placeholder: "SRWB_PREPAID", required: true },
+          { name: "accountNumber", label: "Account Number", placeholder: "e.g., 123456", required: true },
+        ],
+      },
+    },
+    {
+      serviceKey: "masm",
+      name: "MASM Health Coverage (ESB)",
+      type: "Integration Service",
+      description: "MASM health coverage lookup and payment (prepaid/postpaid)",
+      status: "Available",
+      interval: "On-demand",
+      details: "Endpoint: /esb/api/masm-test/v1/accounts",
+      variant: "outline" as const,
+      testable: true,
+      testConfig: {
+        endpoint: "/api/services/biller-test",
+        fields: [
+          { name: "billerType", label: "Biller Type", placeholder: "MASM", required: true },
+          { name: "accountNumber", label: "Account Number", placeholder: "e.g., 123456", required: true },
+          { name: "accountType", label: "Account Type", placeholder: "Select type", type: "select", options: ["PREPAID", "POSTPAID"], required: false },
+        ],
+      },
+    },
+    {
+      serviceKey: "register-general",
+      name: "Register General (ESB)",
+      type: "Integration Service",
+      description: "Government service payments and invoice lookup",
+      status: "Available",
+      interval: "On-demand",
+      details: "Endpoint: /api/billers/register-general/v1/accounts",
+      variant: "outline" as const,
+      testable: true,
+      testConfig: {
+        endpoint: "/api/services/biller-test",
+        fields: [
+          { name: "billerType", label: "Biller Type", placeholder: "REGISTER_GENERAL", required: true },
+          { name: "invoiceNumber", label: "Invoice Number", placeholder: "e.g., INV123456", required: true },
+        ],
+      },
+    },
+    {
+      serviceKey: "tnm-bundles",
+      name: "TNM Bundles Validation (ESB)",
+      type: "Integration Service",
+      description: "TNM bundle validation and purchase",
+      status: "Available",
+      interval: "On-demand",
+      details: "Endpoint: /esb/api/tnm-bundles/v1/validation",
+      variant: "outline" as const,
+      testable: true,
+      testConfig: {
+        endpoint: "/api/services/biller-test",
+        fields: [
+          { name: "billerType", label: "Biller Type", placeholder: "TNM_BUNDLES", required: true },
+          { name: "phoneNumber", label: "Phone Number", placeholder: "e.g., 0881234567", required: true },
+          { name: "bundleId", label: "Bundle ID (Optional)", placeholder: "e.g., BUNDLE123", required: false },
+        ],
+      },
+    },
+    {
+      serviceKey: "airtel-validation",
+      name: "Airtel Validation Service (ESB)",
+      type: "Integration Service",
+      description: "Airtel number validation for topup eligibility",
+      status: "Available",
+      interval: "On-demand",
+      details: "Endpoint: /esb/api/airtel/v1/validation",
+      variant: "outline" as const,
+      testable: true,
+      testConfig: {
+        endpoint: "/api/services/biller-test",
+        fields: [
+          { name: "billerType", label: "Biller Type", placeholder: "AIRTEL_VALIDATION", required: true },
+          { name: "phoneNumber", label: "Phone Number", placeholder: "e.g., 0991234567", required: true },
+        ],
       },
     },
     {
@@ -803,7 +1027,7 @@ export default function ServicesMonitorPage() {
 
       {/* Test Dialog */}
       <Dialog open={testDialogOpen} onOpenChange={setTestDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Test {selectedService?.name}</DialogTitle>
             <DialogDescription>
@@ -811,18 +1035,79 @@ export default function ServicesMonitorPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="testParam">
-                {selectedService?.testConfig?.paramLabel}
-              </Label>
-              <Input
-                id="testParam"
-                placeholder={selectedService?.testConfig?.paramPlaceholder}
-                value={testParam}
-                onChange={(e) => setTestParam(e.target.value)}
-                disabled={testLoading}
-              />
-            </div>
+            {selectedService?.testConfig?.fields.map((field) => (
+              <div key={field.name} className="space-y-2">
+                <Label htmlFor={field.name}>
+                  {field.label}
+                  {field.required !== false && <span className="text-red-500 ml-1">*</span>}
+                </Label>
+                {field.type === "user-select" ? (
+                  <select
+                    id={field.name}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={testParams[field.name] || ""}
+                    onChange={(e) =>
+                      setTestParams({ ...testParams, [field.name]: e.target.value })
+                    }
+                    disabled={testLoading || loadingOptions}
+                  >
+                    <option value="">{loadingOptions ? "Loading users..." : field.placeholder}</option>
+                    {dynamicOptions.users?.map((user) => (
+                      <option key={user.value} value={user.value}>
+                        {user.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : field.type === "select" ? (
+                  <select
+                    id={field.name}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={testParams[field.name] || ""}
+                    onChange={(e) =>
+                      setTestParams({ ...testParams, [field.name]: e.target.value })
+                    }
+                    disabled={testLoading}
+                  >
+                    <option value="">{field.placeholder}</option>
+                    {field.options?.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <Input
+                    id={field.name}
+                    placeholder={field.placeholder}
+                    value={testParams[field.name] || ""}
+                    onChange={(e) =>
+                      setTestParams({ ...testParams, [field.name]: e.target.value })
+                    }
+                    disabled={testLoading}
+                  />
+                )}
+              </div>
+            ))}
+
+            {/* Test Result Log */}
+            {testResult && (
+              <div className="mt-6 space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-semibold">Test Result</Label>
+                  <Badge variant={testResult.success ? "default" : "destructive"}>
+                    {testResult.success ? "Success" : "Failed"}
+                  </Badge>
+                </div>
+                <div className="rounded-md border bg-muted/30 p-3 max-h-96 overflow-y-auto">
+                  <pre className="text-xs whitespace-pre-wrap font-mono">
+                    {JSON.stringify(testResult.data, null, 2)}
+                  </pre>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(testResult.timestamp).toLocaleString()}
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button
@@ -832,10 +1117,7 @@ export default function ServicesMonitorPage() {
             >
               {translate("common.actions.cancel")}
             </Button>
-            <Button
-              onClick={runTest}
-              disabled={testLoading || !testParam}
-            >
+            <Button onClick={runTest} disabled={testLoading}>
               {testLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {translate("common.actions.runTest")}
             </Button>

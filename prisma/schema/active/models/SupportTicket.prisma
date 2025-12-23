@@ -1,0 +1,21 @@
+model SupportTicket {
+  id              Int               @id @default(autoincrement())
+  subject         String
+  status          TicketStatus      @default(OPEN)
+  priority        TicketPriority    @default(MEDIUM)
+  
+  // Context and User Linkage
+  context         MobileUserContext
+  userId          Int?              // Optional if unauthenticated (future) but usually linked
+  user            MobileUser?       @relation(fields: [userId], references: [id])
+  
+  // Metadata
+  category        String?           // e.g., "Account Issue", "Transaction"
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  // Relations
+  messages        TicketMessage[]
+
+  @@map("support_tickets")
+}

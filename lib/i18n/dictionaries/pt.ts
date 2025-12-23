@@ -196,6 +196,8 @@ export const pt = {
     loginAttempts: "Tentativas de Login",
     thirdPartyApi: "API de terceiros",
     servicesMonitor: "Monitor de serviços",
+    customerCare: "Apoio ao Cliente",
+    tickets: "Bilhetes",
   },
   dashboard: {
     title: "Service Manager Admin",

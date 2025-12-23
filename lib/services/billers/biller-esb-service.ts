@@ -1,0 +1,115 @@
+import { waterBillerService } from "./water-biller-service";
+import { masmBillerService } from "./masm-biller-service";
+import { governmentBillerService } from "./government-biller-service";
+import { mnoValidationService } from "./mno-validation-service";
+import { type BillerPaymentParams, type AccountLookupParams } from "./water-biller-service";
+
+/**
+ * Unified Biller ESB Service
+ * Routes requests to appropriate biller service
+ * Similar to AirtimeService pattern
+ */
+export class BillerEsbService {
+    /**
+     * Lookup account for any biller type
+     */
+    async lookupAccount(
+        billerType: string,
+        params: AccountLookupParams | { phoneNumber?: string; invoiceNumber?: string; bundleId?: string }
+    ) {
+        switch (billerType) {
+            case "LWB_POSTPAID":
+                return waterBillerService.lwbAccountLookup(params as AccountLookupParams);
+
+            case "LWB_PREPAID":
+                return waterBillerService.lwbPrepaidAccountLookup(params as AccountLookupParams);
+
+            case "BWB_POSTPAID":
+                return waterBillerService.bwbAccountLookup(params as AccountLookupParams);
+
+            case "SRWB_POSTPAID":
+                return waterBillerService.srwbAccountLookup(params as AccountLookupParams);
+
+            case "SRWB_PREPAID":
+                return waterBillerService.srwbPrepaidAccountLookup(params as AccountLookupParams);
+
+            case "MASM":
+                return masmBillerService.accountLookup(params as AccountLookupParams);
+
+            case "REGISTER_GENERAL":
+                return governmentBillerService.getInvoice({
+                    invoiceNumber: (params as any).invoiceNumber || (params as any).accountNumber
+                });
+
+            case "TNM_BUNDLES":
+                return mnoValidationService.validateTnmBundle({
+                    phoneNumber: (params as any).phoneNumber || (params as any).accountNumber,
+                    bundleId: (params as any).bundleId,
+                });
+
+            case "AIRTEL_VALIDATION":
+                return mnoValidationService.validateAirtelNumber({
+                    phoneNumber: (params as any).phoneNumber || (params as any).accountNumber,
+                });
+
+            default:
+                throw new Error(`Unsupported biller type: ${billerType}`);
+        }
+    }
+
+    /**
+     * Process payment for any biller type
+     */
+    async processPayment(
+        billerType: string,
+        params: BillerPaymentParams & { accountType?: string; invoiceNumber?: string }
+    ) {
+        switch (billerType) {
+            case "LWB_POSTPAID":
+                return waterBillerService.lwbPayment(params);
+
+            case "LWB_PREPAID":
+                return waterBillerService.lwbPrepaidPayment(params);
+
+            case "BWB_POSTPAID":
+                return waterBillerService.bwbPayment(params);
+
+            case "SRWB_POSTPAID":
+                return waterBillerService.srwbPayment(params);
+
+            case "SRWB_PREPAID":
+                return waterBillerService.srwbPrepaidPayment(params);
+
+            case "MASM":
+                return masmBillerService.processPayment(params);
+
+            case "REGISTER_GENERAL":
+                return governmentBillerService.confirmInvoice({
+                    ...params,
+                    invoiceNumber: params.invoiceNumber || params.accountNumber,
+                });
+
+            default:
+                throw new Error(`Unsupported biller type: ${billerType}`);
+        }
+    }
+
+    /**
+     * Get available biller types
+     */
+    getSupportedBillers() {
+        return [
+            "LWB_POSTPAID",
+            "LWB_PREPAID",
+            "BWB_POSTPAID",
+            "SRWB_POSTPAID",
+            "SRWB_PREPAID",
+            "MASM",
+            "REGISTER_GENERAL",
+            "TNM_BUNDLES",
+            "AIRTEL_VALIDATION",
+        ];
+    }
+}
+
+export const billerEsbService = new BillerEsbService();

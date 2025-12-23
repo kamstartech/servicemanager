@@ -94,12 +94,16 @@ export const deviceManagementResolvers = {
             const sentTo = sentToDetails.join(", ");
 
             // Store OTP in DeviceLoginAttempt (reusing existing infrastructure)
+            const existingAttempt = await prisma.deviceLoginAttempt.findFirst({
+                where: {
+                    mobileUserId: context.userId,
+                    deviceId,
+                },
+            });
+
             await prisma.deviceLoginAttempt.upsert({
                 where: {
-                    mobileUserId_deviceId: {
-                        mobileUserId: context.userId,
-                        deviceId,
-                    },
+                    id: existingAttempt?.id || "",
                 },
                 create: {
                     mobileUserId: context.userId,

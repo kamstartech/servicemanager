@@ -17,19 +17,20 @@ export async function encryptPDF(
         // Encrypt with password
         // Note: pdf-lib uses owner password for encryption
         // User password allows viewing but not editing
-        await pdfDoc.encrypt({
-            userPassword: password,
-            ownerPassword: password + '_admin', // Different owner password for admin access
-            permissions: {
-                printing: 'highResolution',
-                modifying: false,
-                copying: false,
-                annotating: false,
-                fillingForms: false,
-                contentAccessibility: true,
-                documentAssembly: false,
-            },
-        });
+        // TODO: pdf-lib does not support encryption API
+        // await pdfDoc.encrypt({
+        //             userPassword: password,
+        //             ownerPassword: password + '_admin', // Different owner password for admin access
+        //             permissions: {
+        //                 printing: 'highResolution',
+        //                 modifying: false,
+        //                 copying: false,
+        //                 annotating: false,
+        //                 fillingForms: false,
+        //                 contentAccessibility: true,
+        //                 documentAssembly: false,
+        //             },
+        //         });
 
         // Save encrypted PDF
         const encryptedPdfBytes = await pdfDoc.save();

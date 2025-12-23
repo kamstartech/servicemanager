@@ -2340,4 +2340,78 @@ export const typeDefs = /* GraphQL */ `
     message: String!
     requestId: String
   }
+
+  enum TicketStatus {
+    OPEN
+    IN_PROGRESS
+    RESOLVED
+    CLOSED
+  }
+
+  enum TicketPriority {
+    LOW
+    MEDIUM
+    HIGH
+    CRITICAL
+  }
+
+  enum MessageSenderType {
+    USER
+    ADMIN
+  }
+
+  type TicketMessage {
+    id: ID!
+    message: String!
+    senderType: MessageSenderType!
+    createdAt: String!
+    readAt: String
+  }
+
+  type SupportTicket {
+    id: ID!
+    subject: String!
+    status: TicketStatus!
+    priority: TicketPriority!
+    context: MobileUserContext!
+    category: String
+    user: MobileUser
+    messages: [TicketMessage!]!
+    lastMessage: String
+    createdAt: String!
+    updatedAt: String!
+    unreadCount: Int!
+  }
+
+  type TicketResponse {
+    tickets: [SupportTicket!]!
+    total: Int!
+    page: Int!
+    pages: Int!
+  }
+
+  type Query {
+    tickets(
+      status: TicketStatus
+      context: MobileUserContext
+      search: String
+      page: Int
+      limit: Int
+    ): TicketResponse!
+    ticket(id: ID!): SupportTicket
+    myTickets(page: Int, limit: Int): TicketResponse!
+
+    
+    # Existing queries...
+    # (Note: we are appending to the string, so we need to be careful with the closing backtick)
+  }
+
+  type Mutation {
+    createTicket(subject: String!, category: String, priority: TicketPriority!, message: String!): SupportTicket!
+    replyToTicket(ticketId: ID!, message: String!): TicketMessage!
+    sendTicketMessage(ticketId: ID!, message: String!): TicketMessage!
+    updateTicketStatus(ticketId: ID!, status: TicketStatus!): SupportTicket!
+    
+    # Existing mutations...
+  }
 `;

@@ -1,0 +1,16 @@
+model TicketMessage {
+  id              Int               @id @default(autoincrement())
+  ticketId        Int               @map("ticket_id")
+  ticket          SupportTicket     @relation(fields: [ticketId], references: [id])
+  
+  senderType      MessageSenderType @map("sender_type")
+  senderId        Int?              // Admin ID if admin, User ID if user (optional, can imply from ticket)
+  
+  message         String            @db.Text
+  attachmentUrl   String?           @map("attachment_url")
+  
+  createdAt       DateTime          @default(now()) @map("created_at")
+  readAt          DateTime?         @map("read_at")
+
+  @@map("ticket_messages")
+}

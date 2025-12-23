@@ -41,13 +41,11 @@ function NavItem({
       asChild
       variant="ghost"
       size="sm"
-      className={`w-full text-white transition-all duration-300 ${
-        collapsed ? "justify-center px-2" : "justify-start gap-2"
-      } ${
-        active 
-          ? "bg-fdh-light-blue" 
+      className={`w-full text-white transition-all duration-300 ${collapsed ? "justify-center px-2" : "justify-start gap-2"
+        } ${active
+          ? "bg-fdh-light-blue"
           : "hover:bg-white/20 hover:translate-x-1"
-      }`}
+        }`}
     >
       <Link href={href}>
         <Icon className="h-4 w-4 shrink-0 text-fdh-orange" />
@@ -89,9 +87,8 @@ function SectionHeader({
     <button
       type="button"
       onClick={onToggle}
-      className={`flex w-full items-center rounded-md px-2 py-2 text-xs font-semibold uppercase tracking-wide text-white/80 transition-colors hover:bg-white/20 hover:text-white ${
-        collapsed ? "justify-center" : "justify-between"
-      }`}
+      className={`flex w-full items-center rounded-md px-2 py-2 text-xs font-semibold uppercase tracking-wide text-white/80 transition-colors hover:bg-white/20 hover:text-white ${collapsed ? "justify-center" : "justify-between"
+        }`}
       aria-expanded={isOpen}
     >
       <span className="flex items-center gap-2">
@@ -100,9 +97,8 @@ function SectionHeader({
       </span>
       {!collapsed && (
         <ChevronDown
-          className={`h-4 w-4 transition-transform duration-200 ${
-            isOpen ? "rotate-180" : "rotate-0"
-          }`}
+          className={`h-4 w-4 transition-transform duration-200 ${isOpen ? "rotate-180" : "rotate-0"
+            }`}
         />
       )}
     </button>
@@ -216,27 +212,26 @@ export function AdminSidebar() {
 
   return (
     <aside
-      className={`sticky top-0 flex h-screen flex-col gap-3 bg-fdh-blue text-white transition-[width] duration-200 rounded-tr-3xl rounded-br-3xl ${
-        collapsed ? "w-16" : "w-64"
-      }`}
+      className={`sticky top-0 flex h-screen flex-col gap-3 bg-fdh-blue text-white transition-[width] duration-200 rounded-tr-3xl rounded-br-3xl ${collapsed ? "w-16" : "w-64"
+        }`}
     >
       {/* Header with Logo */}
       <div className="flex flex-col items-center px-4 pt-6">
         {!collapsed ? (
           <>
-            <img 
-              src="/images/logo/whitelogo.svg" 
+            <img
+              src="/images/logo/whitelogo.svg"
               alt={translate("sidebar.logoAlt")}
-              className="w-3/4 max-w-[150px] mb-6" 
+              className="w-3/4 max-w-[150px] mb-6"
             />
             <div className="w-full h-0.5 bg-fdh-orange mb-4"></div>
           </>
         ) : (
           <div className="mb-4">
-            <img 
-              src="/images/logo/whitelogo.svg" 
+            <img
+              src="/images/logo/whitelogo.svg"
               alt={translate("sidebar.logoAlt")}
-              className="w-8 h-8 object-contain" 
+              className="w-8 h-8 object-contain"
             />
           </div>
         )}
@@ -265,11 +260,10 @@ export function AdminSidebar() {
               type="button"
               variant={locale === "en" ? "default" : "ghost"}
               size="sm"
-              className={`h-7 flex-1 text-xs ${
-                locale === "en" 
-                  ? "bg-fdh-orange text-white hover:bg-fdh-orange/90" 
+              className={`h-7 flex-1 text-xs ${locale === "en"
+                  ? "bg-fdh-orange text-white hover:bg-fdh-orange/90"
                   : "text-white hover:bg-white/20"
-              }`}
+                }`}
               onClick={() => setLocale("en")}
             >
               EN
@@ -278,11 +272,10 @@ export function AdminSidebar() {
               type="button"
               variant={locale === "pt" ? "default" : "ghost"}
               size="sm"
-              className={`h-7 flex-1 text-xs ${
-                locale === "pt" 
-                  ? "bg-fdh-orange text-white hover:bg-fdh-orange/90" 
+              className={`h-7 flex-1 text-xs ${locale === "pt"
+                  ? "bg-fdh-orange text-white hover:bg-fdh-orange/90"
                   : "text-white hover:bg-white/20"
-              }`}
+                }`}
               onClick={() => setLocale("pt")}
             >
               PT
@@ -310,6 +303,7 @@ export function AdminSidebar() {
         {renderSection("configuration")}
 
         {/* System Section - REFINED */}
+        {renderSection("customerCare")}
         {renderSection("system")}
 
         {/* Administration Section - NEW */}
@@ -322,9 +316,8 @@ export function AdminSidebar() {
           asChild
           variant="ghost"
           size="sm"
-          className={`w-full text-white transition-all duration-300 hover:bg-white/20 hover:translate-x-1 ${
-            collapsed ? "justify-center px-2" : "justify-start gap-2"
-          }`}
+          className={`w-full text-white transition-all duration-300 hover:bg-white/20 hover:translate-x-1 ${collapsed ? "justify-center px-2" : "justify-start gap-2"
+            }`}
         >
           <Link href={SIDEBAR_PROFILE.href}>
             <SIDEBAR_PROFILE.icon className="h-4 w-4 shrink-0 text-fdh-orange" />
@@ -339,9 +332,8 @@ export function AdminSidebar() {
           variant="ghost"
           size="sm"
           onClick={logout}
-          className={`mt-1 w-full text-white transition-all duration-300 hover:bg-white/20 hover:translate-x-1 ${
-            collapsed ? "justify-center px-2" : "justify-start gap-2"
-          }`}
+          className={`mt-1 w-full text-white transition-all duration-300 hover:bg-white/20 hover:translate-x-1 ${collapsed ? "justify-center px-2" : "justify-start gap-2"
+            }`}
         >
           <LogOut className="h-4 w-4 shrink-0 text-fdh-orange" />
           {!collapsed && <span className="truncate">Logout</span>}

@@ -39,6 +39,7 @@ model MobileUser {
   
   // Transaction relationships
   initiatedTransactions      FdhTransaction[] @relation("InitiatedBy")
+  tickets                    SupportTicket[]
 
   @@map("fdh_mobile_users")
 }

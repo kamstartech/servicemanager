@@ -32,7 +32,7 @@ export const accountAlertResolvers = {
         const settings = await prisma.accountAlertSettings.findFirst({
           where: context.adminId
             ? { accountNumber: args.accountNumber }
-            : { accountNumber: args.accountNumber, mobileUserId: context.mobileUser.id },
+            : { accountNumber: args.accountNumber, mobileUserId: context.mobileUser?.id },
           include: { mobileUser: true }
         });
 
@@ -250,7 +250,7 @@ export const accountAlertResolvers = {
         const account = await prisma.mobileUserAccount.findFirst({
           where: context.adminId
             ? { accountNumber }
-            : { accountNumber, mobileUserId: context.mobileUser.id, isActive: true },
+            : { accountNumber, mobileUserId: context.mobileUser?.id, isActive: true },
         });
 
         if (!account) {
@@ -419,10 +419,10 @@ export const accountAlertResolvers = {
           where: context.adminId
             ? { accountNumber: args.accountNumber }
             : {
-                accountNumber: args.accountNumber,
-                mobileUserId: context.mobileUser.id,
-                isActive: true,
-              },
+              accountNumber: args.accountNumber,
+              mobileUserId: context.mobileUser?.id,
+              isActive: true,
+            },
         });
 
         if (!account) {

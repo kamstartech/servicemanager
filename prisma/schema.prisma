@@ -53,6 +53,8 @@ enum BeneficiaryType {
   EXTERNAL_BANK
   FDH_WALLET
   EXTERNAL_WALLET
+  BILL
+  SELF
 }
 
 enum BillerTransactionStatus {
@@ -109,6 +111,11 @@ enum LoginMethod {
   BIOMETRIC
   PASSKEY
   OTP
+}
+
+enum MessageSenderType {
+  USER
+  ADMIN
 }
 
 enum MigrationStatus {
@@ -207,6 +214,20 @@ enum SuspicionReason {
   NEW_DEVICE_TRANSACTION
 }
 
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
 enum TransactionSource {
   MOBILE_BANKING
   WALLET
@@ -233,6 +254,7 @@ enum TransactionType {
   ACCOUNT_TO_WALLET
   WALLET_TO_ACCOUNT
   AIRTIME
+  BILL_PAYMENT
 }
 
 enum TransferType {
@@ -1083,6 +1105,7 @@ model MobileUser {
   
   // Transaction relationships
   initiatedTransactions      FdhTransaction[] @relation("InitiatedBy")
+  tickets                    SupportTicket[]
 
   @@map("fdh_mobile_users")
 }
@@ -1330,6 +1353,28 @@ model SMSNotification {
   @@map("sms_notifications")
 }
 
+model SupportTicket {
+  id              Int               @id @default(autoincrement())
+  subject         String
+  status          TicketStatus      @default(OPEN)
+  priority        TicketPriority    @default(MEDIUM)
+  
+  // Context and User Linkage
+  context         MobileUserContext
+  userId          Int?              // Optional if unauthenticated (future) but usually linked
+  user            MobileUser?       @relation(fields: [userId], references: [id])
+  
+  // Metadata
+  category        String?           // e.g., "Account Issue", "Transaction"
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  // Relations
+  messages        TicketMessage[]
+
+  @@map("support_tickets")
+}
+
 model SuspiciousActivityLog {
   id            Int     @id @default(autoincrement())
   alertId       Int?    @map("alert_id")
@@ -1482,6 +1527,23 @@ model ThirdPartyClient {
 
   @@index([isActive])
   @@map("third_party_clients")
+}
+
+model TicketMessage {
+  id              Int               @id @default(autoincrement())
+  ticketId        Int               @map("ticket_id")
+  ticket          SupportTicket     @relation(fields: [ticketId], references: [id])
+  
+  senderType      MessageSenderType @map("sender_type")
+  senderId        Int?              // Admin ID if admin, User ID if user (optional, can imply from ticket)
+  
+  message         String            @db.Text
+  attachmentUrl   String?           @map("attachment_url")
+  
+  createdAt       DateTime          @default(now()) @map("created_at")
+  readAt          DateTime?         @map("read_at")
+
+  @@map("ticket_messages")
 }
 
 model WalletTier {
