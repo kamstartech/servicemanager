@@ -1,34 +1,10 @@
 model ExternalBank {
   id        String   @id @default(cuid())
-  name      String   @db.Text
-  code      String   @unique @db.Text // Bank Code (e.g. "NBM", "STD")
-  swiftCode String?  @map("swift_code") @db.Text
-  
-  isActive  Boolean  @default(true) @map("is_active")
-  
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  branches  ExternalBankBranch[]
+  name      String
+  code      String   @unique // Sort Code
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("external_banks")
-}
-
-model ExternalBankBranch {
-  id             String       @id @default(cuid())
-  
-  externalBankId String       @map("external_bank_id")
-  externalBank   ExternalBank @relation(fields: [externalBankId], references: [id], onDelete: Cascade)
-  
-  name           String       @db.Text
-  code           String       @db.Text // Branch Code (e.g. "001")
-  
-  isActive       Boolean      @default(true) @map("is_active")
-
-  createdAt      DateTime     @default(now()) @map("created_at")
-  updatedAt      DateTime     @updatedAt @map("updated_at")
-
-  @@unique([externalBankId, code])
-  @@index([externalBankId])
-  @@map("external_bank_branches")
 }

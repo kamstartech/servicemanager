@@ -23,7 +23,7 @@ import { ExternalBank } from "@prisma/client";
 import { ExternalBankDialog } from "./external-bank-dialog";
 
 interface ExternalBanksClientViewProps {
-    banks: (ExternalBank & { _count: { branches: number } })[];
+    banks: ExternalBank[];
 }
 
 export function ExternalBanksClientView({
@@ -59,7 +59,7 @@ export function ExternalBanksClientView({
                 <CardHeader>
                     <CardTitle>Configured Banks</CardTitle>
                     <CardDescription>
-                        Manage external banks and their branch codes.
+                        Manage external banks.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -67,9 +67,7 @@ export function ExternalBanksClientView({
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Bank Name</TableHead>
-                                <TableHead>Code</TableHead>
-                                <TableHead>Swift Code</TableHead>
-                                <TableHead>Branches</TableHead>
+                                <TableHead>Sort Code</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -77,7 +75,7 @@ export function ExternalBanksClientView({
                             {banks.length === 0 ? (
                                 <TableRow>
                                     <TableCell
-                                        colSpan={5}
+                                        colSpan={3}
                                         className="text-center text-muted-foreground h-24"
                                     >
                                         No banks configured yet.
@@ -88,8 +86,6 @@ export function ExternalBanksClientView({
                                     <TableRow key={bank.id}>
                                         <TableCell className="font-medium">{bank.name}</TableCell>
                                         <TableCell>{bank.code}</TableCell>
-                                        <TableCell>{bank.swiftCode || "-"}</TableCell>
-                                        <TableCell>{bank._count.branches}</TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
                                                 <Button

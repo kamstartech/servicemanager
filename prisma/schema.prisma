@@ -297,6 +297,17 @@ enum WorkflowStepType {
   POST_TRANSACTION
 }
 
+model ExternalBank {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique // Sort Code
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("external_banks")
+}
+
 
 
 model AccountAlert {
@@ -1416,6 +1427,18 @@ model SuspiciousActivityLog {
 // ============================================
 // Checkbook Requests
 // ============================================
+
+model SystemConfiguration {
+  id          String   @id @default(cuid())
+  key         String   @unique @db.Text
+  value       String   @db.Text
+  description String?  @db.Text
+  updatedBy   String?  @map("updated_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("system_configurations")
+}
 
 model ThirdPartyAccessLog {
   id       String  @id @default(cuid())

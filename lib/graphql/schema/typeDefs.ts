@@ -614,18 +614,6 @@ export const typeDefs = /* GraphQL */ `
     id: ID!
     name: String!
     code: String!
-    swiftCode: String
-    isActive: Boolean!
-    branches: [ExternalBankBranch!]!
-    createdAt: String!
-    updatedAt: String!
-  }
-
-  type ExternalBankBranch {
-    id: ID!
-    name: String!
-    code: String!
-    externalBankId: String!
     isActive: Boolean!
     createdAt: String!
     updatedAt: String!

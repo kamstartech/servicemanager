@@ -10,13 +10,12 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { ExternalBankDialog } from "./external-bank-dialog";
-import { BranchList } from "./branch-list";
-import { ExternalBank, ExternalBankBranch } from "@prisma/client";
+import { ExternalBank } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 interface ExternalBankDetailsViewProps {
-    bank: ExternalBank & { branches: ExternalBankBranch[] };
+    bank: ExternalBank;
 }
 
 export function ExternalBankDetailsView({ bank }: ExternalBankDetailsViewProps) {
@@ -43,24 +42,16 @@ export function ExternalBankDetailsView({ bank }: ExternalBankDetailsViewProps) 
                     </Button>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <div>
-                            <p className="text-sm font-medium text-muted-foreground">Name</p>
-                            <p className="text-lg">{bank.name}</p>
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-muted-foreground">Code</p>
-                            <p className="text-lg font-mono">{bank.code}</p>
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-muted-foreground">Swift Code</p>
-                            <p className="text-lg font-mono">{bank.swiftCode || "-"}</p>
-                        </div>
+                    <div className="grid gap-1">
+                        <span className="text-sm font-medium text-muted-foreground">Name</span>
+                        <span className="text-lg font-semibold">{bank.name}</span>
+                    </div>
+                    <div className="grid gap-1">
+                        <span className="text-sm font-medium text-muted-foreground">Sort Code</span>
+                        <span className="text-lg">{bank.code}</span>
                     </div>
                 </CardContent>
             </Card>
-
-            <BranchList bankId={bank.id} branches={bank.branches} />
 
             <ExternalBankDialog
                 open={isDialogOpen}

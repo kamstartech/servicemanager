@@ -77,25 +77,15 @@ export function ExternalBankDialog({
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="code" className="text-right">
-                                Code
+                                Sort Code
                             </Label>
                             <Input
                                 id="code"
                                 name="code"
                                 defaultValue={initialData?.code}
+                                placeholder="e.g. 050015"
                                 className="col-span-3"
                                 required
-                            />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="swiftCode" className="text-right">
-                                Swift Code
-                            </Label>
-                            <Input
-                                id="swiftCode"
-                                name="swiftCode"
-                                defaultValue={initialData?.swiftCode || ""}
-                                className="col-span-3"
                             />
                         </div>
                     </div>
@@ -113,6 +103,6 @@ export function ExternalBankDialog({
                     </DialogFooter>
                 </form>
             </DialogContent>
-        </Dialog>
+        </Dialog >
     );
 }
