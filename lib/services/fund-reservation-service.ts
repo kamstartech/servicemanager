@@ -13,7 +13,7 @@ export class FundReservationService {
         _description: string
     ): Promise<{ success: boolean; transactionReference?: string; error?: string }> {
         try {
-            const suspenseAccount = await ConfigurationService.getSuspenseAccount();
+            const suspenseAccount = await ConfigurationService.getInboundSuspenseAccount();
 
             // Logic to call core banking or transfer service
             // For now, we stub this or use an existing service if valid
@@ -53,7 +53,7 @@ export class FundReservationService {
         _description: string
     ): Promise<{ success: boolean; transactionReference?: string; error?: string }> {
         try {
-            const suspenseAccount = await ConfigurationService.getSuspenseAccount();
+            const suspenseAccount = await ConfigurationService.getInboundSuspenseAccount();
 
             console.log(`[FundReservation] Releasing ${amount} from Suspense ${suspenseAccount} to ${destinationAccount}`);
 

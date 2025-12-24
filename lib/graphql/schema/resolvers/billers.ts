@@ -9,6 +9,8 @@ import {
 import { generateTransactionReference } from "@/lib/utils/reference-generator";
 import { billerEsbService } from "@/lib/services/billers/biller-esb-service";
 import { Decimal } from "@prisma/client/runtime/library";
+import { t24Service } from "@/lib/services/t24-service";
+import { ConfigurationService } from "@/lib/services/configuration-service";
 
 /**
  * Biller Resolvers
@@ -378,20 +380,77 @@ export const billersResolvers = {
       });
 
       try {
-        // Call ESB directly (like airtime)
-        const result = await billerEsbService.processPayment(billerType, {
-          accountNumber,
-          amount: amount.toNumber(),
-          currency,
-          debitAccount,
-          debitAccountType,
-          creditAccount,
-          creditAccountType,
-          customerAccountNumber,
-          customerAccountName,
-          externalTxnId: reference,
-          accountType,
+        // 1. FUND RESERVATION: Move funds to Outbound Suspense Account
+        const outboundSuspense = await ConfigurationService.getOutboundSuspenseAccount();
+        console.log(`[BillerResolver] Reserving funds: ${sourceAccount.accountNumber} -> Suspense ${outboundSuspense}`);
+
+        const reservationResult = await t24Service.transfer({
+          fromAccount: sourceAccount.accountNumber,
+          toAccount: outboundSuspense,
+          amount: amount.toString(), // amount is Decimal
+          currency: currency,
+          reference: `RES-${reference}`,
+          description: `Biller Reservation: ${billerType}`,
+          transferType: "BILLER_RESERVATION" as any
         });
+
+        if (!reservationResult.success) {
+          // Return T24 error directly as requested
+          const errorMessage = reservationResult.message || "Fund reservation failed";
+
+          await prisma.fdhTransaction.update({
+            where: { id: transaction.id },
+            data: {
+              status: TransactionStatus.FAILED,
+              errorMessage,
+              errorCode: reservationResult.errorCode
+            }
+          });
+
+          return {
+            success: false,
+            message: errorMessage, // Sending T24 error to user
+            transactionId: transaction.id,
+            reference,
+            status: "FAILED"
+          };
+        }
+
+        // 2. EXECUTE BILLER PAYMENT
+        // Call ESB directly (like airtime)
+        let result;
+        try {
+          result = await billerEsbService.processPayment(billerType, {
+            accountNumber,
+            amount: amount.toNumber(),
+            currency,
+            debitAccount,
+            debitAccountType,
+            creditAccount,
+            creditAccountType,
+            customerAccountNumber,
+            customerAccountName,
+            externalTxnId: reference,
+            accountType,
+          });
+        } catch (billerError: any) {
+          // 3. REVERSAL ON EXCEPTION
+          console.warn(`[BillerResolver] Biller threw error, reversing funds: Suspense ${outboundSuspense} -> ${sourceAccount.accountNumber}`);
+          try {
+            await t24Service.transfer({
+              fromAccount: outboundSuspense,
+              toAccount: sourceAccount.accountNumber,
+              amount: amount.toString(),
+              currency: currency,
+              reference: `REV-${reference}`,
+              description: `Reversal: ${billerType} Failed`,
+              transferType: "BILLER_REVERSAL" as any
+            });
+          } catch (reversalError) {
+            console.error(`[BillerResolver] CRITICAL: Fund reversal failed!`, reversalError);
+          }
+          throw billerError; // Let outer catch handle the transaction update
+        }
 
         if (result.ok) {
           // Update transaction status
@@ -432,6 +491,22 @@ export const billersResolvers = {
             },
           };
         } else {
+          // 3b. REVERSAL ON LOGICAL FAILURE
+          console.warn(`[BillerResolver] Biller returned unsucessful result, reversing funds`);
+          try {
+            await t24Service.transfer({
+              fromAccount: outboundSuspense,
+              toAccount: sourceAccount.accountNumber,
+              amount: amount.toString(),
+              currency: currency,
+              reference: `REV-${reference}`,
+              description: `Reversal: ${billerType} Failed`,
+              transferType: "BILLER_REVERSAL" as any
+            });
+          } catch (reversalError) {
+            console.error(`[BillerResolver] CRITICAL: Fund reversal failed!`, reversalError);
+          }
+
           const errorMessage = result.error || "Failed to process bill payment";
 
           await prisma.fdhTransaction.update({

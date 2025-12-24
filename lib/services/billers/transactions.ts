@@ -1,6 +1,8 @@
 import { PrismaClient, BillerTransaction, BillerTransactionStatus, BillerType } from "@prisma/client";
 import { nanoid } from "nanoid";
 import { BillerServiceFactory } from "./factory";
+import { t24Service } from "../t24-service";
+import { ConfigurationService } from "../configuration-service";
 
 const prisma = new PrismaClient();
 
@@ -349,31 +351,97 @@ export class BillerTransactionService {
         status: BillerTransactionStatus.PROCESSING,
       });
 
-      // Process payment
-      const result = await billerService.processPayment({
-        accountNumber: paymentData.accountNumber,
-        amount,
-        currency: paymentData.currency || config.defaultCurrency,
-        accountType: paymentData.accountType,
-        metadata: {
-          ourTransactionId: transaction.ourTransactionId,
-          creditAccount: paymentData.creditAccount,
-          creditAccountType: paymentData.creditAccountType,
-          debitAccount: paymentData.debitAccount,
-          debitAccountType: paymentData.debitAccountType,
-          customerAccountNumber: paymentData.customerAccountNumber,
-          customerAccountName: paymentData.customerAccountName,
-          ...paymentData.metadata,
-        },
-      });
+      // 1. FUND RESERVATION: Move funds to Outbound Suspense Account
+      // Only applicable if we have a debit account (source of funds)
+      const debitAccount = paymentData.debitAccount || paymentData.accountNumber; // Fallback might need review dependent on context
+      const outboundSuspense = await ConfigurationService.getOutboundSuspenseAccount();
+      let reservationReference = null;
+
+      if (debitAccount) {
+        console.log(`[BillerTransaction] Reserving funds: ${debitAccount} -> Suspense ${outboundSuspense}`);
+        const reservationResult = await t24Service.transfer({
+          fromAccount: debitAccount,
+          toAccount: outboundSuspense,
+          amount: amount.toString(),
+          currency: paymentData.currency || config.defaultCurrency,
+          reference: `RES-${transaction.ourTransactionId}`,
+          description: `Biller Reservation: ${config.billerName}`,
+          transferType: "BILLER_RESERVATION" as any
+        });
+
+        if (!reservationResult.success) {
+          throw new Error(`Fund reservation failed: ${reservationResult.message}`);
+        }
+        reservationReference = reservationResult.t24Reference;
+      }
+
+      // 2. PROCESS PAYMENT: Call Biller API
+      let result;
+      try {
+        // Process payment
+        result = await billerService.processPayment({
+          accountNumber: paymentData.accountNumber,
+          amount,
+          currency: paymentData.currency || config.defaultCurrency,
+          accountType: paymentData.accountType,
+          metadata: {
+            ourTransactionId: transaction.ourTransactionId,
+            creditAccount: paymentData.creditAccount,
+            creditAccountType: paymentData.creditAccountType,
+            debitAccount: paymentData.debitAccount,
+            debitAccountType: paymentData.debitAccountType,
+            customerAccountNumber: paymentData.customerAccountNumber,
+            customerAccountName: paymentData.customerAccountName,
+            ...paymentData.metadata,
+          },
+        });
+      } catch (billerError: any) {
+        // 3. REVERSAL: If Biller API fails, reverse funds from Suspense
+        if (debitAccount) {
+          console.warn(`[BillerTransaction] Biller failed, reversing funds: Suspense ${outboundSuspense} -> ${debitAccount}`);
+          try {
+            await t24Service.transfer({
+              fromAccount: outboundSuspense,
+              toAccount: debitAccount,
+              amount: amount.toString(),
+              currency: paymentData.currency || config.defaultCurrency,
+              reference: `REV-${transaction.ourTransactionId}`,
+              description: `Reversal: ${config.billerName} Failed`,
+              transferType: "BILLER_REVERSAL" as any
+            });
+          } catch (reversalError) {
+            console.error(`[BillerTransaction] CRITICAL: Fund reversal failed!`, reversalError);
+            // In a real system, we might flag this transaction for manual intervention
+          }
+        }
+        throw billerError; // Re-throw to handle outer failure logic
+      }
 
       if (!result.success && !result.error && result.message) {
         (result as any).error = result.message;
       }
 
       if (result.success) {
-        await this.completeTransaction(transaction.id, result);
+        await this.completeTransaction(transaction.id, result, (result as any).transactionReference);
       } else {
+        // Should functionally fall into catch block if throw was used, but if result.success is false:
+        // We might need reversal here too if the service didn't throw but returned success: false
+        if (debitAccount) {
+          console.warn(`[BillerTransaction] Biller result failed, reversing funds`);
+          try {
+            await t24Service.transfer({
+              fromAccount: outboundSuspense,
+              toAccount: debitAccount,
+              amount: amount.toString(),
+              currency: paymentData.currency || config.defaultCurrency,
+              reference: `REV-${transaction.ourTransactionId}`,
+              description: `Reversal: ${config.billerName} Failed`,
+              transferType: "BILLER_REVERSAL" as any
+            });
+          } catch (reversalError) {
+            console.error(`[BillerTransaction] CRITICAL: Fund reversal failed!`, reversalError);
+          }
+        }
         await this.failTransaction(transaction.id, result.error || "Payment failed");
       }
 

@@ -38,7 +38,21 @@ export class ConfigurationService {
     }
 
     static async getSuspenseAccount(): Promise<string> {
-        const account = await this.get("suspense_account");
-        return account || "1520000114607"; // Default fallback
+        return this.getInboundSuspenseAccount();
+    }
+
+    static async getInboundSuspenseAccount(): Promise<string> {
+        const account = await this.get("suspense_account_inbound");
+        // Fallback to old key or default
+        if (!account) {
+            const oldAccount = await this.get("suspense_account");
+            return oldAccount || "1520000114607";
+        }
+        return account;
+    }
+
+    static async getOutboundSuspenseAccount(): Promise<string> {
+        const account = await this.get("suspense_account_outbound");
+        return account || "1520000114608"; // Default fallback
     }
 }

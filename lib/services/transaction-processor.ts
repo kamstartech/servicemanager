@@ -8,6 +8,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { TransactionStatus, TransactionType, TransferType } from "@prisma/client";
 import { t24Service } from "./t24-service";
+import { ConfigurationService } from "./configuration-service";
 
 export async function processTransaction(transactionId: string): Promise<void> {
   const transaction = await prisma.fdhTransaction.findUnique({
@@ -105,10 +106,19 @@ async function processBankTransfer(transaction: any): Promise<any> {
     throw new Error("Missing account information");
   }
 
+  // Create a modifiable toAccount
+  let destinationAccount = toAccount;
+
+  // Intercept EXTERNAL_BANK transfers and route to Outbound Suspense Account through T24
+  if (transaction.transferType === TransferType.EXTERNAL_BANK) {
+    console.log(`[TransactionProcessor] Routing EXTERNAL_BANK transfer to Outbound Suspense Account`);
+    destinationAccount = await ConfigurationService.getOutboundSuspenseAccount();
+  }
+
   // Call T24 API
   const t24Response = await t24Service.transfer({
     fromAccount,
-    toAccount,
+    toAccount: destinationAccount,
     amount: transaction.amount.toString(),
     currency: transaction.currency,
     reference: transaction.reference,
@@ -125,13 +135,42 @@ async function processBankTransfer(transaction: any): Promise<any> {
 async function processWalletTransfer(transaction: any): Promise<any> {
   console.log(`[TransactionProcessor] Processing wallet transfer ${transaction.id}`);
 
-  // TODO: Implement wallet-specific logic
-  // This should update local wallet balances or call a wallet service.
-  // For now, simulate success.
+  // Route FDH_WALLET and EXTERNAL_WALLET to Outbound Suspense Account
+  if (
+    transaction.transferType === TransferType.FDH_WALLET ||
+    transaction.transferType === TransferType.EXTERNAL_WALLET
+  ) {
+    console.log(`[TransactionProcessor] Routing WALLET transfer (${transaction.transferType}) to Outbound Suspense Account`);
+
+    const fromAccount = transaction.fromAccountNumber || transaction.fromAccount?.accountNumber;
+    const outboundSuspense = await ConfigurationService.getOutboundSuspenseAccount();
+
+    if (!fromAccount) {
+      throw new Error("Missing source account information for wallet transfer");
+    }
+
+    // Perform T24 transfer to Suspense Account
+    // Note: The actual wallet credit logic (e.g. calling a Wallet API) happens separately 
+    // or is assumed to be triggered by the suspense movement + external system.
+    // For this system's scope, we move money to suspense.
+    const t24Response = await t24Service.transfer({
+      fromAccount,
+      toAccount: outboundSuspense,
+      amount: transaction.amount.toString(),
+      currency: transaction.currency,
+      reference: transaction.reference,
+      description: transaction.description || `Wallet Funding: ${transaction.transferType}`,
+      transferType: transaction.transferType,
+    });
+
+    return t24Response;
+  }
+
+  // Fallback / standard wallet logic if any (currently simulated)
   return {
     success: true,
     t24Reference: `WALLET-${Date.now()}`,
-    message: "Wallet transaction processed",
+    message: "Wallet transaction processed (simulated)",
   };
 }
 
