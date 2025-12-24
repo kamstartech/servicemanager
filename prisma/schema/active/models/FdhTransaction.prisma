@@ -15,13 +15,14 @@ model FdhTransaction {
   amount    Decimal  @db.Decimal(19, 4)
   currency  String   @default("MWK") @db.VarChar(3)
   
-  // Sender (From) - Mobile Banking
-  fromAccountId     Int?  @map("from_account_id")
-  fromAccountNumber String?  @map("from_account_number") @db.VarChar(50)
+  // Sender (From)
+  fromAccountNumber String?            @map("from_account_number") @db.VarChar(50)
   
-  // Receiver (To) - Mobile Banking
-  toAccountId       Int?  @map("to_account_id")
-  toAccountNumber   String?  @map("to_account_number") @db.VarChar(50)
+  // Receiver (To)
+  toAccountNumber   String?            @map("to_account_number") @db.VarChar(50)
+  
+  // Relationships
+  // No Foreign Key constraints on account numbers (for joint account support)
   
   // Description
   description       String   @db.Text
@@ -53,10 +54,6 @@ model FdhTransaction {
   updatedAt         DateTime @updatedAt @map("updated_at")
   completedAt       DateTime? @map("completed_at")
   
-  // Relationships - Mobile Banking Accounts
-  fromAccount MobileUserAccount? @relation("FromAccount", fields: [fromAccountId], references: [id], onDelete: SetNull)
-  toAccount   MobileUserAccount? @relation("ToAccount", fields: [toAccountId], references: [id], onDelete: SetNull)
-  
   // User who initiated
   initiatedByUserId Int? @map("initiated_by_user_id")
   initiatedBy       MobileUser? @relation("InitiatedBy", fields: [initiatedByUserId], references: [id], onDelete: SetNull)
@@ -70,11 +67,9 @@ model FdhTransaction {
   @@index([transferType])
   @@index([transferContext])
   @@index([reference])
-  @@index([fromAccountId])
-  @@index([toAccountId])
+  @@index([fromAccountNumber])
+  @@index([toAccountNumber])
   @@index([t24Reference])
   @@index([createdAt])
   @@map("fdh_transactions")
 }
-
-// Transaction Status History (Audit Trail)

@@ -58,7 +58,6 @@ export const airtimeResolvers = {
                     amount,
                     currency: sourceAccount.currency,
                     description: `Airtime purchase for ${msisdn} (${provider})`,
-                    fromAccountId: sourceAccount.id,
                     fromAccountNumber: sourceAccount.accountNumber,
                     toAccountNumber: msisdn,
                     initiatedByUserId: context.userId,

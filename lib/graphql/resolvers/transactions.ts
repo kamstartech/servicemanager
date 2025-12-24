@@ -11,6 +11,7 @@ import {
 } from "@prisma/client";
 import { generateTransactionReference } from "@/lib/utils/reference-generator";
 import { Decimal } from "@prisma/client/runtime/library";
+import { walletTransactionService } from "@/lib/services/wallet-transaction-service";
 
 export const transactionResolvers = {
   Query: {
@@ -45,8 +46,7 @@ export const transactionResolvers = {
       if (context.mobileUser) {
         const hasAccess =
           transaction.initiatedByUserId === context.mobileUser.id ||
-          transaction.fromAccount?.mobileUserId === context.mobileUser.id ||
-          transaction.toAccount?.mobileUserId === context.mobileUser.id;
+          transaction.fromAccount?.mobileUserId === context.mobileUser.id; // toAccount ownership check removed due to decoupled schema
 
         if (!hasAccess) {
           throw new GraphQLError("Forbidden", {
@@ -119,10 +119,18 @@ export const transactionResolvers = {
             where.amount.lte = new Decimal(filter.maxAmount);
         }
         if (filter.accountId) {
-          where.OR = [
-            { fromAccountId: filter.accountId },
-            { toAccountId: filter.accountId },
-          ];
+          const account = await prisma.mobileUserAccount.findUnique({
+            where: { id: filter.accountId },
+          });
+          if (account) {
+            where.OR = [
+              { fromAccountNumber: account.accountNumber },
+              { toAccountNumber: account.accountNumber },
+            ];
+          } else {
+            // Force empty result
+            where.id = "0";
+          }
         }
         if (filter.search) {
           where.OR = [
@@ -183,22 +191,91 @@ export const transactionResolvers = {
         });
       }
 
-      // Verify account ownership for mobile users
-      if (context.mobileUser) {
-        const account = await prisma.mobileUserAccount.findUnique({
-          where: { id: accountId },
-        });
+      const account = await prisma.mobileUserAccount.findUnique({
+        where: { id: accountId },
+      });
 
-        if (account?.mobileUserId !== context.mobileUser.id) {
+      if (!account) {
+        throw new GraphQLError("Account not found", { extensions: { code: "NOT_FOUND" } });
+      }
+
+      // Verify account ownership for mobile users
+      if (context.mobileUser && account.mobileUserId !== context.mobileUser.id) {
+        throw new GraphQLError("Forbidden", { extensions: { code: "FORBIDDEN" } });
+      }
+
+      const where: Prisma.FdhTransactionWhereInput = {
+        OR: [{ fromAccountNumber: account.accountNumber }, { toAccountNumber: account.accountNumber }],
+      };
+
+      const [transactions, totalCount] = await Promise.all([
+        prisma.fdhTransaction.findMany({
+          where,
+          include: {
+            fromAccount: true,
+            toAccount: true,
+            statusHistory: true,
+          },
+          orderBy: { createdAt: "desc" },
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+        prisma.fdhTransaction.count({ where }),
+      ]);
+
+      return {
+        transactions,
+        totalCount,
+        pageInfo: {
+          hasNextPage: page * limit < totalCount,
+          hasPreviousPage: page > 1,
+          currentPage: page,
+          totalPages: Math.ceil(totalCount / limit),
+        },
+      };
+    },
+
+    walletTransactions: async (
+      _: any,
+
+      {
+        walletId,
+        page = 1,
+        limit = 20,
+      }: { walletId: number; page?: number; limit?: number },
+      context: GraphQLContext
+    ) => {
+      if (!context.adminUser && !context.mobileUser) {
+        throw new GraphQLError("Unauthorized", {
+          extensions: { code: "UNAUTHENTICATED" },
+        });
+      }
+
+      // Verify wallet ownership for mobile users
+      if (context.mobileUser) {
+        if (walletId !== context.mobileUser.id) {
           throw new GraphQLError("Forbidden", {
             extensions: { code: "FORBIDDEN" },
           });
         }
       }
 
-      const where: Prisma.FdhTransactionWhereInput = {
-        OR: [{ fromAccountId: accountId }, { toAccountId: accountId }],
-      };
+      // Find the user's wallet account
+      const walletAccount = await prisma.mobileUserAccount.findFirst({
+        where: {
+          mobileUserId: walletId,
+          context: MobileUserContext.WALLET
+        }
+      });
+
+      const where: Prisma.FdhTransactionWhereInput = {};
+
+      if (walletAccount) {
+        where.OR = [{ fromAccountNumber: walletAccount.accountNumber }, { toAccountNumber: walletAccount.accountNumber }];
+      } else {
+        // No wallet account found, return empty
+        where.id = "0";
+      }
 
       const [transactions, totalCount] = await Promise.all([
         prisma.fdhTransaction.findMany({
@@ -342,6 +419,9 @@ export const transactionResolvers = {
           throw new Error("toAccountNumber is required for account transfers");
         }
 
+        const currency = input.currency || "MWK";
+        const description = input.description || "Transfer";
+
         const fromAccount = await prisma.mobileUserAccount.findUnique({
           where: { id: input.fromAccountId },
           select: {
@@ -398,6 +478,57 @@ export const transactionResolvers = {
 
         if (input.type === TransferType.SELF) {
           if (!toAccount) {
+            // Check if it's a transfer to OWN Wallet
+            // This assumes toAccountNumber matches wallet identifier or we check input context
+            // But input.context is Source Context.
+            // If input.context is MOBILE_BANKING, and we want to transfer to WALLET.
+            // Currently createTransfer assumes same context for source and dest if not specified?
+            // The code above did: where: { context: input.context } for toAccount.
+            // So createTransfer currently ONLY supports Same-Context transfers (Bank->Bank or Wallet->Wallet).
+
+            // If we want Bank -> Wallet, we need to handle it.
+            // The user request is "When a transaction from mobile_banking to fdh wallet".
+
+            // Let's assume for SELF transfer, if destination account is not found in same context,
+            // check if user has a wallet and dest number matches wallet number?
+            // OR, we should rely on a specific TransferType or input flag.
+            // But TransferType is enum { SELF, INTERNAL, EXTERNAL... }
+
+            // If "toAccount" is not found in MOBILE_BANKING context, key "to_wallet" logic could be applied.
+            // However, `toAccount` query filtered by `context: input.context`.
+
+            // Let's add logic: If source is MOBILE_BANKING and SELF transfer, and we want to load Wallet.
+            // We can check if `toAccountNumber` is the user's phone number (Wallet ID).
+
+            const walletUser = await prisma.mobileUser.findFirst({
+              where: {
+                id: context.mobileUser.id,
+                phoneNumber: toAccountNumber
+              }
+            });
+
+            if (walletUser) {
+              // Identified as Account -> Wallet Transfer
+              const result = await walletTransactionService.processAccountToWalletTransfer(
+                context.mobileUser.id,
+                fromAccount.id,
+                input.amount,
+                currency,
+                description
+              );
+
+              if (!result.success) {
+                throw new Error(result.error);
+              }
+
+              return {
+                success: true,
+                transaction: result.transaction,
+                message: "Wallet top-up successful",
+                errors: []
+              };
+            }
+
             throw new GraphQLError("Destination account not found for SELF transfer", {
               extensions: { code: "NOT_FOUND" },
             });
@@ -411,8 +542,7 @@ export const transactionResolvers = {
         }
 
         const reference = generateTransactionReference();
-        const currency = input.currency || "MWK";
-        const description = input.description || "Transfer";
+        // currency and description are already defined above
 
         const transaction = await prisma.fdhTransaction.create({
           data: {
@@ -428,9 +558,7 @@ export const transactionResolvers = {
             amount,
             currency,
             description,
-            fromAccountId: fromAccount.id,
             fromAccountNumber: fromAccount.accountNumber,
-            toAccountId: toAccount?.id,
             toAccountNumber: toAccount?.accountNumber || toAccountNumber,
             t24RequestBody: {
               type: input.type,
@@ -446,8 +574,6 @@ export const transactionResolvers = {
             initiatedByUserId: context.mobileUser.id,
           },
           include: {
-            fromAccount: true,
-            toAccount: true,
             initiatedBy: true,
             statusHistory: true,
           },
@@ -544,16 +670,13 @@ export const transactionResolvers = {
             amount,
             currency: input.currency || "MWK",
             description: input.description,
-            fromAccountId: input.fromAccountId,
             fromAccountNumber: resolvedFromAccountNumber,
-            toAccountId: input.toAccountId,
             toAccountNumber: input.toAccountNumber,
             maxRetries: input.maxRetries || 3,
             initiatedByUserId: context.mobileUser?.id,
           },
           include: {
-            fromAccount: true,
-            toAccount: true,
+            initiatedBy: true,
             statusHistory: true,
           },
         });
@@ -702,9 +825,7 @@ export const transactionResolvers = {
           currency: originalTransaction.currency,
           description: `Reversal: ${reason}`,
           // Swap accounts
-          fromAccountId: originalTransaction.toAccountId,
           fromAccountNumber: originalTransaction.toAccountNumber,
-          toAccountId: originalTransaction.fromAccountId,
           toAccountNumber: originalTransaction.fromAccountNumber,
           isReversal: true,
           originalTxnId: originalTransaction.id,
@@ -712,8 +833,6 @@ export const transactionResolvers = {
           maxRetries: 3,
         },
         include: {
-          fromAccount: true,
-          toAccount: true,
           statusHistory: true,
         },
       });
@@ -745,22 +864,20 @@ export const transactionResolvers = {
 
   Transaction: {
     fromAccount: async (parent: any) => {
-      if (!parent.fromAccountId) return null;
+      if (!parent.fromAccountNumber) return null;
       return (
         parent.fromAccount ||
-        (await prisma.mobileUserAccount.findUnique({
-          where: { id: parent.fromAccountId },
+        (await prisma.mobileUserAccount.findFirst({
+          where: { accountNumber: parent.fromAccountNumber },
         }))
       );
     },
     toAccount: async (parent: any) => {
-      if (!parent.toAccountId) return null;
-      return (
-        parent.toAccount ||
-        (await prisma.mobileUserAccount.findUnique({
-          where: { id: parent.toAccountId },
-        }))
-      );
+      // Best effort resolution since toAccount is not a strict relation anymore
+      if (!parent.toAccountNumber) return null;
+      return await prisma.mobileUserAccount.findFirst({
+        where: { accountNumber: parent.toAccountNumber }
+      });
     },
     initiatedBy: async (parent: any) => {
       if (!parent.initiatedByUserId) return null;

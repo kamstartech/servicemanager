@@ -1,4 +1,10 @@
+import { XMLParser } from "fast-xml-parser";
 import { fetchIPv4 } from "@/lib/utils/fetch-ipv4";
+
+const xmlParser = new XMLParser({
+  ignoreAttributes: false,
+  removeNSPrefix: true, // easier to traverse (soapenv:Body -> Body)
+});
 
 type AuthConfig =
   | { type: "basic"; username: string; password: string }
@@ -21,6 +27,16 @@ function tryParseJson(text: string) {
   if (!trimmed) return null;
   try {
     return JSON.parse(trimmed);
+  } catch {
+    return null;
+  }
+}
+
+function tryParseXml(text: string) {
+  const trimmed = text.trim();
+  if (!trimmed || !trimmed.startsWith("<")) return null;
+  try {
+    return xmlParser.parse(trimmed);
   } catch {
     return null;
   }
@@ -111,19 +127,64 @@ export class ESBAirtimeTopupService {
 
     const raw = await response.text();
     const data = tryParseJson(raw);
+    const xmlData = !data ? tryParseXml(raw) : null;
 
     if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}`;
+
+      if (data) {
+        errorMessage = data.message || data.error || data.description || errorMessage;
+      } else if (xmlData) {
+        // Common XML Error patterns
+        // 1. SOAP Fault
+        if (xmlData.Envelope?.Body?.Fault) {
+          const fault = xmlData.Envelope.Body.Fault;
+          errorMessage = fault.faultstring || fault.faultcode || errorMessage;
+        }
+        // 2. Airtel/Generic Command Response
+        else if (xmlData.COMMAND) {
+          errorMessage =
+            xmlData.COMMAND.MESSAGE ||
+            xmlData.COMMAND.TXNSTATUS ||
+            xmlData.COMMAND.Message ||
+            errorMessage;
+        }
+        // 3. Simple Error Tag
+        else if (xmlData.Error) {
+          errorMessage = xmlData.Error.Message || xmlData.Error || errorMessage;
+        }
+        // 4. Response with Status/Message
+        else if (xmlData.Response?.Message) {
+          errorMessage = xmlData.Response.Message;
+        }
+      }
+
       return {
         ok: false,
         status: response.status,
         statusText: response.statusText,
         raw,
-        data: data ?? undefined,
-        error:
-          (data && (data.message || data.error || data.description)) ||
-          raw ||
-          `HTTP ${response.status}`,
+        data: data ?? xmlData ?? undefined,
+        error: errorMessage,
       };
+    } else {
+      // Also check if sucessful HTTP response contains business logic error (common in legacy XML APIs)
+      if (xmlData) {
+        // Airtel example: <COMMAND><TXNSTATUS>200</TXNSTATUS><MESSAGE>Success</MESSAGE></COMMAND>
+        // Need to check specific provider patterns if needed, but for now assuming HTTP OK = Success
+        // unless we see specific error flags.
+        // Often HTTP 200 returns <COMMAND><TXNSTATUS>FAILED</TXNSTATUS>...
+        if (xmlData.COMMAND && xmlData.COMMAND.TXNSTATUS && String(xmlData.COMMAND.TXNSTATUS) !== "200" && String(xmlData.COMMAND.TXNSTATUS) !== "SUCCESS") {
+          return {
+            ok: false,
+            status: 400, // Treat as client error
+            statusText: "Business Logic Error",
+            raw,
+            data: xmlData,
+            error: xmlData.COMMAND.MESSAGE || `Transaction Failed: ${xmlData.COMMAND.TXNSTATUS}`
+          };
+        }
+      }
     }
 
     return {
@@ -131,7 +192,7 @@ export class ESBAirtimeTopupService {
       status: response.status,
       statusText: response.statusText,
       raw,
-      data: data ?? undefined,
+      data: data ?? xmlData ?? undefined,
     };
   }
 }

@@ -42,8 +42,7 @@ model MobileUserAccount {
   mobileUser MobileUser @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
   
   // Transaction relationships (for mobile banking accounts)
-  outgoingTransactions FdhTransaction[] @relation("FromAccount")
-  incomingTransactions FdhTransaction[] @relation("ToAccount")
+  // No strict relations to FdhTransaction due to loose coupling requirement
 
   @@unique([mobileUserId, accountNumber, context])
   @@index([mobileUserId])

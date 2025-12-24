@@ -1,6 +1,7 @@
 import { MobileUserContext, PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import { ensureIndexes } from "./seed/indexes";
 
 const prisma = new PrismaClient();
 
@@ -307,6 +308,7 @@ async function main() {
 
   try {
     await seedAdminUser();
+    await ensureIndexes();
     await seedWalletTiers();
     await seedMobileUsers();
     await seedBillerConfigs();

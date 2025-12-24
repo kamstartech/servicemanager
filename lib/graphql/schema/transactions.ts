@@ -53,6 +53,10 @@ export const transactionTypeDefs = gql`
     toWalletId: Int
     toWalletNumber: String
     
+    # Wallet Relationships
+    fromWallet: MobileUser
+    toWallet: MobileUser
+    
     # T24 Integration
     t24Reference: String
     t24Response: JSON

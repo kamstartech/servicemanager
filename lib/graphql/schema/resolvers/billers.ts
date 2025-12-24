@@ -372,7 +372,6 @@ export const billersResolvers = {
           amount,
           currency: sourceAccount.currency,
           description: `Bill payment: ${billerType} - ${accountNumber}`,
-          fromAccountId: sourceAccount.id,
           fromAccountNumber: sourceAccount.accountNumber,
           toAccountNumber: accountNumber,
           initiatedByUserId: context.userId,
