@@ -1,0 +1,11 @@
+model SystemConfiguration {
+  id          String   @id @default(cuid())
+  key         String   @unique @db.Text
+  value       String   @db.Text
+  description String?  @db.Text
+  updatedBy   String?  @map("updated_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("system_configurations")
+}

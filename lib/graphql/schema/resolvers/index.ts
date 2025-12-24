@@ -38,6 +38,7 @@ import { checkbookResolvers } from "./checkbook";
 import { passwordResolvers } from "./password";
 import { ticketsResolvers } from "./tickets";
 import { mobileTicketsResolvers } from "./mobileTickets";
+import { externalBanksResolvers } from "./externalBanks";
 import { JSONResolver, DateTimeResolver } from "graphql-scalars";
 import { GraphQLScalarType, Kind } from "graphql";
 
@@ -69,6 +70,9 @@ export const resolvers = {
   SupportTicket: {
     ...ticketsResolvers.SupportTicket,
   },
+  ExternalBank: {
+    ...externalBanksResolvers.ExternalBank,
+  },
   Query: {
     ...mobileUserResolvers.Query,
     ...adminWebUserResolvers.Query,
@@ -97,6 +101,7 @@ export const resolvers = {
     ...checkbookRequestResolvers.Query,
     ...ticketsResolvers.Query,
     ...mobileTicketsResolvers.Query,
+    ...externalBanksResolvers.Query,
   },
   Mutation: {
     ...authResolvers.Mutation,

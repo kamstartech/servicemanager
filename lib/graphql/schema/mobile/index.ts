@@ -27,6 +27,7 @@ const MOBILE_QUERY_FIELDS = new Set([
   "mobileUserAccount",
   "myTickets",
   "ticket",
+  "externalBanks",
 ]);
 
 const MOBILE_SUBSCRIPTION_FIELDS = new Set([

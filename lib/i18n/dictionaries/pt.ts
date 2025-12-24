@@ -185,6 +185,7 @@ export const pt = {
     databaseManagement: "Gestão de base de dados",
     migrations: "Migrações",
     backups: "Cópias de segurança",
+    settings: "Definições",
     users: "Utilizadores",
     accounts: "Contas",
     transactions: "Transações",
@@ -469,6 +470,16 @@ export const pt = {
         usageBody: "Adicione este token ao cabeçalho Authorization:",
         savedButton: "Já guardei o token",
       },
+    },
+  },
+  systemSettings: {
+    title: "Definições do Sistema",
+    suspenseAccount: {
+      title: "Configuração da Conta Suspensa",
+      description: "Esta conta é usada para reter fundos durante levantamentos sem cartão e outras operações de reserva.",
+      accountNumberLabel: "Número da Conta",
+      placeholder: "Introduza o número da conta",
+      saveButton: "Guardar Configuração",
     },
   },
 } as const;

@@ -185,6 +185,7 @@ export const en = {
     databaseManagement: "Database management",
     migrations: "Migrations",
     backups: "Backups",
+    settings: "Settings",
     users: "Users",
     accounts: "Accounts",
     transactions: "Transactions",
@@ -468,6 +469,16 @@ export const en = {
         usageBody: "Add this token to the Authorization header:",
         savedButton: "I've Saved the Token",
       },
+    },
+  },
+  systemSettings: {
+    title: "System Settings",
+    suspenseAccount: {
+      title: "Suspense Account Configuration",
+      description: "This account is used for holding funds during cardless withdrawals and other reservation operations.",
+      accountNumberLabel: "Account Number",
+      placeholder: "Enter account number",
+      saveButton: "Save Configuration",
     },
   },
 } as const;

@@ -610,6 +610,27 @@ export const typeDefs = /* GraphQL */ `
     timeZone: String
   }
 
+  type ExternalBank {
+    id: ID!
+    name: String!
+    code: String!
+    swiftCode: String
+    isActive: Boolean!
+    branches: [ExternalBankBranch!]!
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  type ExternalBankBranch {
+    id: ID!
+    name: String!
+    code: String!
+    externalBankId: String!
+    isActive: Boolean!
+    createdAt: String!
+    updatedAt: String!
+  }
+
   type Query {
     mobileUsers(context: MobileUserContext): [MobileUser!]!
     mobileUserDevices(userId: ID!): [MobileDevice!]!
@@ -645,6 +666,7 @@ export const typeDefs = /* GraphQL */ `
     beneficiaries(userId: ID!, type: String): [Beneficiary!]!
     allBeneficiaries(type: String): [Beneficiary!]!
     beneficiary(id: ID!): Beneficiary
+    externalBanks: [ExternalBank!]!
   }
 
   type Mutation {

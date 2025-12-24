@@ -164,6 +164,12 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
         icon: Smartphone,
         labelKey: "sidebar.appScreens",
       },
+      {
+        kind: "link",
+        href: "/system/external-banks",
+        icon: Landmark,
+        labelKey: "sidebar.externalBanks",
+      },
     ],
   },
   {
@@ -189,8 +195,15 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
       "/system/core-banking",
       "/system/migrations",
       "/system/backups",
+      "/system/settings",
     ],
     items: [
+      {
+        kind: "link",
+        href: "/system/settings",
+        icon: Settings,
+        labelKey: "sidebar.settings",
+      },
       {
         kind: "link",
         href: "/system/databases",
