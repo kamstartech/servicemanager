@@ -88,6 +88,18 @@ export function ExternalBankDialog({
                                 required
                             />
                         </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="institutionCode" className="text-right">
+                                Inst. Code
+                            </Label>
+                            <Input
+                                id="institutionCode"
+                                name="institutionCode"
+                                defaultValue={initialData?.institutionCode || ""}
+                                placeholder="Optional"
+                                className="col-span-3"
+                            />
+                        </div>
                     </div>
                     <DialogFooter>
                         <Button

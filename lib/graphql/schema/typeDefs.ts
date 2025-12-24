@@ -614,6 +614,7 @@ export const typeDefs = /* GraphQL */ `
     id: ID!
     name: String!
     code: String!
+    institutionCode: String
     isActive: Boolean!
     createdAt: String!
     updatedAt: String!

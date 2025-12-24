@@ -50,6 +50,10 @@ export function ExternalBankDetailsView({ bank }: ExternalBankDetailsViewProps) 
                         <span className="text-sm font-medium text-muted-foreground">Sort Code</span>
                         <span className="text-lg">{bank.code}</span>
                     </div>
+                    <div className="grid gap-1">
+                        <span className="text-sm font-medium text-muted-foreground">Institution Code</span>
+                        <span className="text-lg">{bank.institutionCode || "Not Set"}</span>
+                    </div>
                 </CardContent>
             </Card>
 

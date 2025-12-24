@@ -68,6 +68,7 @@ export function ExternalBanksClientView({
                             <TableRow>
                                 <TableHead>Bank Name</TableHead>
                                 <TableHead>Sort Code</TableHead>
+                                <TableHead>Inst. Code</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -86,6 +87,7 @@ export function ExternalBanksClientView({
                                     <TableRow key={bank.id}>
                                         <TableCell className="font-medium">{bank.name}</TableCell>
                                         <TableCell>{bank.code}</TableCell>
+                                        <TableCell>{bank.institutionCode || "-"}</TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
                                                 <Button

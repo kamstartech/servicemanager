@@ -1,7 +1,7 @@
 
 "use client";
 
-import { updateSystemSetting } from "./actions";
+import { updateSuspenseAccounts } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,12 +11,13 @@ import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
 
 interface SettingsFormProps {
-    suspenseAccount: string | null;
+    inboundSuspenseAccount: string | null;
+    outboundSuspenseAccount: string | null;
 }
 
-export function SettingsForm({ suspenseAccount }: SettingsFormProps) {
+export function SettingsForm({ inboundSuspenseAccount, outboundSuspenseAccount }: SettingsFormProps) {
     const { translate } = useI18n();
-    const [state, formAction, isPending] = useActionState(updateSystemSetting, {
+    const [state, formAction, isPending] = useActionState(updateSuspenseAccounts, {
         message: "",
         success: false,
     });
@@ -42,35 +43,41 @@ export function SettingsForm({ suspenseAccount }: SettingsFormProps) {
             <div className="grid gap-6">
                 <Card>
                     <CardHeader>
-                        <CardTitle>{translate("systemSettings.suspenseAccount.title")}</CardTitle>
+                        <CardTitle>Suspense Accounts</CardTitle>
                         <CardDescription>
-                            {translate("systemSettings.suspenseAccount.description")}
+                            Configure the accounts used for holding funds during processing.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <form action={formAction} className="space-y-4">
-                            <input type="hidden" name="key" value="suspense_account" />
-                            <input
-                                type="hidden"
-                                name="description"
-                                value="Account for holding reserved funds"
-                            />
-
                             <div className="grid w-full max-w-sm items-center gap-1.5">
-                                <Label htmlFor="suspense_account_value">
-                                    {translate("systemSettings.suspenseAccount.accountNumberLabel")}
+                                <Label htmlFor="suspense_account_inbound">
+                                    Inbound Suspense Account
                                 </Label>
                                 <Input
                                     type="text"
-                                    id="suspense_account_value"
-                                    name="value"
-                                    defaultValue={suspenseAccount || "1520000114607"}
-                                    placeholder={translate("systemSettings.suspenseAccount.placeholder")}
+                                    id="suspense_account_inbound"
+                                    name="suspense_account_inbound"
+                                    defaultValue={inboundSuspenseAccount || ""}
+                                    placeholder="e.g. 1520000114607"
+                                />
+                            </div>
+
+                            <div className="grid w-full max-w-sm items-center gap-1.5">
+                                <Label htmlFor="suspense_account_outbound">
+                                    Outbound Suspense Account
+                                </Label>
+                                <Input
+                                    type="text"
+                                    id="suspense_account_outbound"
+                                    name="suspense_account_outbound"
+                                    defaultValue={outboundSuspenseAccount || ""}
+                                    placeholder="e.g. 1520000114608"
                                 />
                             </div>
 
                             <Button type="submit" disabled={isPending}>
-                                {isPending ? "Saving..." : translate("systemSettings.suspenseAccount.saveButton")}
+                                {isPending ? "Saving..." : "Save Suspense Accounts"}
                             </Button>
                         </form>
                     </CardContent>

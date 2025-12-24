@@ -298,12 +298,12 @@ enum WorkflowStepType {
 }
 
 model ExternalBank {
-  id        String   @id @default(cuid())
-  name      String
-  code      String   @unique // Sort Code
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String   @id @default(cuid())
+  name            String
+  code            String   @unique // Sort Code
+  institutionCode String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
 
   @@map("external_banks")
 }

@@ -29,6 +29,7 @@ export async function upsertExternalBank(
     const id = formData.get("id") as string;
     const name = formData.get("name") as string;
     const code = formData.get("code") as string; // Sort Code
+    const institutionCode = formData.get("institutionCode") as string;
 
     if (!name || !code) {
         return { success: false, message: "Name and Sort Code are required" };
@@ -38,11 +39,11 @@ export async function upsertExternalBank(
         if (id && id !== "new") {
             await prisma.externalBank.update({
                 where: { id },
-                data: { name, code },
+                data: { name, code, institutionCode },
             });
         } else {
             await prisma.externalBank.create({
-                data: { name, code },
+                data: { name, code, institutionCode },
             });
         }
 
