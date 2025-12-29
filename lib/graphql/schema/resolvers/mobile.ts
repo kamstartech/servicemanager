@@ -81,6 +81,73 @@ export const mobileResolvers = {
       }));
     },
 
+    // Get single device details
+    async myDevice(_: unknown, { deviceId }: { deviceId: string }, context: GraphQLContext) {
+      if (!context.userId) {
+        throw new GraphQLError('Authentication required', {
+          extensions: {
+            code: 'UNAUTHENTICATED',
+            http: { status: 401 },
+          },
+        });
+      }
+
+      const device = await prisma.mobileDevice.findFirst({
+        where: {
+          deviceId: deviceId,
+          mobileUserId: context.userId,
+          isDenied: false  // Don't show denied devices
+        },
+      });
+
+      if (!device) {
+        throw new GraphQLError('Device not found', {
+          extensions: {
+            code: 'NOT_FOUND',
+            http: { status: 404 },
+          },
+        });
+      }
+
+      // Get active sessions for this device
+      const sessions = await prisma.deviceSession.findMany({
+        where: {
+          deviceId: device.deviceId,
+          mobileUserId: context.userId,
+          isActive: true,
+        },
+        orderBy: { lastActivityAt: 'desc' },
+      });
+
+      return {
+        id: device.id,
+        deviceId: device.deviceId,
+        name: device.name,
+        model: device.model,
+        os: device.os,
+        isActive: device.isActive,
+        isPrimary: device.isPrimary,
+        isCurrent: device.deviceId === context.deviceId,
+        lastUsedAt: device.lastUsedAt?.toISOString(),
+        credentialId: device.credentialId,
+        createdAt: device.createdAt.toISOString(),
+        updatedAt: device.updatedAt.toISOString(),
+        loginCount: device.loginCount || 0,
+        lastLoginIp: device.lastLoginIp,
+        activeSessions: sessions.map((s: any) => ({
+          id: s.id,
+          deviceId: s.deviceId,
+          lastActivityAt: s.lastActivityAt.toISOString(),
+          createdAt: s.createdAt.toISOString(),
+          expiresAt: s.expiresAt.toISOString(),
+          ipAddress: s.ipAddress,
+          isActive: s.isActive,
+          isCurrent: s.sessionId === context.sessionId,
+        })),
+      };
+    },
+
+
     // Get current user's profile
     async myProfile(_: unknown, __: unknown, context: GraphQLContext) {
       if (!context.userId) {
