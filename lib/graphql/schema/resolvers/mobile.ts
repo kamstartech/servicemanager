@@ -665,7 +665,7 @@ export const mobileResolvers = {
       // Verify device belongs to this user and is pending
       const device = await prisma.mobileDevice.findFirst({
         where: {
-          id: deviceId,
+          deviceId: deviceId,
           mobileUserId: context.mobileUser.id,
           isActive: false, // Must be pending
         },
@@ -750,7 +750,7 @@ export const mobileResolvers = {
       // Verify device belongs to this user and is pending
       const device = await prisma.mobileDevice.findFirst({
         where: {
-          id: deviceId,
+          deviceId: deviceId,
           mobileUserId: context.mobileUser.id,
           isActive: false,
         },
