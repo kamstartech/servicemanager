@@ -30,7 +30,10 @@ export const mobileResolvers = {
       }
 
       const devices = await prisma.mobileDevice.findMany({
-        where: { mobileUserId: context.userId },
+        where: {
+          mobileUserId: context.userId,
+          isDenied: false  // Don't show denied devices
+        },
         orderBy: { lastUsedAt: "desc" },
       });
 
@@ -787,9 +790,14 @@ export const mobileResolvers = {
         }
       });
 
-      // Delete the pending device
-      await prisma.mobileDevice.delete({
-        where: { id: deviceId },
+      // Mark device as denied instead of deleting
+      await prisma.mobileDevice.update({
+        where: { id: device.id },
+        data: {
+          isDenied: true,
+          deniedAt: new Date(),
+          isActive: false
+        },
       });
 
       return true;

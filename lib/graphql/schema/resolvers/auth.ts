@@ -145,6 +145,34 @@ export const authResolvers = {
         },
       });
 
+      // 3a. Check if device has been denied
+      if (existingDevice?.isDenied) {
+        await prisma.deviceLoginAttempt.create({
+          data: {
+            mobileUserId: user.id,
+            username,
+            context,
+            deviceId,
+            deviceName,
+            deviceModel,
+            deviceOs,
+            ipAddress,
+            location,
+            attemptType: "PASSWORD_LOGIN",
+            status: "FAILED_DEVICE_BLOCKED",
+            failureReason: "Device has been denied access",
+            attemptedAt: new Date(),
+          },
+        });
+
+        throw new GraphQLError('This device has been denied access. Please contact support if you believe this is an error.', {
+          extensions: {
+            code: 'DEVICE_DENIED',
+            http: { status: 403 },
+          },
+        });
+      }
+
       if (existingDevice && existingDevice.isActive) {
         // 3a. Known active device - allow login
         await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
