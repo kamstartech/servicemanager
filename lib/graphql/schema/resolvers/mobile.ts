@@ -719,14 +719,13 @@ export const mobileResolvers = {
       });
 
       // Publish real-time update for GraphQL Subscription
-      // TODO: Fix pubsub type issue
-      // pubsub.publish(EVENTS.DEVICE_APPROVAL_STATUS, {
-      //   deviceApprovalStatus: {
-      //     deviceId: device.deviceId,
-      //     status: "APPROVED",
-      //     message: "Your device has been approved.",
-      //   }
-      // }, device.deviceId);
+      pubsub.publish(`${EVENTS.DEVICE_APPROVAL_STATUS}:${device.deviceId}`, {
+        deviceApprovalStatus: {
+          deviceId: device.deviceId,
+          status: "APPROVED",
+          message: "Your device has been approved.",
+        }
+      });
 
       return true;
     },
@@ -780,14 +779,13 @@ export const mobileResolvers = {
       });
 
       // Publish real-time update for GraphQL Subscription
-      // TODO: Fix pubsub type issue
-      // pubsub.publish(EVENTS.DEVICE_APPROVAL_STATUS, {
-      //   deviceApprovalStatus: {
-      //     deviceId: device.deviceId,
-      //     status: "DENIED",
-      //     message: "Your login request was denied.",
-      //   }
-      // }, device.deviceId);
+      pubsub.publish(`${EVENTS.DEVICE_APPROVAL_STATUS}:${device.deviceId}`, {
+        deviceApprovalStatus: {
+          deviceId: device.deviceId,
+          status: "DENIED",
+          message: "Your login request was denied.",
+        }
+      });
 
       // Delete the pending device
       await prisma.mobileDevice.delete({

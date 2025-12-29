@@ -10,7 +10,7 @@ export const subscriptionResolvers = {
     },
     deviceApprovalStatus: {
       subscribe: (_parent: any, { deviceId }: { deviceId: string }) =>
-        pubsub.subscribe(EVENTS.DEVICE_APPROVAL_STATUS, deviceId),
+        pubsub.subscribe(`${EVENTS.DEVICE_APPROVAL_STATUS}:${deviceId}`),
       resolve: (payload: any) => payload.deviceApprovalStatus,
     },
   },
