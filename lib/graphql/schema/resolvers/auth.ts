@@ -556,18 +556,23 @@ export const authResolvers = {
 
       // Send notification EXCLUSIVELY to user's PRIMARY device (async, don't block response)
       const { PushNotificationService } = await import("@/lib/services/push-notification");
-      PushNotificationService.sendNewDeviceLoginAttempt(
-        user.id,
-        deviceId,
-        deviceName || "Unknown Device",
-        deviceModel,
-        deviceOs,
-        location,
-        ipAddress,
-        true // primaryOnly = true
-      ).catch((error) => {
+
+      // We must await this to ensure the notification is actually sent before the lambda/process potentially freezing/exiting
+      try {
+        await PushNotificationService.sendNewDeviceLoginAttempt(
+          user.id,
+          deviceId,
+          deviceName || "Unknown Device",
+          deviceModel,
+          deviceOs,
+          location,
+          ipAddress,
+          true // primaryOnly = true
+        );
+      } catch (error) {
         console.error("Failed to send new device notification to primary device:", error);
-      });
+        // Continue with login even if notification fails
+      }
 
       return {
         success: true,

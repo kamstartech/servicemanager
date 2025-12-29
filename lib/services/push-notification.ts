@@ -126,7 +126,8 @@ export class PushNotificationService {
         android: {
           priority: priority === 'HIGH' || priority === 'URGENT' ? 'high' : 'normal',
           notification: {
-            channelId: type === 'NEW_DEVICE_ATTEMPT' ? 'device_security' : 'default',
+            channelId: 'default', // Force default channel for testing
+            // channelId: type === 'NEW_DEVICE_ATTEMPT' ? 'device_security' : 'default',
             priority: priority === 'HIGH' || priority === 'URGENT' ? 'high' : 'default',
             defaultSound: true,
             defaultVibrateTimings: true,
@@ -397,7 +398,7 @@ export class PushNotificationService {
 
     return this.send({
       userId,
-      type: 'NEW_DEVICE_ATTEMPT',
+      type: 'LOGIN_ALERT',
       priority: 'HIGH',
       title: 'New Device Login Attempt',
       body: `A new device (${deviceName}${deviceInfo ? ` - ${deviceInfo}` : ''}) is attempting to login${locationInfo} and requires approval`,
