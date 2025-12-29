@@ -683,7 +683,7 @@ export const mobileResolvers = {
       // Approve the device
       await prisma.$transaction(async (tx: import('@prisma/client').Prisma.TransactionClient) => {
         await tx.mobileDevice.update({
-          where: { id: deviceId },
+          where: { id: device.id },
           data: { isActive: true, verifiedVia: "USER_APPROVAL" },
         });
 
@@ -699,7 +699,7 @@ export const mobileResolvers = {
             data: { isPrimary: false },
           });
           await tx.mobileDevice.update({
-            where: { id: deviceId },
+            where: { id: device.id },
             data: { isPrimary: true },
           });
         }
