@@ -9,7 +9,6 @@ import {
   TransactionStatus,
   TransactionType,
 } from "@prisma/client";
-import { generateTransactionReference } from "@/lib/utils/reference-generator";
 import { Decimal } from "@prisma/client/runtime/library";
 import { walletTransactionService } from "@/lib/services/wallet-transaction-service";
 import { t24Service } from "@/lib/services/t24-service";
@@ -583,25 +582,27 @@ export const transactionResolvers = {
           }
         }
 
-        const reference = generateTransactionReference();
         // currency and description are already defined above
 
         // FDH_BANK transfers: Execute synchronously
         if (input.type === TransferType.FDH_BANK) {
-          console.log(`[createTransfer] Executing FDH_BANK transfer synchronously: ${reference}`);
+          console.log(`[createTransfer] Executing FDH_BANK transfer synchronously`);
 
-          // Call T24 immediately
+          // Call T24 immediately (T24 generates the reference)
           const t24Response = await t24Service.transfer({
             fromAccount: fromAccount.accountNumber,
             toAccount: toAccountNumber,
             amount: amount.toString(),
             currency,
-            reference,
+            reference: '', // T24 generates the reference
             description,
             transferType: input.type,
           });
 
           if (t24Response.success) {
+            // Use T24 reference as the primary reference
+            const reference = t24Response.t24Reference || `T24-${Date.now()}`;
+
             // Create COMPLETED transaction
             const transaction = await prisma.fdhTransaction.create({
               data: {
@@ -610,7 +611,7 @@ export const transactionResolvers = {
                   input.context === MobileUserContext.WALLET
                     ? TransactionSource.WALLET
                     : TransactionSource.MOBILE_BANKING,
-                reference,
+                reference, // Use T24 reference
                 status: TransactionStatus.COMPLETED,
                 transferType: input.type,
                 transferContext: input.context,
@@ -651,6 +652,7 @@ export const transactionResolvers = {
           } else {
             // Create FAILED transaction with formatted error
             const formattedError = formatT24Error(t24Response);
+            const tempReference = `FAILED-${Date.now()}`;
 
             const transaction = await prisma.fdhTransaction.create({
               data: {
@@ -659,7 +661,7 @@ export const transactionResolvers = {
                   input.context === MobileUserContext.WALLET
                     ? TransactionSource.WALLET
                     : TransactionSource.MOBILE_BANKING,
-                reference,
+                reference: tempReference, // Temporary reference for failed transfers
                 status: TransactionStatus.FAILED_PERMANENT,
                 transferType: input.type,
                 transferContext: input.context,
@@ -689,7 +691,7 @@ export const transactionResolvers = {
               },
             });
 
-            console.log(`[createTransfer] FDH_BANK transfer failed: ${reference} - ${formattedError}`);
+            console.log(`[createTransfer] FDH_BANK transfer failed: ${tempReference} - ${formattedError}`);
 
             return {
               success: false,
@@ -701,7 +703,9 @@ export const transactionResolvers = {
         }
 
         // Other transfer types: Async PENDING flow
-        console.log(`[createTransfer] Creating PENDING transaction for ${input.type}: ${reference}`);
+        // Use temporary reference, will be updated to T24 reference when processed
+        const tempReference = `PENDING-${Date.now()}`;
+        console.log(`[createTransfer] Creating PENDING transaction for ${input.type}: ${tempReference}`);
 
         const transaction = await prisma.fdhTransaction.create({
           data: {
@@ -710,7 +714,7 @@ export const transactionResolvers = {
               input.context === MobileUserContext.WALLET
                 ? TransactionSource.WALLET
                 : TransactionSource.MOBILE_BANKING,
-            reference,
+            reference: tempReference, // Temporary, will be updated to T24 reference
             status: TransactionStatus.PENDING,
             transferType: input.type,
             transferContext: input.context,
@@ -726,7 +730,7 @@ export const transactionResolvers = {
               toAccount: toAccount?.accountNumber || toAccountNumber,
               amount: amount.toString(),
               currency,
-              reference,
+              reference: tempReference,
               description,
             },
             maxRetries: 3,
@@ -780,8 +784,8 @@ export const transactionResolvers = {
           };
         }
 
-        // Generate unique reference
-        const reference = generateTransactionReference();
+        // Use temporary reference, will be updated to T24 reference when processed
+        const tempReference = `PENDING-${Date.now()}`;
 
         // Validate amount
         const amount = new Decimal(input.amount);
@@ -822,7 +826,7 @@ export const transactionResolvers = {
           data: {
             type: input.type,
             source: input.source || (context.adminId ? TransactionSource.ADMIN : TransactionSource.API),
-            reference,
+            reference: tempReference, // Temporary, will be updated to T24 reference
             status: TransactionStatus.PENDING,
             transferType: input.transferType || null,
             transferContext: resolvedTransferContext,
@@ -968,7 +972,7 @@ export const transactionResolvers = {
       }
 
       // Create reversal transaction (swap from/to)
-      const reversalReference = generateTransactionReference();
+      const reversalReference = `REVERSAL-${Date.now()}`;
       const reversalTransaction = await prisma.fdhTransaction.create({
         data: {
           type: originalTransaction.type,
