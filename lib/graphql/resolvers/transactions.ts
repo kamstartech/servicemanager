@@ -12,6 +12,32 @@ import {
 import { generateTransactionReference } from "@/lib/utils/reference-generator";
 import { Decimal } from "@prisma/client/runtime/library";
 import { walletTransactionService } from "@/lib/services/wallet-transaction-service";
+import { t24Service } from "@/lib/services/t24-service";
+
+/**
+ * Format T24 error responses into user-friendly messages
+ */
+function formatT24Error(t24Response: {
+  message?: string;
+  errorCode?: string;
+}): string {
+  const errorMap: Record<string, string> = {
+    'INSUFFICIENT_FUNDS': 'Insufficient funds in the source account',
+    'ACCOUNT_BLOCKED': 'The account is blocked. Please contact support',
+    'DAILY_LIMIT_EXCEEDED': 'Daily transaction limit exceeded',
+    'INVALID_ACCOUNT': 'Invalid destination account number',
+    'ACCOUNT_NOT_FOUND': 'Destination account not found',
+    'INVALID_AMOUNT': 'Invalid transaction amount',
+    'T24_API_ERROR': 'Banking system is temporarily unavailable',
+    'T24_ERROR': 'Banking system error occurred',
+  };
+
+  if (t24Response.errorCode && errorMap[t24Response.errorCode]) {
+    return errorMap[t24Response.errorCode];
+  }
+
+  return t24Response.message || 'Transfer failed. Please try again';
+}
 
 export const transactionResolvers = {
   Query: {
@@ -544,6 +570,123 @@ export const transactionResolvers = {
         const reference = generateTransactionReference();
         // currency and description are already defined above
 
+        // FDH_BANK transfers: Execute synchronously
+        if (input.type === TransferType.FDH_BANK) {
+          console.log(`[createTransfer] Executing FDH_BANK transfer synchronously: ${reference}`);
+
+          // Call T24 immediately
+          const t24Response = await t24Service.transfer({
+            fromAccount: fromAccount.accountNumber,
+            toAccount: toAccountNumber,
+            amount: amount.toString(),
+            currency,
+            reference,
+            description,
+            transferType: input.type,
+          });
+
+          if (t24Response.success) {
+            // Create COMPLETED transaction
+            const transaction = await prisma.fdhTransaction.create({
+              data: {
+                type: TransactionType.TRANSFER,
+                source:
+                  input.context === MobileUserContext.WALLET
+                    ? TransactionSource.WALLET
+                    : TransactionSource.MOBILE_BANKING,
+                reference,
+                status: TransactionStatus.COMPLETED,
+                transferType: input.type,
+                transferContext: input.context,
+                amount,
+                currency,
+                description,
+                fromAccountNumber: fromAccount.accountNumber,
+                toAccountNumber: toAccountNumber,
+                t24Reference: t24Response.t24Reference,
+                t24Response: t24Response as any,
+                completedAt: new Date(),
+                maxRetries: 0, // No retries for sync transfers
+                initiatedByUserId: context.mobileUser.id,
+              },
+              include: {
+                initiatedBy: true,
+                statusHistory: true,
+              },
+            });
+
+            await prisma.fdhTransactionStatusHistory.create({
+              data: {
+                transactionId: transaction.id,
+                fromStatus: TransactionStatus.PENDING,
+                toStatus: TransactionStatus.COMPLETED,
+                reason: "Transfer completed successfully (synchronous)",
+              },
+            });
+
+            console.log(`[createTransfer] FDH_BANK transfer completed: ${reference}`);
+
+            return {
+              success: true,
+              transaction,
+              message: "Transfer completed successfully",
+              errors: [],
+            };
+          } else {
+            // Create FAILED transaction with formatted error
+            const formattedError = formatT24Error(t24Response);
+
+            const transaction = await prisma.fdhTransaction.create({
+              data: {
+                type: TransactionType.TRANSFER,
+                source:
+                  input.context === MobileUserContext.WALLET
+                    ? TransactionSource.WALLET
+                    : TransactionSource.MOBILE_BANKING,
+                reference,
+                status: TransactionStatus.FAILED_PERMANENT,
+                transferType: input.type,
+                transferContext: input.context,
+                amount,
+                currency,
+                description,
+                fromAccountNumber: fromAccount.accountNumber,
+                toAccountNumber: toAccountNumber,
+                errorMessage: formattedError,
+                errorCode: t24Response.errorCode,
+                t24Response: t24Response as any,
+                maxRetries: 0, // No retries for sync transfers
+                initiatedByUserId: context.mobileUser.id,
+              },
+              include: {
+                initiatedBy: true,
+                statusHistory: true,
+              },
+            });
+
+            await prisma.fdhTransactionStatusHistory.create({
+              data: {
+                transactionId: transaction.id,
+                fromStatus: TransactionStatus.PENDING,
+                toStatus: TransactionStatus.FAILED_PERMANENT,
+                reason: `Transfer failed: ${formattedError}`,
+              },
+            });
+
+            console.log(`[createTransfer] FDH_BANK transfer failed: ${reference} - ${formattedError}`);
+
+            return {
+              success: false,
+              transaction,
+              message: formattedError,
+              errors: [formattedError],
+            };
+          }
+        }
+
+        // Other transfer types: Async PENDING flow
+        console.log(`[createTransfer] Creating PENDING transaction for ${input.type}: ${reference}`);
+
         const transaction = await prisma.fdhTransaction.create({
           data: {
             type: TransactionType.TRANSFER,
@@ -584,7 +727,7 @@ export const transactionResolvers = {
             transactionId: transaction.id,
             fromStatus: TransactionStatus.PENDING,
             toStatus: TransactionStatus.PENDING,
-            reason: `Transfer created (type=${input.type})`,
+            reason: `Transfer created (type=${input.type}) - async processing`,
           },
         });
 
