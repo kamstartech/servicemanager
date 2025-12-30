@@ -308,6 +308,8 @@ model ExternalBank {
   @@map("external_banks")
 }
 
+
+
 model AccountAlert {
   id            Int       @id @default(autoincrement())
   mobileUserId  Int       @map("mobile_user_id")
@@ -543,8 +545,8 @@ model BackupSchedule {
 
   isRunning Boolean @default(false) @map("is_running")
 
-  lastRunAt   DateTime? @map("last_run_at")
-  lastRunDate String?   @map("last_run_date") @db.VarChar(10)
+  lastRunAt DateTime? @map("last_run_at")
+  lastRunDate String? @map("last_run_date") @db.VarChar(10)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -873,10 +875,10 @@ model DeviceSession {
 }
 
 model FdhTransaction {
-  id String @id @default(cuid())
-
+  id        String   @id @default(cuid())
+  
   // Basic Identity
-  reference String            @unique @db.VarChar(100)
+  reference String   @unique @db.VarChar(100)
   type      TransactionType
   source    TransactionSource @default(API)
   status    TransactionStatus @default(PENDING)
@@ -884,57 +886,57 @@ model FdhTransaction {
   // Transfer routing
   transferType    TransferType?      @map("transfer_type")
   transferContext MobileUserContext? @map("transfer_context")
-
+  
   // Amount
-  amount   Decimal @db.Decimal(19, 4)
-  currency String  @default("MWK") @db.VarChar(3)
-
+  amount    Decimal  @db.Decimal(19, 4)
+  currency  String   @default("MWK") @db.VarChar(3)
+  
   // Sender (From)
-  fromAccountNumber String? @map("from_account_number") @db.VarChar(50)
-
+  fromAccountNumber String?            @map("from_account_number") @db.VarChar(50)
+  
   // Receiver (To)
-  toAccountNumber String? @map("to_account_number") @db.VarChar(50)
-
+  toAccountNumber   String?            @map("to_account_number") @db.VarChar(50)
+  
   // Relationships
   // No Foreign Key constraints on account numbers (for joint account support)
-
+  
   // Description
-  description String @db.Text
-
+  description       String   @db.Text
+  
   // T24 Integration
-  t24Reference   String? @unique @map("t24_reference") @db.VarChar(100)
-  t24Response    Json?   @map("t24_response")
-  t24RequestBody Json?   @map("t24_request_body")
-
+  t24Reference      String?  @unique @map("t24_reference") @db.VarChar(100)
+  t24Response       Json?    @map("t24_response")
+  t24RequestBody    Json?    @map("t24_request_body")
+  
   // Retry Mechanism (Built-in)
-  retryCount  Int       @default(0) @map("retry_count")
-  maxRetries  Int       @default(3) @map("max_retries")
-  nextRetryAt DateTime? @map("next_retry_at")
-  lastRetryAt DateTime? @map("last_retry_at")
-
+  retryCount        Int      @default(0) @map("retry_count")
+  maxRetries        Int      @default(3) @map("max_retries")
+  nextRetryAt       DateTime? @map("next_retry_at")
+  lastRetryAt       DateTime? @map("last_retry_at")
+  
   // Error Tracking
-  errorMessage String? @map("error_message") @db.Text
-  errorCode    String? @map("error_code") @db.VarChar(50)
-
+  errorMessage      String?  @db.Text @map("error_message")
+  errorCode         String?  @db.VarChar(50) @map("error_code")
+  
   // Reversal
-  isReversal     Boolean         @default(false) @map("is_reversal")
-  originalTxnId  String?         @unique @map("original_txn_id")
-  originalTxn    FdhTransaction? @relation("Reversal", fields: [originalTxnId], references: [id], onDelete: SetNull)
-  reversalTxn    FdhTransaction? @relation("Reversal")
-  reversalReason String?         @map("reversal_reason") @db.Text
-
+  isReversal        Boolean  @default(false) @map("is_reversal")
+  originalTxnId     String?  @unique @map("original_txn_id")
+  originalTxn       FdhTransaction? @relation("Reversal", fields: [originalTxnId], references: [id], onDelete: SetNull)
+  reversalTxn       FdhTransaction? @relation("Reversal")
+  reversalReason    String?  @db.Text @map("reversal_reason")
+  
   // Timestamps
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-  completedAt DateTime? @map("completed_at")
-
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  completedAt       DateTime? @map("completed_at")
+  
   // User who initiated
-  initiatedByUserId Int?        @map("initiated_by_user_id")
+  initiatedByUserId Int? @map("initiated_by_user_id")
   initiatedBy       MobileUser? @relation("InitiatedBy", fields: [initiatedByUserId], references: [id], onDelete: SetNull)
-
+  
   // Audit Trail
   statusHistory FdhTransactionStatusHistory[]
-
+  
   // Indexes
   @@index([status, nextRetryAt])
   @@index([status, type])
@@ -949,19 +951,19 @@ model FdhTransaction {
 }
 
 model FdhTransactionStatusHistory {
-  id String @id @default(cuid())
-
-  transactionId String         @map("transaction_id")
+  id            String   @id @default(cuid())
+  
+  transactionId String   @map("transaction_id")
   transaction   FdhTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-
-  fromStatus TransactionStatus @map("from_status")
-  toStatus   TransactionStatus @map("to_status")
-
-  reason      String? @db.Text
-  retryNumber Int?    @map("retry_number")
-
-  createdAt DateTime @default(now()) @map("created_at")
-
+  
+  fromStatus    TransactionStatus @map("from_status")
+  toStatus      TransactionStatus @map("to_status")
+  
+  reason        String?  @db.Text
+  retryNumber   Int?     @map("retry_number")
+  
+  createdAt     DateTime @default(now()) @map("created_at")
+  
   @@index([transactionId])
   @@index([toStatus, createdAt])
   @@map("fdh_transaction_status_history")
@@ -1054,6 +1056,8 @@ model MobileDevice {
 
   // Status
   isActive    Boolean   @default(true) @map("is_active")
+  isDenied    Boolean   @default(false) @map("is_denied")
+  deniedAt    DateTime? @map("denied_at")
   isPrimary   Boolean   @default(false) @map("is_primary")
   lastUsedAt  DateTime? @map("last_used_at")
   loginCount  Int       @default(0) @map("login_count")
@@ -1106,10 +1110,10 @@ model MobileUser {
   checkbookRequests    CheckbookRequest[]
   notifications        PushNotification[]
   kyc                  MobileUserKYC?
-
+  
   // Transaction relationships
-  initiatedTransactions FdhTransaction[] @relation("InitiatedBy")
-  tickets               SupportTicket[]
+  initiatedTransactions      FdhTransaction[] @relation("InitiatedBy")
+  tickets                    SupportTicket[]
 
   @@map("fdh_mobile_users")
 }
@@ -1156,7 +1160,7 @@ model MobileUserAccount {
 
   // Relations
   mobileUser MobileUser @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
-
+  
   // Transaction relationships (for mobile banking accounts)
   // No strict relations to FdhTransaction due to loose coupling requirement
 
@@ -1214,14 +1218,14 @@ model MobileUserProfile {
   id           Int @id @default(autoincrement())
   mobileUserId Int @unique @map("mobile_user_id")
 
-  firstName       String? @map("first_name") @db.Text
-  lastName        String? @map("last_name") @db.Text
-  email           String? @db.Text
-  phone           String? @db.Text
-  address         String? @db.Text
-  city            String? @db.Text
-  country         String? @db.Text
-  zip             String? @db.Text
+  firstName String? @map("first_name") @db.Text
+  lastName  String? @map("last_name") @db.Text
+  email     String? @db.Text
+  phone     String? @db.Text
+  address   String? @db.Text
+  city      String? @db.Text
+  country   String? @db.Text
+  zip       String? @db.Text
   profileImageUrl String? @map("profile_image_url") @db.Text
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -1234,43 +1238,43 @@ model MobileUserProfile {
 }
 
 model PushNotification {
-  id           String  @id @default(cuid())
-  mobileUserId Int     @map("mobile_user_id")
-  deviceId     String? @map("device_id") // null = all devices
-
-  type     NotificationType
-  priority NotificationPriority @default(NORMAL)
-
-  title    String  @db.Text
-  body     String  @db.Text
-  imageUrl String? @map("image_url") @db.Text
-
+  id              String               @id @default(cuid())
+  mobileUserId    Int                  @map("mobile_user_id")
+  deviceId        String?              @map("device_id") // null = all devices
+  
+  type            NotificationType
+  priority        NotificationPriority @default(NORMAL)
+  
+  title           String               @db.Text
+  body            String               @db.Text
+  imageUrl        String?              @map("image_url") @db.Text
+  
   // Action/Deep linking
-  actionUrl  String? @map("action_url") @db.Text
-  actionData Json?   @map("action_data")
-
+  actionUrl       String?              @map("action_url") @db.Text
+  actionData      Json?                @map("action_data")
+  
   // Delivery tracking
-  status        NotificationStatus @default(PENDING)
-  sentAt        DateTime?          @map("sent_at")
-  deliveredAt   DateTime?          @map("delivered_at")
-  readAt        DateTime?          @map("read_at")
-  failedAt      DateTime?          @map("failed_at")
-  failureReason String?            @map("failure_reason") @db.Text
-
+  status          NotificationStatus   @default(PENDING)
+  sentAt          DateTime?            @map("sent_at")
+  deliveredAt     DateTime?            @map("delivered_at")
+  readAt          DateTime?            @map("read_at")
+  failedAt        DateTime?            @map("failed_at")
+  failureReason   String?              @map("failure_reason") @db.Text
+  
   // Retry logic
-  retryCount  Int       @default(0) @map("retry_count")
-  nextRetryAt DateTime? @map("next_retry_at")
-
+  retryCount      Int                  @default(0) @map("retry_count")
+  nextRetryAt     DateTime?            @map("next_retry_at")
+  
   // Metadata
-  metadata  Json?
-  expiresAt DateTime? @map("expires_at")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
+  metadata        Json?
+  expiresAt       DateTime?            @map("expires_at")
+  
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+  
   // Relations
-  mobileUser MobileUser @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
-
+  mobileUser      MobileUser           @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
+  
   @@index([mobileUserId])
   @@index([deviceId])
   @@index([status])
@@ -1340,16 +1344,16 @@ model RequestedRegistration {
 model SMSNotification {
   id           Int       @id @default(autoincrement())
   userId       Int       @default(1) @map("user_id")
-  msisdn       String // Phone number
+  msisdn       String    // Phone number
   message      String    @db.Text
   status       String    @default("ready")
   sentAt       DateTime? @map("sent_at")
-  details      Json? // Provider response and metadata
+  details      Json?     // Provider response and metadata
   attemptCount Int       @default(0) @map("attempt_count")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
+  
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  
   @@index([status, attemptCount])
   @@index([userId])
   @@index([createdAt])
@@ -1357,23 +1361,23 @@ model SMSNotification {
 }
 
 model SupportTicket {
-  id       Int            @id @default(autoincrement())
-  subject  String
-  status   TicketStatus   @default(OPEN)
-  priority TicketPriority @default(MEDIUM)
-
+  id              Int               @id @default(autoincrement())
+  subject         String
+  status          TicketStatus      @default(OPEN)
+  priority        TicketPriority    @default(MEDIUM)
+  
   // Context and User Linkage
-  context MobileUserContext
-  userId  Int? // Optional if unauthenticated (future) but usually linked
-  user    MobileUser?       @relation(fields: [userId], references: [id])
-
+  context         MobileUserContext
+  userId          Int?              // Optional if unauthenticated (future) but usually linked
+  user            MobileUser?       @relation(fields: [userId], references: [id])
+  
   // Metadata
-  category  String? // e.g., "Account Issue", "Transaction"
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  category        String?           // e.g., "Account Issue", "Transaction"
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
 
   // Relations
-  messages TicketMessage[]
+  messages        TicketMessage[]
 
   @@map("support_tickets")
 }
@@ -1545,18 +1549,18 @@ model ThirdPartyClient {
 }
 
 model TicketMessage {
-  id       Int           @id @default(autoincrement())
-  ticketId Int           @map("ticket_id")
-  ticket   SupportTicket @relation(fields: [ticketId], references: [id])
-
-  senderType MessageSenderType @map("sender_type")
-  senderId   Int? // Admin ID if admin, User ID if user (optional, can imply from ticket)
-
-  message       String  @db.Text
-  attachmentUrl String? @map("attachment_url")
-
-  createdAt DateTime  @default(now()) @map("created_at")
-  readAt    DateTime? @map("read_at")
+  id              Int               @id @default(autoincrement())
+  ticketId        Int               @map("ticket_id")
+  ticket          SupportTicket     @relation(fields: [ticketId], references: [id])
+  
+  senderType      MessageSenderType @map("sender_type")
+  senderId        Int?              // Admin ID if admin, User ID if user (optional, can imply from ticket)
+  
+  message         String            @db.Text
+  attachmentUrl   String?           @map("attachment_url")
+  
+  createdAt       DateTime          @default(now()) @map("created_at")
+  readAt          DateTime?         @map("read_at")
 
   @@map("ticket_messages")
 }

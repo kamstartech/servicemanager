@@ -9,10 +9,10 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const encoder = new TextEncoder();
-  
+
   // Check if Redis is available
   const isRedisAvailable = redisClient.isConnected();
-  
+
   const stream = new ReadableStream({
     async start(controller) {
       try {
@@ -31,7 +31,7 @@ export async function GET(request: Request) {
             intervalHours: Math.round(accountEnrichmentService.getStatus().interval / 1000 / 60 / 60),
           },
         };
-        
+
         controller.enqueue(
           encoder.encode(`data: ${JSON.stringify(initialStatus)}\n\n`)
         );
@@ -39,9 +39,11 @@ export async function GET(request: Request) {
         console.log("✅ SSE Client connected");
 
         // Only subscribe to Redis if available
+        let unsubscribe: (() => void) | undefined;
+
         if (isRedisAvailable) {
           // Subscribe to all service channels
-          await servicePubSub.subscribe(
+          unsubscribe = await servicePubSub.subscribe(
             [ServiceChannel.ALL_SERVICES],
             (channel, message) => {
               try {
@@ -77,6 +79,9 @@ export async function GET(request: Request) {
         // Cleanup on connection close
         request.signal.addEventListener("abort", () => {
           clearInterval(heartbeat);
+          if (unsubscribe) {
+            unsubscribe();
+          }
           try {
             controller.close();
           } catch (error) {

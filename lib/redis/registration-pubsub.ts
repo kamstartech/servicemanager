@@ -98,6 +98,7 @@ export class RegistrationPubSub {
    * Unsubscribe from registration updates
    */
   async unsubscribe(): Promise<void> {
+    // Note: This matches the old behavior of unsubscribing everything from this channel
     await servicePubSub.unsubscribe([ServiceChannel.REGISTRATION_UPDATES]);
   }
 }

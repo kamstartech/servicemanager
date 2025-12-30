@@ -13,10 +13,6 @@ import { ConfigurationService } from "./configuration-service";
 export async function processTransaction(transactionId: string): Promise<void> {
   const transaction = await prisma.fdhTransaction.findUnique({
     where: { id: transactionId },
-    include: {
-      fromAccount: true,
-      toAccount: true,
-    },
   });
 
   if (!transaction) {

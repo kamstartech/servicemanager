@@ -55,8 +55,6 @@ export const transactionResolvers = {
       const transaction = await prisma.fdhTransaction.findUnique({
         where: { id },
         include: {
-          fromAccount: true,
-          toAccount: true,
           initiatedBy: true,
           statusHistory: true,
         },
@@ -98,8 +96,6 @@ export const transactionResolvers = {
       return await prisma.fdhTransaction.findUnique({
         where: { reference },
         include: {
-          fromAccount: true,
-          toAccount: true,
           initiatedBy: true,
           statusHistory: true,
         },
@@ -119,13 +115,13 @@ export const transactionResolvers = {
       },
       context: GraphQLContext
     ) => {
-      if (!context.adminUser && !context.adminId) {
-        throw new GraphQLError("Admin access required", {
-          extensions: { code: "FORBIDDEN" },
+      if (!context.adminUser && !context.adminId && !context.mobileUser) {
+        throw new GraphQLError("Unauthorized", {
+          extensions: { code: "UNAUTHENTICATED" },
         });
       }
 
-      const where: Prisma.FdhTransactionWhereInput = {};
+      let where: Prisma.FdhTransactionWhereInput = {};
 
       if (filter) {
         if (filter.status) where.status = filter.status;
@@ -175,12 +171,38 @@ export const transactionResolvers = {
         }
       }
 
+      // Security: Mobile users can only see their own transactions
+      if (context.mobileUser) {
+        const userAccounts = await prisma.mobileUserAccount.findMany({
+          where: { mobileUserId: context.mobileUser.id },
+          select: { accountNumber: true },
+        });
+
+        const accountNumbers = userAccounts.map(acc => acc.accountNumber);
+
+        const ownershipCondition: Prisma.FdhTransactionWhereInput = {
+          OR: [
+            { initiatedByUserId: context.mobileUser.id },
+            { fromAccountNumber: { in: accountNumbers } },
+            { toAccountNumber: { in: accountNumbers } },
+          ],
+        };
+
+        // Combine with existing filters using AND. 
+        // We create a new object to avoid circular references or issues, 
+        // ensuring we wrap previous logic effectively.
+        // Note: If where was empty, this is essentially just ownershipCondition.
+        // But to be safe and simple:
+        const existingWhere = { ...where };
+        where = {
+          AND: [existingWhere, ownershipCondition],
+        };
+      }
+
       const [transactions, totalCount] = await Promise.all([
         prisma.fdhTransaction.findMany({
           where,
           include: {
-            fromAccount: true,
-            toAccount: true,
             statusHistory: true,
           },
           orderBy: { createdAt: "desc" },
@@ -238,8 +260,6 @@ export const transactionResolvers = {
         prisma.fdhTransaction.findMany({
           where,
           include: {
-            fromAccount: true,
-            toAccount: true,
             statusHistory: true,
           },
           orderBy: { createdAt: "desc" },
@@ -307,8 +327,6 @@ export const transactionResolvers = {
         prisma.fdhTransaction.findMany({
           where,
           include: {
-            fromAccount: true,
-            toAccount: true,
             statusHistory: true,
           },
           orderBy: { createdAt: "desc" },
@@ -352,8 +370,6 @@ export const transactionResolvers = {
         orderBy: { nextRetryAt: "asc" },
         take: limit,
         include: {
-          fromAccount: true,
-          toAccount: true,
           statusHistory: true,
         },
       });
@@ -894,8 +910,6 @@ export const transactionResolvers = {
           nextRetryAt: new Date(), // Process immediately
         },
         include: {
-          fromAccount: true,
-          toAccount: true,
           statusHistory: true,
         },
       });
@@ -932,10 +946,7 @@ export const transactionResolvers = {
 
       const originalTransaction = await prisma.fdhTransaction.findUnique({
         where: { id },
-        include: {
-          fromAccount: true,
-          toAccount: true,
-        },
+
       });
 
       if (!originalTransaction) {

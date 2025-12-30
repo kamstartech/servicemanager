@@ -1274,6 +1274,7 @@ export const typeDefs = /* GraphQL */ `
   extend type Query {
     # Device & Session Management
     myDevices: [MyDevice!]!
+    myDevice(deviceId: String!): MyDevice
     mySessions: [MySession!]!
     
     # Profile & Accounts
