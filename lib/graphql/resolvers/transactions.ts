@@ -29,13 +29,21 @@ function formatT24Error(t24Response: {
     'INVALID_AMOUNT': 'Invalid transaction amount',
     'T24_API_ERROR': 'Banking system is temporarily unavailable',
     'T24_ERROR': 'Banking system error occurred',
+    'DUPLICATE_REFERENCE': 'This transaction has already been processed',
+    'INVALID_CURRENCY': 'Invalid currency code',
+    'SYSTEM_ERROR': 'System error. Please try again later',
   };
 
   if (t24Response.errorCode && errorMap[t24Response.errorCode]) {
     return errorMap[t24Response.errorCode];
   }
 
-  return t24Response.message || 'Transfer failed. Please try again';
+  // If we have a message from T24, use it (cleaning it up if necessary)
+  if (t24Response.message && t24Response.message !== "T24 transfer failed") {
+    return t24Response.message;
+  }
+
+  return 'Transfer failed. Please try again';
 }
 
 export const transactionResolvers = {
@@ -347,78 +355,9 @@ export const transactionResolvers = {
       };
     },
 
-    retryableTransactions: async (
-      _: any,
-      { limit = 100 }: { limit?: number },
-      context: GraphQLContext
-    ) => {
-      if (!context.adminUser) {
-        throw new GraphQLError("Admin access required", {
-          extensions: { code: "FORBIDDEN" },
-        });
-      }
 
-      const now = new Date();
 
-      return await prisma.fdhTransaction.findMany({
-        where: {
-          status: TransactionStatus.FAILED,
-          retryCount: { lt: 3 },
-          nextRetryAt: { lte: now },
-        },
-        orderBy: { nextRetryAt: "asc" },
-        take: limit,
-        include: {
-          statusHistory: true,
-        },
-      });
-    },
 
-    transactionRetryStats: async (
-      _: any,
-      __: any,
-      context: GraphQLContext
-    ) => {
-      if (!context.adminUser) {
-        throw new GraphQLError("Admin access required", {
-          extensions: { code: "FORBIDDEN" },
-        });
-      }
-
-      const now = new Date();
-
-      const [totalRetryable, totalFailed, totalPending, nextRetryTxn] =
-        await Promise.all([
-          prisma.fdhTransaction.count({
-            where: {
-              status: TransactionStatus.FAILED,
-              retryCount: { lt: 3 },
-              nextRetryAt: { lte: now },
-            },
-          }),
-          prisma.fdhTransaction.count({
-            where: { status: TransactionStatus.FAILED_PERMANENT },
-          }),
-          prisma.fdhTransaction.count({
-            where: { status: TransactionStatus.PENDING },
-          }),
-          prisma.fdhTransaction.findFirst({
-            where: {
-              status: TransactionStatus.FAILED,
-              nextRetryAt: { gte: now },
-            },
-            orderBy: { nextRetryAt: "asc" },
-            select: { nextRetryAt: true },
-          }),
-        ]);
-
-      return {
-        totalRetryable,
-        totalFailed,
-        totalPending,
-        nextRetryTime: nextRetryTxn?.nextRetryAt,
-      };
-    },
   },
 
   Mutation: {
@@ -584,179 +523,122 @@ export const transactionResolvers = {
 
         // currency and description are already defined above
 
-        // FDH_BANK transfers: Execute synchronously
-        if (input.type === TransferType.FDH_BANK) {
-          console.log(`[createTransfer] Executing FDH_BANK transfer synchronously`);
+        // All transfers: Execute synchronously ("T24 First")
+        console.log(`[createTransfer] Executing ${input.type} transfer synchronously`);
 
-          // Call T24 immediately (T24 generates the reference)
-          const t24Response = await t24Service.transfer({
-            fromAccount: fromAccount.accountNumber,
-            toAccount: toAccountNumber,
-            amount: amount.toString(),
-            currency,
-            reference: '', // T24 generates the reference
-            description,
-            transferType: input.type,
+        // Call T24 immediately (T24 generates the reference)
+        const t24Response = await t24Service.transfer({
+          fromAccount: fromAccount.accountNumber,
+          toAccount: toAccountNumber,
+          amount: amount.toString(),
+          currency,
+          reference: '', // T24 generates the reference
+          description,
+          transferType: input.type,
+        });
+
+        if (t24Response.success) {
+          // Use T24 reference as the primary reference
+          const reference = t24Response.t24Reference || `T24-${Date.now()}`;
+
+          // Create COMPLETED transaction
+          const transaction = await prisma.fdhTransaction.create({
+            data: {
+              type: TransactionType.TRANSFER,
+              source:
+                input.context === MobileUserContext.WALLET
+                  ? TransactionSource.WALLET
+                  : TransactionSource.MOBILE_BANKING,
+              reference, // Use T24 reference
+              status: TransactionStatus.COMPLETED,
+              transferType: input.type,
+              transferContext: input.context,
+              amount,
+              currency,
+              description,
+              fromAccountNumber: fromAccount.accountNumber,
+              toAccountNumber: toAccountNumber,
+              t24Reference: t24Response.t24Reference,
+              t24Response: t24Response as any,
+              completedAt: new Date(),
+              maxRetries: 0, // No retries for sync transfers
+              initiatedByUserId: context.mobileUser.id,
+            },
+            include: {
+              initiatedBy: true,
+              statusHistory: true,
+            },
           });
 
-          if (t24Response.success) {
-            // Use T24 reference as the primary reference
-            const reference = t24Response.t24Reference || `T24-${Date.now()}`;
+          await prisma.fdhTransactionStatusHistory.create({
+            data: {
+              transactionId: transaction.id,
+              fromStatus: TransactionStatus.PENDING,
+              toStatus: TransactionStatus.COMPLETED,
+              reason: "Transfer completed successfully (synchronous)",
+            },
+          });
 
-            // Create COMPLETED transaction
-            const transaction = await prisma.fdhTransaction.create({
-              data: {
-                type: TransactionType.TRANSFER,
-                source:
-                  input.context === MobileUserContext.WALLET
-                    ? TransactionSource.WALLET
-                    : TransactionSource.MOBILE_BANKING,
-                reference, // Use T24 reference
-                status: TransactionStatus.COMPLETED,
-                transferType: input.type,
-                transferContext: input.context,
-                amount,
-                currency,
-                description,
-                fromAccountNumber: fromAccount.accountNumber,
-                toAccountNumber: toAccountNumber,
-                t24Reference: t24Response.t24Reference,
-                t24Response: t24Response as any,
-                completedAt: new Date(),
-                maxRetries: 0, // No retries for sync transfers
-                initiatedByUserId: context.mobileUser.id,
-              },
-              include: {
-                initiatedBy: true,
-                statusHistory: true,
-              },
-            });
+          console.log(`[createTransfer] Transfer completed: ${reference}`);
 
-            await prisma.fdhTransactionStatusHistory.create({
-              data: {
-                transactionId: transaction.id,
-                fromStatus: TransactionStatus.PENDING,
-                toStatus: TransactionStatus.COMPLETED,
-                reason: "Transfer completed successfully (synchronous)",
-              },
-            });
+          return {
+            success: true,
+            transaction,
+            message: "Transfer completed successfully",
+            errors: [],
+          };
+        } else {
+          // Create FAILED transaction with formatted error
+          const formattedError = formatT24Error(t24Response);
+          const tempReference = `FAILED-${Date.now()}`;
 
-            console.log(`[createTransfer] FDH_BANK transfer completed: ${reference}`);
+          const transaction = await prisma.fdhTransaction.create({
+            data: {
+              type: TransactionType.TRANSFER,
+              source:
+                input.context === MobileUserContext.WALLET
+                  ? TransactionSource.WALLET
+                  : TransactionSource.MOBILE_BANKING,
+              reference: tempReference, // Temporary reference for failed transfers
+              status: TransactionStatus.FAILED_PERMANENT,
+              transferType: input.type,
+              transferContext: input.context,
+              amount,
+              currency,
+              description,
+              fromAccountNumber: fromAccount.accountNumber,
+              toAccountNumber: toAccountNumber,
+              errorMessage: formattedError,
+              errorCode: t24Response.errorCode,
+              t24Response: t24Response as any,
+              maxRetries: 0, // No retries for sync transfers
+              initiatedByUserId: context.mobileUser.id,
+            },
+            include: {
+              initiatedBy: true,
+              statusHistory: true,
+            },
+          });
 
-            return {
-              success: true,
-              transaction,
-              message: "Transfer completed successfully",
-              errors: [],
-            };
-          } else {
-            // Create FAILED transaction with formatted error
-            const formattedError = formatT24Error(t24Response);
-            const tempReference = `FAILED-${Date.now()}`;
+          await prisma.fdhTransactionStatusHistory.create({
+            data: {
+              transactionId: transaction.id,
+              fromStatus: TransactionStatus.PENDING,
+              toStatus: TransactionStatus.FAILED_PERMANENT,
+              reason: `Transfer failed: ${formattedError}`,
+            },
+          });
 
-            const transaction = await prisma.fdhTransaction.create({
-              data: {
-                type: TransactionType.TRANSFER,
-                source:
-                  input.context === MobileUserContext.WALLET
-                    ? TransactionSource.WALLET
-                    : TransactionSource.MOBILE_BANKING,
-                reference: tempReference, // Temporary reference for failed transfers
-                status: TransactionStatus.FAILED_PERMANENT,
-                transferType: input.type,
-                transferContext: input.context,
-                amount,
-                currency,
-                description,
-                fromAccountNumber: fromAccount.accountNumber,
-                toAccountNumber: toAccountNumber,
-                errorMessage: formattedError,
-                errorCode: t24Response.errorCode,
-                t24Response: t24Response as any,
-                maxRetries: 0, // No retries for sync transfers
-                initiatedByUserId: context.mobileUser.id,
-              },
-              include: {
-                initiatedBy: true,
-                statusHistory: true,
-              },
-            });
+          console.log(`[createTransfer] Transfer failed: ${tempReference} - ${formattedError}`);
 
-            await prisma.fdhTransactionStatusHistory.create({
-              data: {
-                transactionId: transaction.id,
-                fromStatus: TransactionStatus.PENDING,
-                toStatus: TransactionStatus.FAILED_PERMANENT,
-                reason: `Transfer failed: ${formattedError}`,
-              },
-            });
-
-            console.log(`[createTransfer] FDH_BANK transfer failed: ${tempReference} - ${formattedError}`);
-
-            return {
-              success: false,
-              transaction,
-              message: formattedError,
-              errors: [formattedError],
-            };
-          }
+          return {
+            success: false,
+            transaction,
+            message: formattedError,
+            errors: [formattedError],
+          };
         }
 
-        // Other transfer types: Async PENDING flow
-        // Use temporary reference, will be updated to T24 reference when processed
-        const tempReference = `PENDING-${Date.now()}`;
-        console.log(`[createTransfer] Creating PENDING transaction for ${input.type}: ${tempReference}`);
-
-        const transaction = await prisma.fdhTransaction.create({
-          data: {
-            type: TransactionType.TRANSFER,
-            source:
-              input.context === MobileUserContext.WALLET
-                ? TransactionSource.WALLET
-                : TransactionSource.MOBILE_BANKING,
-            reference: tempReference, // Temporary, will be updated to T24 reference
-            status: TransactionStatus.PENDING,
-            transferType: input.type,
-            transferContext: input.context,
-            amount,
-            currency,
-            description,
-            fromAccountNumber: fromAccount.accountNumber,
-            toAccountNumber: toAccount?.accountNumber || toAccountNumber,
-            t24RequestBody: {
-              type: input.type,
-              context: input.context,
-              fromAccount: fromAccount.accountNumber,
-              toAccount: toAccount?.accountNumber || toAccountNumber,
-              amount: amount.toString(),
-              currency,
-              reference: tempReference,
-              description,
-            },
-            maxRetries: 3,
-            initiatedByUserId: context.mobileUser.id,
-          },
-          include: {
-            initiatedBy: true,
-            statusHistory: true,
-          },
-        });
-
-        await prisma.fdhTransactionStatusHistory.create({
-          data: {
-            transactionId: transaction.id,
-            fromStatus: TransactionStatus.PENDING,
-            toStatus: TransactionStatus.PENDING,
-            reason: `Transfer created (type=${input.type}) - async processing`,
-          },
-        });
-
-        return {
-          success: true,
-          transaction,
-          message: "Transfer created successfully",
-          errors: [],
-        };
       } catch (error) {
         const message = error instanceof Error ? error.message : "Unknown error";
         console.error("Create transfer error:", error);
@@ -835,7 +717,7 @@ export const transactionResolvers = {
             description: input.description,
             fromAccountNumber: resolvedFromAccountNumber,
             toAccountNumber: input.toAccountNumber,
-            maxRetries: input.maxRetries || 3,
+            maxRetries: 0,
             initiatedByUserId: context.mobileUser?.id,
           },
           include: {
@@ -871,71 +753,7 @@ export const transactionResolvers = {
       }
     },
 
-    retryTransaction: async (
-      _: any,
-      { id }: { id: string },
-      context: GraphQLContext
-    ) => {
-      if (!context.adminUser) {
-        throw new GraphQLError("Admin access required", {
-          extensions: { code: "FORBIDDEN" },
-        });
-      }
 
-      const transaction = await prisma.fdhTransaction.findUnique({
-        where: { id },
-      });
-
-      if (!transaction) {
-        throw new GraphQLError("Transaction not found", {
-          extensions: { code: "NOT_FOUND" },
-        });
-      }
-
-      if (transaction.status !== TransactionStatus.FAILED) {
-        throw new GraphQLError("Only failed transactions can be retried", {
-          extensions: { code: "BAD_REQUEST" },
-        });
-      }
-
-      if (transaction.retryCount >= transaction.maxRetries) {
-        throw new GraphQLError("Maximum retries exceeded", {
-          extensions: { code: "BAD_REQUEST" },
-        });
-      }
-
-      // Reset to pending
-      const updatedTransaction = await prisma.fdhTransaction.update({
-        where: { id },
-        data: {
-          status: TransactionStatus.PENDING,
-          errorMessage: null,
-          errorCode: null,
-          nextRetryAt: new Date(), // Process immediately
-        },
-        include: {
-          statusHistory: true,
-        },
-      });
-
-      // Create status history
-      await prisma.fdhTransactionStatusHistory.create({
-        data: {
-          transactionId: id,
-          fromStatus: TransactionStatus.FAILED,
-          toStatus: TransactionStatus.PENDING,
-          reason: "Manual retry by admin",
-          retryNumber: transaction.retryCount + 1,
-        },
-      });
-
-      return {
-        success: true,
-        transaction: updatedTransaction,
-        message: "Transaction queued for retry",
-        errors: [],
-      };
-    },
 
     reverseTransaction: async (
       _: any,
@@ -988,7 +806,7 @@ export const transactionResolvers = {
           isReversal: true,
           originalTxnId: originalTransaction.id,
           reversalReason: reason,
-          maxRetries: 3,
+          maxRetries: 0,
         },
         include: {
           statusHistory: true,

@@ -117,6 +117,37 @@ export class T24Service {
         };
       }
 
+      // Check for logical errors even if status is 200
+      if (
+        responseJson?.type === "BUSINESS" ||
+        responseJson?.errorDetails ||
+        responseJson?.header?.status === "failed" ||
+        responseJson?.status === "failed"
+      ) {
+        let errorMessage = "T24 transfer failed";
+        let errCode = "T24_BUSINESS_ERROR";
+
+        if (responseJson.errorDetails && Array.isArray(responseJson.errorDetails) && responseJson.errorDetails.length > 0) {
+          errorMessage = responseJson.errorDetails[0].message || errorMessage;
+          errCode = responseJson.errorDetails[0].code || errCode;
+        } else if (responseJson.message) {
+          errorMessage = typeof responseJson.message === 'string' ? responseJson.message : JSON.stringify(responseJson.message);
+        }
+
+        console.error("[T24Service] T24 logic error detected:", {
+          errorMessage,
+          errorCode: errCode,
+          response: responseJson
+        });
+
+        return {
+          success: false,
+          message: errorMessage,
+          errorCode: errCode,
+          t24Reference: responseJson?.id || responseJson?.header?.id, // Capture ref if available even on failure
+        };
+      }
+
       const t24Reference =
         responseJson?.body?.header?.id ||
         responseJson?.header?.id ||

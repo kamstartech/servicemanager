@@ -2057,12 +2057,7 @@ export const typeDefs = /* GraphQL */ `
     totalPages: Int!
   }
 
-  type RetryStats {
-    totalRetryable: Int!
-    totalFailed: Int!
-    totalPending: Int!
-    nextRetryTime: DateTime
-  }
+
 
   extend type Query {
     # Proxy Transaction System queries (renamed to avoid conflicts)
@@ -2080,14 +2075,13 @@ export const typeDefs = /* GraphQL */ `
       limit: Int = 20
     ): TransactionConnection!
     
-    retryableTransactions(limit: Int = 100): [Transaction!]!
-    transactionRetryStats: RetryStats!
+
   }
 
   extend type Mutation {
     createTransaction(input: CreateTransactionInput!): CreateTransactionResponse!
     createTransfer(input: CreateTransferInput!): CreateTransactionResponse!
-    retryTransaction(id: ID!): CreateTransactionResponse!
+
     reverseTransaction(id: ID!, reason: String!): CreateTransactionResponse!
   }
   

@@ -179,25 +179,15 @@ async function handleTransactionFailure(
   errorMessage: string,
   errorCode?: string
 ): Promise<void> {
-  const retryCount = transaction.retryCount + 1;
-  const shouldRetry = retryCount < transaction.maxRetries;
-
-  const status = shouldRetry ? TransactionStatus.FAILED : TransactionStatus.FAILED_PERMANENT;
-
-  // Calculate next retry time (exponential backoff: 2^retryCount * 2 minutes)
-  const nextRetryAt = shouldRetry
-    ? new Date(Date.now() + Math.pow(2, retryCount) * 2 * 60 * 1000)
-    : null;
+  const status = TransactionStatus.FAILED_PERMANENT;
 
   await prisma.fdhTransaction.update({
     where: { id: transactionId },
     data: {
       status,
-      retryCount,
-      lastRetryAt: new Date(),
-      nextRetryAt,
       errorMessage,
       errorCode,
+      nextRetryAt: null,
     },
   });
 
@@ -205,19 +195,12 @@ async function handleTransactionFailure(
     transactionId,
     TransactionStatus.PROCESSING,
     status,
-    errorMessage,
-    retryCount
+    errorMessage
   );
 
-  if (shouldRetry) {
-    console.log(
-      `[TransactionProcessor] Transaction ${transactionId} failed, will retry at ${nextRetryAt} (attempt ${retryCount}/${transaction.maxRetries})`
-    );
-  } else {
-    console.log(
-      `[TransactionProcessor] Transaction ${transactionId} permanently failed after ${retryCount} attempts`
-    );
-  }
+  console.log(
+    `[TransactionProcessor] Transaction ${transactionId} permanently failed: ${errorMessage}`
+  );
 }
 
 /**

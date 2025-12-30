@@ -47,21 +47,19 @@ export const transactionResolvers = {
         status: "success",
       };
     },
-    
+
     // Add proxy transaction queries (renamed to avoid conflicts)
     proxyTransaction: proxyTransactionResolvers.Query.transaction,
     proxyTransactionByReference: proxyTransactionResolvers.Query.transactionByReference,
     proxyTransactions: proxyTransactionResolvers.Query.transactions,
     proxyAccountTransactions: proxyTransactionResolvers.Query.accountTransactions,
-    retryableTransactions: proxyTransactionResolvers.Query.retryableTransactions,
-    transactionRetryStats: proxyTransactionResolvers.Query.transactionRetryStats,
   },
-  
+
   Mutation: {
     // Add proxy transaction mutations
     ...proxyTransactionResolvers.Mutation,
   },
-  
+
   // Add Transaction type resolver (only statusHistory, others are direct fields)
   Transaction: {
     statusHistory: proxyTransactionResolvers.Transaction.statusHistory,
