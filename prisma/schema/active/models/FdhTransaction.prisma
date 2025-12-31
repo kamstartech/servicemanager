@@ -21,6 +21,10 @@ model FdhTransaction {
   // Receiver (To)
   toAccountNumber   String?            @map("to_account_number") @db.VarChar(50)
   
+  // External Bank Details (only for EXTERNAL_BANK transfers)
+  toBankCode        String?            @map("to_bank_code") @db.VarChar(50)
+  toBankName        String?            @map("to_bank_name") @db.VarChar(255)
+  
   // Relationships
   // No Foreign Key constraints on account numbers (for joint account support)
   

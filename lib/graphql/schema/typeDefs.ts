@@ -2022,6 +2022,10 @@ export const typeDefs = /* GraphQL */ `
     # Account-based transfers - mobile clients provide account number
     fromAccountNumber: String
     toAccountNumber: String
+    
+    # External bank transfers - bank details
+    bankCode: String
+    bankName: String
   }
 
   input TransactionFilterInput {

@@ -564,12 +564,14 @@ export const transactionResolvers = {
               currency,
               description,
               fromAccountNumber: fromAccount.accountNumber,
-              toAccountNumber: toAccountNumber,
+              toAccountNumber,
+              toBankCode: input.bankCode || null,
+              toBankName: input.bankName || null,
+              initiatedByUserId: context.mobileUser.id,
               t24Reference: t24Response.t24Reference,
               t24Response: t24Response as any,
               completedAt: new Date(),
               maxRetries: 0, // No retries for sync transfers
-              initiatedByUserId: context.mobileUser.id,
             },
             include: {
               initiatedBy: true,
