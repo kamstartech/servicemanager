@@ -75,9 +75,22 @@ export const transactionResolvers = {
 
       // Authorization: mobile users can only see their own transactions
       if (context.mobileUser) {
-        const hasAccess =
-          transaction.initiatedByUserId === context.mobileUser.id ||
-          transaction.fromAccount?.mobileUserId === context.mobileUser.id; // toAccount ownership check removed due to decoupled schema
+        // Check if user initiated the transaction
+        const initiatedByUser = transaction.initiatedByUserId === context.mobileUser.id;
+
+        // Check if user owns the source account
+        let ownsSourceAccount = false;
+        if (transaction.fromAccountNumber) {
+          const sourceAccount = await prisma.mobileUserAccount.findFirst({
+            where: {
+              accountNumber: transaction.fromAccountNumber,
+              mobileUserId: context.mobileUser.id,
+            },
+          });
+          ownsSourceAccount = !!sourceAccount;
+        }
+
+        const hasAccess = initiatedByUser || ownsSourceAccount;
 
         if (!hasAccess) {
           throw new GraphQLError("Forbidden", {
@@ -372,7 +385,7 @@ export const transactionResolvers = {
           amount: string | number;
           currency?: string | null;
           description?: string | null;
-          fromAccountId?: number | null;
+          fromAccountNumber?: string | null;
           toAccountNumber?: string | null;
         };
       },
@@ -390,8 +403,9 @@ export const transactionResolvers = {
           throw new Error("Amount must be greater than zero");
         }
 
-        if (!input.fromAccountId) {
-          throw new Error("fromAccountId is required for account transfers");
+        const fromAccountNumber = (input.fromAccountNumber || "").trim();
+        if (!fromAccountNumber) {
+          throw new Error("fromAccountNumber is required for account transfers");
         }
 
         const toAccountNumber = (input.toAccountNumber || "").trim();
@@ -402,8 +416,13 @@ export const transactionResolvers = {
         const currency = input.currency || "MWK";
         const description = input.description || "Transfer";
 
-        const fromAccount = await prisma.mobileUserAccount.findUnique({
-          where: { id: input.fromAccountId },
+        // Look up the source account by account number
+        const fromAccount = await prisma.mobileUserAccount.findFirst({
+          where: {
+            accountNumber: fromAccountNumber,
+            mobileUserId: context.mobileUser.id, // Security: ensure account belongs to user
+            context: input.context,
+          },
           select: {
             id: true,
             mobileUserId: true,
@@ -419,20 +438,8 @@ export const transactionResolvers = {
           });
         }
 
-        if (fromAccount.mobileUserId !== context.mobileUser.id) {
-          throw new GraphQLError("Forbidden", {
-            extensions: { code: "FORBIDDEN" },
-          });
-        }
-
         if (!fromAccount.isActive) {
           throw new GraphQLError("Source account is not active", {
-            extensions: { code: "BAD_REQUEST" },
-          });
-        }
-
-        if (fromAccount.context !== input.context) {
-          throw new GraphQLError("Source account context mismatch", {
             extensions: { code: "BAD_REQUEST" },
           });
         }

@@ -2019,8 +2019,8 @@ export const typeDefs = /* GraphQL */ `
     currency: String
     description: String
 
-    # Account-based transfers
-    fromAccountId: Int
+    # Account-based transfers - mobile clients provide account number
+    fromAccountNumber: String
     toAccountNumber: String
   }
 
