@@ -197,6 +197,7 @@ export const typeDefs = /* GraphQL */ `
     walletTier: MobileUserWalletTier
     isActive: Boolean!
     hasSecret: Boolean!
+    allowMultiSession: Boolean!
     createdAt: String!
     updatedAt: String!
   }
@@ -621,6 +622,7 @@ export const typeDefs = /* GraphQL */ `
   }
 
   type Query {
+    me: MobileUser
     mobileUsers(context: MobileUserContext): [MobileUser!]!
     mobileUserDevices(userId: ID!): [MobileDevice!]!
     mobileUserAccounts(userId: ID!): [Account!]!

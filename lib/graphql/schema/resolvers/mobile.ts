@@ -18,6 +18,37 @@ async function getHiddenAccountCategoryIds(): Promise<string[]> {
 
 export const mobileResolvers = {
   Query: {
+    // Get current user (me)
+    async me(_: unknown, __: unknown, context: GraphQLContext) {
+      if (!context.userId) {
+        throw new GraphQLError('Authentication required', {
+          extensions: {
+            code: 'UNAUTHENTICATED',
+            http: { status: 401 },
+          },
+        });
+      }
+
+      const user = await prisma.mobileUser.findUnique({
+        where: { id: context.userId },
+      });
+
+      if (!user) {
+        throw new GraphQLError('User not found', {
+          extensions: {
+            code: 'NOT_FOUND',
+            http: { status: 404 },
+          },
+        });
+      }
+
+      return {
+        ...user,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt.toISOString(),
+      };
+    },
+
     // Get current user's devices
     async myDevices(_: unknown, __: unknown, context: GraphQLContext) {
       if (!context.userId) {
