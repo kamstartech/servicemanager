@@ -247,3 +247,28 @@ export const changePasswordResolvers = {
         },
     },
 };
+
+// Export verify function for reuse in other resolvers (e.g., memo word change)
+export function verifyPasswordChangeOTP(userId: number, otpCode: string): boolean {
+  const stored = passwordChangeOtpStorage.get(userId);
+
+  if (!stored) {
+    return false;
+  }
+
+  // Check if OTP expired
+  if (new Date() > stored.expiresAt) {
+    passwordChangeOtpStorage.delete(userId);
+    return false;
+  }
+
+  // Verify OTP
+  if (stored.otp !== otpCode) {
+    return false;
+  }
+
+  // OTP is valid, remove it (one-time use)
+  passwordChangeOtpStorage.delete(userId);
+  return true;
+}
+

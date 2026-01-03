@@ -245,9 +245,9 @@ export const mobileUserResolvers = {
           throw new Error("OTP code required to change existing memo word. Please request OTP first.");
         }
 
-        // Verify OTP
-        const { verifyMemoWordChangeOTP } = await import('./memoWordChange');
-        const isValidOTP = verifyMemoWordChangeOTP(context.userId, args.otpCode);
+        // Verify OTP using the same password change OTP storage
+        const { verifyPasswordChangeOTP } = await import('./changePassword');
+        const isValidOTP = verifyPasswordChangeOTP(context.userId, args.otpCode);
 
         if (!isValidOTP) {
           throw new Error("Invalid or expired OTP code");

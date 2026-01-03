@@ -1,5 +1,4 @@
 import { mobileUserResolvers } from "./mobileUser";
-import { memoWordChangeResolvers } from "./memoWordChange";
 import { adminWebUserResolvers } from "./adminWebUser";
 import { subscriptionResolvers } from "./subscription";
 import { databaseConnectionResolvers } from "./databaseConnection";
@@ -108,7 +107,6 @@ export const resolvers = {
     ...authResolvers.Mutation,
     ...adminWebUserResolvers.Mutation,
     ...mobileUserResolvers.Mutation,
-    ...memoWordChangeResolvers.Mutation,
     ...databaseConnectionResolvers.Mutation,
     ...migrationResolvers.Mutation,
     ...coreBankingConnectionResolvers.Mutation,
