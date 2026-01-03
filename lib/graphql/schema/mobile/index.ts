@@ -28,6 +28,8 @@ const MOBILE_QUERY_FIELDS = new Set([
   "myTickets",
   "ticket",
   "externalBanks",
+  "myNotifications",
+  "unreadNotificationCount",
 ]);
 
 const MOBILE_SUBSCRIPTION_FIELDS = new Set([
@@ -70,6 +72,9 @@ const MOBILE_MUTATION_FIELDS = new Set([
   "registerDeviceForPush",
   "unregisterDeviceFromPush",
   "testPushNotification",
+  "markNotificationAsRead",
+  "markAllNotificationsAsRead",
+  "deleteNotification",
   "setAccountNickname",
   "freezeAccount",
   "unfreezeAccount",
