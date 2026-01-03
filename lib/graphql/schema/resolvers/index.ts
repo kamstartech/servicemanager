@@ -102,6 +102,7 @@ export const resolvers = {
     ...ticketsResolvers.Query,
     ...mobileTicketsResolvers.Query,
     ...externalBanksResolvers.Query,
+    ...pushNotificationResolvers.Query,
   },
   Mutation: {
     ...authResolvers.Mutation,
