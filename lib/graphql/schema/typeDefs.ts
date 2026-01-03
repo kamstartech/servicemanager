@@ -2242,6 +2242,7 @@ export const typeDefs = /* GraphQL */ `
     setMemoWord(memoWord: String!, otpCode: String): MobileUserResponse!
   }
 
+  # Push Notification Types and Enums
   enum NotificationType {
     ACCOUNT_ALERT
     TRANSACTION_COMPLETE
@@ -2268,14 +2269,6 @@ export const typeDefs = /* GraphQL */ `
     DELIVERED
     FAILED
     READ
-  }
-
-  type MobileUserResponse {
-    success: Boolean!
-    message: String
-    user: MobileUser
-    token: String
-    appStructure: [AppScreen!]
   }
 
   type PushNotification {
@@ -2310,6 +2303,14 @@ export const typeDefs = /* GraphQL */ `
     ): PushNotificationConnection!
     
     unreadNotificationCount: Int!
+  }
+
+  type MobileUserResponse {
+    success: Boolean!
+    message: String
+    user: MobileUser
+    token: String
+    appStructure: [AppScreen!]
   }
 
   # Statement Request Feature
