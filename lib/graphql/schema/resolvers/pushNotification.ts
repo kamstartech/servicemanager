@@ -41,7 +41,13 @@ export const pushNotificationResolvers = {
       ]);
 
       return {
-        items,
+        items: items.map(item => ({
+          ...item,
+          sentAt: item.sentAt?.toISOString(),
+          deliveredAt: item.deliveredAt?.toISOString(),
+          readAt: item.readAt?.toISOString(),
+          createdAt: item.createdAt.toISOString(),
+        })),
         totalCount,
         page,
         pageSize,
