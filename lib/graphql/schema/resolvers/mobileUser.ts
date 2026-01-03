@@ -224,11 +224,37 @@ export const mobileUserResolvers = {
 
       return formattedUser;
     },
-    async setMemoWord(_parent: unknown, args: { memoWord: string }, context: any) {
+    async setMemoWord(_parent: unknown, args: { memoWord: string; otpCode?: string }, context: any) {
       if (!context.userId) {
         throw new Error("Authentication required");
       }
 
+      // Check if user already has a memo word
+      const existingUser = await prisma.mobileUser.findUnique({
+        where: { id: context.userId },
+        select: { secretHash: true },
+      });
+
+      if (!existingUser) {
+        throw new Error("User not found");
+      }
+
+      // If user already has a memo word, require OTP verification
+      if (existingUser.secretHash) {
+        if (!args.otpCode) {
+          throw new Error("OTP code required to change existing memo word. Please request OTP first.");
+        }
+
+        // Verify OTP
+        const { verifyMemoWordChangeOTP } = await import('./memoWordChange');
+        const isValidOTP = verifyMemoWordChangeOTP(context.userId, args.otpCode);
+
+        if (!isValidOTP) {
+          throw new Error("Invalid or expired OTP code");
+        }
+      }
+
+      // Hash the new memo word
       const hashedSecret = await bcrypt.hash(args.memoWord, 12);
 
       const user = await prisma.mobileUser.update({
@@ -238,7 +264,9 @@ export const mobileUserResolvers = {
 
       return {
         success: true,
-        message: "Memo word set successfully",
+        message: existingUser.secretHash 
+          ? "Memo word changed successfully" 
+          : "Memo word set successfully",
         user: {
           id: user.id,
           context: user.context,

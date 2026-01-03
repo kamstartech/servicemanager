@@ -1319,6 +1319,12 @@ export const typeDefs = /* GraphQL */ `
     message: String!
   }
 
+  type RequestMemoWordChangeOtpResult {
+    success: Boolean!
+    message: String!
+    otpCode: String # DEV ONLY - Remove in production
+  }
+
   input ChangePasswordInput {
     oldPassword: String!
     newPassword: String!
@@ -2239,7 +2245,8 @@ export const typeDefs = /* GraphQL */ `
     purchaseAirtime(input: PurchaseAirtimeInput!): PurchaseAirtimeResponse!
 
     # Security mutations
-    setMemoWord(memoWord: String!): MobileUserResponse!
+    requestMemoWordChangeOtp: RequestMemoWordChangeOtpResult!
+    setMemoWord(memoWord: String!, otpCode: String): MobileUserResponse!
   }
 
   enum NotificationType {
