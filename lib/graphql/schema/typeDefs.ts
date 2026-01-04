@@ -1337,7 +1337,7 @@ export const typeDefs = /* GraphQL */ `
 
   input InitiatePasswordResetInput {
     username: String!
-    secret: String!
+    secret: String
     context: MobileUserContext!
     phoneNumber: String
     deviceId: String!

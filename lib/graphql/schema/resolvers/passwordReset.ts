@@ -70,35 +70,37 @@ export const passwordResetResolvers = {
           };
         }
 
-        // 2. Verify secret
-        if (!user.secretHash) {
-          return {
-            success: false,
-            message: "Secret not set for this account",
-            resetToken: null,
-            otpSentTo: null,
-          };
-        }
+        // 2. Verify secret (Only for non-wallet modules)
+        if (context !== "WALLET") {
+          if (!user.secretHash) {
+            return {
+              success: false,
+              message: "Secret not set for this account",
+              resetToken: null,
+              otpSentTo: null,
+            };
+          }
 
-        const secretMatch = await bcrypt.compare(secret, user.secretHash);
-        if (!secretMatch) {
-          // Log failed attempt
-          await prisma.deviceLoginAttempt.create({
-            data: {
-              mobileUserId: user.id,
-              deviceId: deviceId,
-              attemptType: "PASSWORD_LOGIN",
-              status: "FAILED_CREDENTIALS",
-              attemptedAt: new Date(),
-            },
-          });
+          const secretMatch = await bcrypt.compare(secret, user.secretHash);
+          if (!secretMatch) {
+            // Log failed attempt
+            await prisma.deviceLoginAttempt.create({
+              data: {
+                mobileUserId: user.id,
+                deviceId: deviceId,
+                attemptType: "PASSWORD_LOGIN",
+                status: "FAILED_CREDENTIALS",
+                attemptedAt: new Date(),
+              },
+            });
 
-          return {
-            success: false,
-            message: "Invalid secret",
-            resetToken: null,
-            otpSentTo: null,
-          };
+            return {
+              success: false,
+              message: "Invalid secret",
+              resetToken: null,
+              otpSentTo: null,
+            };
+          }
         }
 
         // 3. Determine where to send OTP (phone or email)
