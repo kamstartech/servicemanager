@@ -370,7 +370,7 @@ export const transactionResolvers = {
 
     proofOfPayment: async (
       _: any,
-      { transactionId }: { transactionId: string },
+      { reference }: { reference: string },
       context: GraphQLContext
     ) => {
       if (!context.mobileUser) {
@@ -381,7 +381,7 @@ export const transactionResolvers = {
 
       // 1. Fetch transaction
       const transaction = await prisma.fdhTransaction.findUnique({
-        where: { id: transactionId },
+        where: { reference },
         include: {
           initiatedBy: true,
         },

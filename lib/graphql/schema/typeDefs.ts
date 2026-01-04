@@ -2120,7 +2120,7 @@ export const typeDefs = /* GraphQL */ `
     # Proxy Transaction System queries (renamed to avoid conflicts)
     proxyTransaction(id: ID!): Transaction
     proxyTransactionByReference(reference: String!): Transaction
-    proofOfPayment(transactionId: ID!): ProofOfPayment
+    proofOfPayment(reference: String!): ProofOfPayment
     proxyTransactions(
       filter: TransactionFilterInput
       page: Int = 1
