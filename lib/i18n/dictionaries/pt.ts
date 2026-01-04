@@ -199,6 +199,8 @@ export const pt = {
     servicesMonitor: "Monitor de serviços",
     customerCare: "Apoio ao Cliente",
     tickets: "Bilhetes",
+    externalBanks: "Bancos Externos",
+    logout: "Sair",
   },
   dashboard: {
     title: "Service Manager Admin",

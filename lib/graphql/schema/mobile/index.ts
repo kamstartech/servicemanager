@@ -22,6 +22,7 @@ const MOBILE_QUERY_FIELDS = new Set([
   "accountTransactions",
   "proxyTransactionByReference",
   "proxyTransaction",
+  "proofOfPayment",
   "proxyAccountTransactions",
   "mobileUserAccounts",
   "mobileUserAccount",

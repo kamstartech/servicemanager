@@ -261,8 +261,8 @@ export function AdminSidebar() {
               variant={locale === "en" ? "default" : "ghost"}
               size="sm"
               className={`h-7 flex-1 text-xs ${locale === "en"
-                  ? "bg-fdh-orange text-white hover:bg-fdh-orange/90"
-                  : "text-white hover:bg-white/20"
+                ? "bg-fdh-orange text-white hover:bg-fdh-orange/90"
+                : "text-white hover:bg-white/20"
                 }`}
               onClick={() => setLocale("en")}
             >
@@ -273,8 +273,8 @@ export function AdminSidebar() {
               variant={locale === "pt" ? "default" : "ghost"}
               size="sm"
               className={`h-7 flex-1 text-xs ${locale === "pt"
-                  ? "bg-fdh-orange text-white hover:bg-fdh-orange/90"
-                  : "text-white hover:bg-white/20"
+                ? "bg-fdh-orange text-white hover:bg-fdh-orange/90"
+                : "text-white hover:bg-white/20"
                 }`}
               onClick={() => setLocale("pt")}
             >
@@ -336,7 +336,7 @@ export function AdminSidebar() {
             }`}
         >
           <LogOut className="h-4 w-4 shrink-0 text-fdh-orange" />
-          {!collapsed && <span className="truncate">Logout</span>}
+          {!collapsed && <span className="truncate">{translate("sidebar.logout")}</span>}
         </Button>
       </div>
     </aside>

@@ -33,6 +33,7 @@ type UpdateWorkflowInput = {
   name?: string;
   description?: string;
   isActive?: boolean;
+  linkedPageIds?: string[];
 };
 
 type AttachWorkflowToPageInput = {
@@ -313,17 +314,64 @@ export const workflowResolvers = {
         throw new Error("Workflow not found");
       }
 
-      const updated = await prisma.workflow.update({
-        where: { id },
-        data: {
-          ...(input.name && { name: input.name }),
-          ...(input.description !== undefined && { description: input.description }),
-          ...(input.isActive !== undefined && { isActive: input.isActive }),
-        },
-        include: {
-          steps: { orderBy: { order: "asc" } },
-          screenPages: true,
-        },
+      const updated = await prisma.$transaction(async (tx) => {
+        if (input.linkedPageIds) {
+          // Get existing links
+          const existingLinks = await tx.appScreenPageWorkflow.findMany({
+            where: { workflowId: id },
+            select: { pageId: true }
+          });
+
+          const existingPageIds = existingLinks.map(l => l.pageId);
+
+          // Determine additions and removals
+          const toAdd = input.linkedPageIds.filter(pid => !existingPageIds.includes(pid));
+          const toRemove = existingPageIds.filter(pid => !input.linkedPageIds?.includes(pid));
+
+          // Remove linked pages
+          if (toRemove.length > 0) {
+            await tx.appScreenPageWorkflow.deleteMany({
+              where: {
+                workflowId: id,
+                pageId: { in: toRemove }
+              }
+            });
+          }
+
+          // Add new linked pages
+          if (toAdd.length > 0) {
+            // Get highest order to append to end? Or just 0?
+            // simpler to just create them. Using Promise.all for individual creates if we want specific defaults, 
+            // or createMany if supported and no extra fields needed.
+            // AppScreenPageWorkflow has `order`, `isActive` etc. default 0 and true.
+            await tx.appScreenPageWorkflow.createMany({
+              data: toAdd.map(pageId => ({
+                workflowId: id,
+                pageId: pageId,
+                isActive: true
+              }))
+            });
+          }
+        }
+
+        return tx.workflow.update({
+          where: { id },
+          data: {
+            ...(input.name && { name: input.name }),
+            ...(input.description !== undefined && { description: input.description }),
+            ...(input.isActive !== undefined && { isActive: input.isActive }),
+          },
+          include: {
+            steps: { orderBy: { order: "asc" } },
+            screenPages: {
+              include: {
+                page: {
+                  include: { screen: true }
+                }
+              }
+            },
+          },
+        });
       });
 
       return {

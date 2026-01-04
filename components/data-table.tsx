@@ -76,6 +76,7 @@ export type DataTableProps<T> = {
   searchPlaceholder?: string;
   showRowNumbers?: boolean;
   rowNumberHeader?: React.ReactNode;
+  initialSortDirection?: "asc" | "desc";
 };
 
 export function DataTable<T extends Record<string, any>>({
@@ -87,11 +88,12 @@ export function DataTable<T extends Record<string, any>>({
   searchPlaceholder = "Search",
   showRowNumbers = false,
   rowNumberHeader = "#",
+  initialSortDirection = "asc",
 }: DataTableProps<T>) {
   const { translate } = useI18n();
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<keyof T | undefined>(initialSortKey);
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">(initialSortDirection);
   const [page, setPage] = useState(1);
   const [pageSizeState, setPageSizeState] = useState(pageSize);
 

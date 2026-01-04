@@ -368,9 +368,82 @@ export const transactionResolvers = {
       };
     },
 
+    proofOfPayment: async (
+      _: any,
+      { transactionId }: { transactionId: string },
+      context: GraphQLContext
+    ) => {
+      if (!context.mobileUser) {
+        throw new GraphQLError("Unauthorized", {
+          extensions: { code: "UNAUTHENTICATED" },
+        });
+      }
 
+      // 1. Fetch transaction
+      const transaction = await prisma.fdhTransaction.findUnique({
+        where: { id: transactionId },
+        include: {
+          initiatedBy: true,
+        },
+      });
 
+      if (!transaction) {
+        throw new GraphQLError("Transaction not found", {
+          extensions: { code: "NOT_FOUND" },
+        });
+      }
 
+      // 2. Authorization: Ensure user is the initiator or the owner of the involved accounts
+      const isInitiator = transaction.initiatedByUserId === context.mobileUser.id;
+
+      const userAccounts = await prisma.mobileUserAccount.findMany({
+        where: { mobileUserId: context.mobileUser.id },
+        select: { accountNumber: true },
+      });
+      const accountNumbers = userAccounts.map(acc => acc.accountNumber);
+      const isInvolved = (transaction.fromAccountNumber && accountNumbers.includes(transaction.fromAccountNumber)) ||
+        (transaction.toAccountNumber && accountNumbers.includes(transaction.toAccountNumber));
+
+      if (!isInitiator && !isInvolved) {
+        throw new GraphQLError("Forbidden", {
+          extensions: { code: "FORBIDDEN" },
+        });
+      }
+
+      // 3. Fetch Biller Details if applicable
+      let billerTxn = null;
+      if (transaction.type === TransactionType.AIRTIME || transaction.type === TransactionType.BILL_PAYMENT) {
+        billerTxn = await prisma.billerTransaction.findUnique({
+          where: { ourTransactionId: transaction.reference }
+        });
+      }
+
+      // 4. Map to ProofOfPayment
+      return {
+        transactionId: transaction.id,
+        reference: transaction.reference,
+        t24Reference: transaction.t24Reference,
+        type: transaction.type,
+        status: transaction.status,
+        amount: transaction.amount,
+        currency: transaction.currency,
+        description: transaction.description,
+        createdAt: transaction.createdAt,
+        completedAt: transaction.completedAt,
+
+        fromAccountNumber: transaction.fromAccountNumber,
+        fromAccountName: context.mobileUser.username, // Simplified: name of the user
+        toAccountNumber: transaction.toAccountNumber,
+        toAccountName: billerTxn?.billerName || transaction.toAccountNumber,
+
+        billerName: billerTxn?.billerName,
+        billerType: billerTxn?.billerType,
+        externalReference: billerTxn?.externalTransactionId || transaction.t24Reference,
+
+        fee: new Decimal(0), // Fees not yet implemented on fdhTransaction level
+        memo: transaction.description
+      };
+    },
   },
 
   Mutation: {
@@ -387,6 +460,8 @@ export const transactionResolvers = {
           description?: string | null;
           fromAccountNumber?: string | null;
           toAccountNumber?: string | null;
+          bankCode?: string | null;
+          bankName?: string | null;
         };
       },
       context: GraphQLContext

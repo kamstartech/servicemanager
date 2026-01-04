@@ -11,6 +11,7 @@ import { billerEsbService } from "@/lib/services/billers/biller-esb-service";
 import { Decimal } from "@prisma/client/runtime/library";
 import { t24Service } from "@/lib/services/t24-service";
 import { ConfigurationService } from "@/lib/services/configuration-service";
+import { getBillerDefinition } from "@/lib/config/biller-constants";
 
 /**
  * Biller Resolvers
@@ -306,6 +307,71 @@ export const billersResolvers = {
         updatedAt: transaction.updatedAt.toISOString(),
       };
     },
+
+    /**
+     * Get all biller transactions (Admin only)
+     */
+    billerTransactions: async (
+      _: unknown,
+      {
+        limit = 100,
+        offset = 0,
+      }: {
+        limit?: number;
+        offset?: number;
+      },
+      context: GraphQLContext
+    ) => {
+      // Admin only
+      if (!context.adminUser && !context.adminId) {
+        throw new GraphQLError("Admin access required", {
+          extensions: { code: "FORBIDDEN" },
+        });
+      }
+
+      const [transactions, totalCount] = await Promise.all([
+        prisma.billerTransaction.findMany({
+          orderBy: { createdAt: "desc" },
+          take: limit,
+          skip: offset,
+        }),
+        prisma.billerTransaction.count(),
+      ]);
+
+      return {
+        transactions,
+        totalCount,
+      };
+    },
+
+    /**
+     * Get biller transaction statistics (Admin only)
+     */
+    billerTransactionStats: async (
+      _: unknown,
+      __: unknown,
+      context: GraphQLContext
+    ) => {
+      // Admin only
+      if (!context.adminUser && !context.adminId) {
+        throw new GraphQLError("Admin access required", {
+          extensions: { code: "FORBIDDEN" },
+        });
+      }
+
+      const stats = await prisma.billerTransaction.groupBy({
+        by: ["billerType", "status"],
+        _count: {
+          _all: true,
+        },
+      });
+
+      return stats.map((stat) => ({
+        billerType: stat.billerType,
+        status: stat.status,
+        count: stat._count._all,
+      }));
+    },
   },
 
   Mutation: {
@@ -371,7 +437,7 @@ export const billersResolvers = {
           status: TransactionStatus.PENDING,
           amount,
           currency: sourceAccount.currency,
-          description: `Bill payment: ${billerType} - ${accountNumber}`,
+          description: `${getBillerDefinition(billerType)?.name || billerType} - ${sourceAccount.currency} ${amount.toNumber().toLocaleString()} to ${accountNumber} from ${sourceAccount.accountNumber}`,
           fromAccountNumber: sourceAccount.accountNumber,
           toAccountNumber: accountNumber,
           initiatedByUserId: context.userId,

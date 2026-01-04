@@ -171,6 +171,9 @@ export const resolvers = {
   CheckbookRequest: {
     ...checkbookRequestResolvers.CheckbookRequest,
   },
+  BillerTransaction: {
+    ...billersResolvers.BillerTransaction,
+  },
   Subscription: {
     ...subscriptionResolvers.Subscription,
     ...mobileUserAccountResolvers.Subscription,

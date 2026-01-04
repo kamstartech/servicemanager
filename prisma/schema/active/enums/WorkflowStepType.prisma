@@ -7,4 +7,5 @@ enum WorkflowStepType {
   REDIRECT
   OTP
   POST_TRANSACTION
+  BILL_TRANSACTION
 }

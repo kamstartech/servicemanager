@@ -1,4 +1,4 @@
-import { BillerConfig } from "@prisma/client";
+import { BillerDefinition } from "@/lib/config/biller-constants";
 import { BaseBillerService } from "./base";
 import { SoapBillerService } from "./soap";
 import { InvoiceBillerService } from "./invoice";
@@ -24,50 +24,50 @@ export class BillerServiceFactory {
   /**
    * Create appropriate biller service based on config
    */
-  static create(config: BillerConfig): BaseBillerService {
-    const features = config.features as any;
+  static create(config: BillerDefinition): BaseBillerService {
+    const features = config.features;
 
     // Airtime topups are handled via dedicated services (Services Overview), not via billers.
     if (
-      config.billerType === BillerType.TNM_BUNDLES ||
-      config.billerType === BillerType.AIRTEL_VALIDATION
+      config.type === BillerType.TNM_BUNDLES ||
+      config.type === BillerType.AIRTEL_VALIDATION
     ) {
       throw new Error(
-        `Biller type ${config.billerType} is not supported via billers. Use the airtime services instead.`
+        `Biller type ${config.type} is not supported via billers. Use the airtime services instead.`
       );
     }
 
     // Validation-only billers
     if (features?.validationOnly) {
-      return new ValidationBillerService(config);
+      return new ValidationBillerService(config as any);
     }
 
     // Bundle-based billers (Generic)
     if (features?.isBundleBased) {
-      return new BundleBillerService(config);
+      return new BundleBillerService(config as any);
     }
 
     // Invoice-based billers (Register General, SRWB Prepaid)
     if (
       features?.requiresTwoStep &&
       features?.supportsInvoice &&
-      (config.billerType === BillerType.REGISTER_GENERAL ||
-        config.billerType === BillerType.SRWB_PREPAID)
+      (config.type === BillerType.REGISTER_GENERAL ||
+        config.type === BillerType.SRWB_PREPAID)
     ) {
-      return new InvoiceBillerService(config);
+      return new InvoiceBillerService(config as any);
     }
 
     // SOAP/XML-based billers (Water boards, MASM)
     if (
-      config.billerType === BillerType.LWB_POSTPAID ||
-      config.billerType === BillerType.BWB_POSTPAID ||
-      config.billerType === BillerType.SRWB_POSTPAID ||
-      config.billerType === BillerType.MASM
+      config.type === BillerType.LWB_POSTPAID ||
+      config.type === BillerType.BWB_POSTPAID ||
+      config.type === BillerType.SRWB_POSTPAID ||
+      config.type === BillerType.MASM
     ) {
-      return new SoapBillerService(config);
+      return new SoapBillerService(config as any);
     }
 
     // Default to SOAP service
-    return new SoapBillerService(config);
+    return new SoapBillerService(config as any);
   }
 }

@@ -3,9 +3,13 @@ import { prisma } from '@/lib/db/prisma';
 import { ESBSMSService } from '@/lib/services/sms/sms-service';
 import { emailService } from '@/lib/services/email';
 import { t24Service } from '@/lib/services/t24-service';
+import { billerEsbService } from '@/lib/services/billers/biller-esb-service';
+import { FundReservationService } from '@/lib/services/fund-reservation-service';
+import { airtimeService } from '@/lib/services/airtime/airtime-service';
+import { billerTransactionService } from "../billers/transactions";
+import { getBillerDefinition } from "@/lib/config/biller-constants";
 import {
   WorkflowStep,
-  StepExecutionMode,
   TriggerTiming,
   TransferType
 } from '@prisma/client';
@@ -13,6 +17,8 @@ import {
 interface ExecutionContext {
   userId: string;
   sessionId: string;
+  transferContext?: string; // MobileUserContext (MOBILE_BANKING or WALLET)
+  source?: string; // TransactionSource (MOBILE_BANKING or WALLET)
   variables: Record<string, any>;
 }
 
@@ -130,6 +136,9 @@ export class WorkflowExecutor {
     stepInput: any,
     timing: TriggerTiming
   ): Promise<StepExecutionResponse> {
+    console.log(`[WorkflowExecutor] executeStep starting: executionId=${executionId}, stepId=${stepId}, timing=${timing}`);
+    console.log(`[WorkflowExecutor] executeStep input:`, JSON.stringify(stepInput, null, 2));
+
     // Get execution details
     const execution = await prisma.workflowExecution.findUnique({
       where: { id: executionId }
@@ -147,6 +156,10 @@ export class WorkflowExecutor {
     const step = await prisma.workflowStep.findUnique({
       where: { id: stepId }
     });
+
+    if (step) {
+      console.log(`[WorkflowExecutor] Step Details: type=${step.type}, mode=${step.executionMode}, timing=${step.triggerTiming}`);
+    }
 
     if (!step) {
       throw new Error('Workflow step not found');
@@ -323,7 +336,7 @@ export class WorkflowExecutor {
     // Check if this step requires trigger at this timing
     if (
       step.executionMode === 'CLIENT_ONLY' ||
-      (step.triggerTiming !== timing && step.triggerTiming !== 'BOTH')
+      (step.triggerTiming !== timing && step.triggerTiming !== 'BOTH' && !(step.triggerTiming === 'IMMEDIATE' && timing === 'BEFORE_STEP'))
     ) {
       // No trigger needed, just store input if provided
       if (timing === 'AFTER_STEP' && stepInput) {
@@ -340,10 +353,15 @@ export class WorkflowExecutor {
           stepId
         );
 
-        await prisma.workflowExecution.update({
-          where: { id: executionId },
-          data: { currentStepId: nextStepId },
-        });
+        if (nextStepId) {
+          await prisma.workflowExecution.update({
+            where: { id: executionId },
+            data: { currentStepId: nextStepId },
+          });
+        } else {
+          // No more steps, complete workflow
+          await this.completeWorkflow(executionId);
+        }
       }
 
       // Extend session TTL
@@ -364,11 +382,35 @@ export class WorkflowExecutor {
 
     // Execute backend trigger
     try {
+      // Look up user's account context for transaction tracking
+      let transferContext: string | undefined;
+      try {
+        const userIdInt = parseInt(execution.userId);
+        const primaryAccount = await prisma.mobileUserAccount.findFirst({
+          where: {
+            mobileUserId: userIdInt,
+            isPrimary: true
+          },
+          select: { context: true }
+        });
+
+        if (primaryAccount) {
+          transferContext = primaryAccount.context;
+        }
+      } catch (e) {
+        console.warn(`[WorkflowExecutor] Could not determine transferContext for user ${execution.userId}:`, e);
+      }
+
       const executionContext: ExecutionContext = {
         userId: execution.userId,
         sessionId: execution.sessionId,
+        transferContext,
+        source: transferContext === 'WALLET' ? 'WALLET' : 'MOBILE_BANKING',
         variables: context
       };
+
+      console.log(`[WorkflowExecutor] Executing backend trigger for step ${stepId}`);
+      console.log(`[WorkflowExecutor] ExecutionContext variables keys:`, Object.keys(context));
 
       const result = await this.executeTrigger({
         step,
@@ -395,16 +437,24 @@ export class WorkflowExecutor {
           stepId
         );
 
-        await prisma.workflowExecution.update({
-          where: { id: executionId },
-          data: { currentStepId: nextStepId },
-        });
+        if (nextStepId) {
+          await prisma.workflowExecution.update({
+            where: { id: executionId },
+            data: { currentStepId: nextStepId },
+          });
+        } else {
+          // No more steps, complete workflow
+          // Note: Trigger return value will be the step result, not the workflow completion result
+          // But completeWorkflow is called side-effectually here
+          await this.completeWorkflow(executionId);
+        }
       }
 
       return result;
 
     } catch (error: any) {
-      console.error('Step execution failed:', error);
+      console.error(`[WorkflowExecutor] Step execution failed for step ${stepId}:`, error);
+
 
       // Check if retry is configured
       if (step.retryConfig) {
@@ -447,17 +497,17 @@ export class WorkflowExecutor {
     // Map data according to workflow configuration
     const mappedData = this.mapContextToAPI(execution.workflow, finalContext);
 
-    // Find final API step
-    const finalStep = execution.workflow.steps
-      .filter(s => s.type === 'API_CALL')
-      .sort((a, b) => b.order - a.order)[0];
+    // Find final API step or Transaction step to determine result validation
+    const sortedSteps = execution.workflow.steps.sort((a, b) => b.order - a.order);
+    const finalStep = sortedSteps[0];
+    const finalApiStep = sortedSteps.find(s => s.type === 'API_CALL');
 
     let finalResult: any = null;
 
     // Submit to final API if configured
-    if (finalStep && finalStep.triggerEndpoint) {
+    if (finalApiStep && finalApiStep.triggerEndpoint) {
       try {
-        finalResult = await this.submitToAPI(finalStep, mappedData);
+        finalResult = await this.submitToAPI(finalApiStep, mappedData);
         console.log('✅ POST_TRANSACTION response:', JSON.stringify(finalResult, null, 2));
       } catch (error: any) {
         console.error('Final API submission failed:', error);
@@ -484,6 +534,22 @@ export class WorkflowExecutor {
             code: 'API_ERROR',
             type: 'POPUP'
           }
+        };
+      }
+    }
+
+    // If no final API call, try to use the result of the last step
+    if (!finalResult && finalStep) {
+      const stepKey = this.getStepKey(finalStep);
+      // Results are stored with _result suffix
+      const stepResult = finalContext[`${stepKey}_result`];
+
+      if (stepResult) {
+        console.log(`✅ Using result from last step (${finalStep.type}):`, JSON.stringify(stepResult, null, 2));
+        finalResult = {
+          success: true,
+          result: stepResult,
+          transaction: stepResult?.transaction || stepResult // Fallback
         };
       }
     }
@@ -598,7 +664,12 @@ export class WorkflowExecutor {
 
     // Support built-in POST_TRANSACTION if no endpoint is configured
     if (step.type === 'POST_TRANSACTION' && !step.triggerEndpoint) {
+      console.log(`[WorkflowExecutor] Handling POST_TRANSACTION step ${step.id}`);
       return this.handlePostTransactionStep(step, context, input);
+    }
+
+    if (step.type === 'BILL_TRANSACTION') {
+      return this.handleBillTransactionStep(step, context, input);
     }
 
     // Handle different execution modes
@@ -762,6 +833,8 @@ export class WorkflowExecutor {
       }
     }
 
+    console.log(`[WorkflowExecutor] Resolved params for transaction:`, JSON.stringify(resolvedParams, null, 2));
+
     // Map resolved params to T24TransferRequest
     const transferRequest = {
       fromAccount: resolvedParams.fromAccountNumber || resolvedParams.fromAccount,
@@ -836,6 +909,374 @@ export class WorkflowExecutor {
       };
     }
   }
+
+  /**
+   * Handle BILL_TRANSACTION step
+   */
+  private async handleBillTransactionStep(
+    step: WorkflowStep,
+    context: ExecutionContext,
+    input: any
+  ): Promise<StepExecutionResponse> {
+    console.log(`[WorkflowExecutor] handleBillTransactionStep input:`, JSON.stringify(input, null, 2));
+    const config = (step.config as any) || {};
+    const mapping = config.parameterMapping || {};
+    const billerType = config.billerType;
+
+    if (!billerType) {
+      return {
+        success: false,
+        error: 'Biller type not configured',
+        shouldProceed: false
+      };
+    }
+
+    if (Object.keys(mapping).length === 0) {
+      return {
+        success: false,
+        error: 'Parameter mapping missing for bill transaction',
+        shouldProceed: false
+      };
+    }
+
+    // Resolve variables in mapping
+    const resolvedParams: Record<string, any> = {};
+    for (const [key, template] of Object.entries(mapping)) {
+      if (typeof template === 'string') {
+        resolvedParams[key] = this.resolveVariables(template, context, input);
+      } else {
+        resolvedParams[key] = template;
+      }
+    }
+
+    try {
+      console.log(`[WorkflowExecutor] Executing bill payment for ${billerType}`);
+
+      // Hybrid Flow Logic:
+      // 1. Airtime (Airtel/TNM): Transactional Flow (Debit User -> Audit/Suspense -> Topup API -> [Fail? Reverse])
+      //    Reason: Topup API is Agent-based and doesn't accept debitAccount override.
+      // 2. Others (Water, Govt): Direct Flow (Debit User via API)
+      //    Reason: API accepts debitAccount override.
+
+      if (billerType === 'AIRTEL_AIRTIME' || billerType === 'TNM_AIRTIME') {
+        return this.handleAirtimeTransaction(billerType, resolvedParams, context);
+      } else {
+        return this.handleDirectBillerTransaction(billerType, resolvedParams, context);
+      }
+
+    } catch (error: any) {
+      console.error('Bill payment failed:', error);
+      return {
+        success: false,
+        error: error.message || 'Bill payment failed',
+        shouldProceed: false
+      };
+    }
+  }
+
+  /**
+   * Handle Airtime Transaction (Hold -> Topup -> [Reverse])
+   */
+  public async handleAirtimeTransaction(
+    billerType: string,
+    params: any,
+    context: ExecutionContext
+  ): Promise<StepExecutionResponse> {
+    const amount = parseFloat(params.amount);
+    const sourceAccount = params.debitAccount;
+    const msisdn = params.phoneNumber || params.accountNumber;
+
+    if (!sourceAccount) {
+      return { success: false, error: "Debit account required for Airtime", shouldProceed: false };
+    }
+
+    let transaction: any; // FDH Transaction (Financial)
+    let billerTransaction: any; // Biller Audit Transaction
+    let reference = '';
+    let description = '';
+
+    // Create description for T24 call
+    const billerDefinition = getBillerDefinition(billerType);
+    const billerTypeName = billerDefinition?.name ||
+      billerType.split('_').map(word =>
+        word.charAt(0) + word.slice(1).toLowerCase()
+      ).join(' ');
+    description = `${billerTypeName} - MWK ${amount.toLocaleString()} to ${msisdn} from ${sourceAccount}`;
+
+    // 1. Hold Funds (Debit User -> Suspense) - DO THIS FIRST to get T24 Reference
+    console.log(`[WorkflowExecutor] Holding funds for airtime (T24-first): ${amount} from ${sourceAccount}`);
+    const holdResult = await FundReservationService.holdFunds(
+      amount,
+      sourceAccount,
+      '', // No internal reference yet
+      description
+    );
+
+    if (!holdResult.success) {
+      return {
+        success: false,
+        error: `Failed to debit account: ${holdResult.error}`,
+        shouldProceed: false
+      };
+    }
+
+    // Now we have the T24 Reference (FT...)
+    reference = holdResult.transactionReference || '';
+
+    // 2. Create Transaction Records using T24 Reference
+    try {
+      // Create Biller Audit Record
+      billerTransaction = await billerTransactionService.createTransaction({
+        billerType,
+        billerName: billerDefinition?.name || billerType,
+        accountNumber: msisdn,
+        amount: amount,
+        currency: 'MWK',
+        transactionType: 'AIRTIME',
+        debitAccount: sourceAccount,
+        debitAccountType: params.debitAccountType,
+        initiatedBy: context.userId,
+        ourTransactionId: reference, // Use T24 Reference as our ID
+        metadata: {
+          context: 'WORKFLOW_AIRTIME',
+          t24HoldReference: reference
+        }
+      });
+
+      // Create Financial Record
+      transaction = await prisma.fdhTransaction.create({
+        data: {
+          type: 'AIRTIME',
+          source: (context.source || 'MOBILE_BANKING') as any,
+          reference, // Use T24 Reference as primary key
+          status: 'PENDING',
+          transferContext: (context.transferContext || 'MOBILE_BANKING') as any,
+          amount: amount,
+          currency: 'MWK',
+          description,
+          fromAccountNumber: sourceAccount,
+          toAccountNumber: msisdn,
+          initiatedByUserId: context.userId ? parseInt(context.userId) : null,
+          t24Reference: reference
+        }
+      });
+
+    } catch (e: any) {
+      console.error("Failed to create transaction record after fund hold:", e);
+      // IF DB fails after hold, we MUST release the funds
+      await FundReservationService.releaseFunds(
+        amount,
+        sourceAccount,
+        reference,
+        `Reversal: DB Failure - ${description}`
+      );
+      return { success: false, error: "System error: Could not record transaction", shouldProceed: false };
+    }
+
+    // 3. Execute Topup
+    console.log(`[WorkflowExecutor] Executing Airtime Topup for ${msisdn} via ${billerType}`);
+    // Use the T24 reference for the provider call for perfect end-to-end traceability
+
+    const airtimeParams = {
+      msisdn,
+      amount,
+      externalTxnId: reference // This is already the FT reference from holdFunds result
+    };
+
+    let topupResult: any = { ok: false, error: "Unsupported biller type" };
+    try {
+      if (billerType === 'AIRTEL_AIRTIME') {
+        topupResult = await airtimeService.airtelRecharge(airtimeParams);
+      } else if (billerType === 'TNM_AIRTIME') {
+        topupResult = await airtimeService.tnmRecharge(airtimeParams);
+      }
+
+      // Update Biller Transaction logic moved to final block for parallel execution
+    } catch (e: any) {
+      topupResult = { ok: false, error: e.message };
+    }
+
+    // 3. Handle Result
+    if (topupResult.ok) {
+      console.log(`[WorkflowExecutor] Airtime Topup Successful: ${holdResult.transactionReference}`);
+
+      const updatePromises: Promise<any>[] = [
+        // Update FDH Transaction
+        prisma.fdhTransaction.update({
+          where: { id: transaction.id },
+          data: {
+            status: 'COMPLETED',
+            t24Reference: holdResult.transactionReference,
+            t24Response: topupResult.data,
+            completedAt: new Date()
+          }
+        })
+      ];
+
+      // Update Biller Transaction (Parallel)
+      if (billerTransaction) {
+        updatePromises.push(
+          billerTransactionService.completeTransaction(
+            billerTransaction.id,
+            topupResult.data,
+            airtimeParams.externalTxnId
+          )
+        );
+      }
+
+      await Promise.all(updatePromises);
+
+      return {
+        success: true,
+        output: {
+          transactionId: holdResult.transactionReference,
+          message: "Airtime purchase successful",
+          ...topupResult.data,
+          transaction: transaction, // FDH Transaction
+          billerTransaction: billerTransaction, // Biller Audit
+        },
+        shouldProceed: true
+      };
+    } else {
+      // 4. Failure: Refund (Reverse Hold)
+      console.error(`[WorkflowExecutor] Airtime Topup Failed. Reversing funds for ${sourceAccount}`);
+      const errorMsg = topupResult.error || topupResult.statusText || 'Unknown error';
+
+      const failurePromises: Promise<any>[] = [];
+
+      // 1. Fail Biller Transaction
+      if (billerTransaction) {
+        failurePromises.push(
+          billerTransactionService.failTransaction(billerTransaction.id, errorMsg || "Topup Exception", String(topupResult.status || 'UNKNOWN'))
+            .catch(e => console.error("Failed to update biller transaction status:", e))
+        );
+      }
+
+      // 2. Release Funds (Critical, so we might want to await this explicitly or let it run in parallel)
+      // Parallel is fine as they are independent systems (DB vs T24)
+      const refundPromise = FundReservationService.releaseFunds(
+        amount,
+        sourceAccount, // Send back to user
+        reference,
+        `Refund for failed Airtime: ${msisdn}`
+      );
+      failurePromises.push(refundPromise);
+
+      // Execute all failure actions in parallel
+      const [refundRes, ..._] = await Promise.all([
+        refundPromise,
+        ...failurePromises.slice(0, -1) // biller update promises
+      ]);
+
+      const errorMessage = `Airtime failed: ${errorMsg}. Refund status: ${refundRes.success ? 'Success' : 'Failed'}`;
+
+      // Update FDH Transaction (Final step)
+      const finalFdhTx = await prisma.fdhTransaction.update({
+        where: { id: transaction.id },
+        data: {
+          status: 'FAILED',
+          errorMessage: errorMessage,
+          errorCode: topupResult.code || 'PROVIDER_ERROR'
+        }
+      });
+
+      return {
+        success: false,
+        error: errorMessage,
+        output: {
+          transactionId: reference,
+          transaction: finalFdhTx,
+          billerTransaction: billerTransaction
+        },
+        shouldProceed: false
+      };
+    }
+  }
+
+  /**
+   * Handle Direct Biller Transaction (Water, Govt, etc.)
+   */
+  private async handleDirectBillerTransaction(
+    billerType: string,
+    resolvedParams: any,
+    context: ExecutionContext
+  ): Promise<StepExecutionResponse> {
+    const paymentParams: any = {
+      amount: resolvedParams.amount?.toString(),
+      accountNumber: resolvedParams.accountNumber || resolvedParams.account,
+      phoneNumber: resolvedParams.phoneNumber,
+      invoiceNumber: resolvedParams.invoiceNumber,
+      bundleId: resolvedParams.bundleId,
+      currency: resolvedParams.currency || 'MWK',
+      // Optional context
+      userId: context.userId,
+      customerNumber: resolvedParams.customerNumber,
+      debitAccount: resolvedParams.debitAccount,
+    };
+
+    const result = await billerEsbService.processPayment(billerType, paymentParams);
+
+    if (!result.ok) {
+      return {
+        success: false,
+        error: result.error || 'Bill payment failed',
+        shouldProceed: false
+      };
+    }
+
+    const txnId = result.data?.transactionId || result.data?.reference || result.data?.id || `DIR-${Date.now()}`;
+    const amountNum = parseFloat(paymentParams.amount);
+
+    // Create Audit Records (Fire and Forget or await)
+    try {
+      // 1. Biller Transaction
+      await billerTransactionService.createTransaction({
+        billerType,
+        billerName: billerType, // TODO: Get name from definition
+        accountNumber: paymentParams.accountNumber,
+        amount: amountNum,
+        currency: paymentParams.currency,
+        transactionType: 'BILL_PAYMENT',
+        debitAccount: paymentParams.debitAccount,
+        initiatedBy: context.userId,
+        ourTransactionId: txnId,
+        externalTransactionId: result.data?.externalReference || result.data?.id,
+        status: 'COMPLETED'
+      }).catch(e => console.error("[WorkflowExecutor] Failed to create biller audit for direct payment:", e));
+
+      // 2. Financial Record
+      await prisma.fdhTransaction.create({
+        data: {
+          type: 'BILL_PAYMENT',
+          source: (context.source || 'MOBILE_BANKING') as any,
+          reference: txnId,
+          status: 'COMPLETED',
+          transferContext: (context.transferContext || 'MOBILE_BANKING') as any,
+          amount: amountNum,
+          currency: paymentParams.currency,
+          description: `Bill Payment - ${billerType} for ${paymentParams.accountNumber}`,
+          fromAccountNumber: paymentParams.debitAccount,
+          toAccountNumber: paymentParams.accountNumber,
+          initiatedByUserId: context.userId ? parseInt(context.userId) : null,
+          t24Reference: txnId,
+          completedAt: new Date()
+        }
+      }).catch(e => console.error("[WorkflowExecutor] Failed to create financial record for direct payment:", e));
+    } catch (e) {
+      console.error("[WorkflowExecutor] Error in direct payment auditing:", e);
+    }
+
+    return {
+      success: true,
+      output: {
+        transactionId: txnId,
+        message: result.data?.message || 'Payment successful',
+        ...result.data
+      },
+      shouldProceed: true
+    };
+  }
+
 
   /**
    * Make API call to trigger endpoint

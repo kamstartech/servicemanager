@@ -1029,6 +1029,7 @@ export const typeDefs = /* GraphQL */ `
     REDIRECT
     OTP
     POST_TRANSACTION
+    BILL_TRANSACTION
   }
 
   enum StepExecutionMode {
@@ -1041,6 +1042,8 @@ export const typeDefs = /* GraphQL */ `
   enum TriggerTiming {
     BEFORE_STEP
     AFTER_STEP
+    ON_NEXT
+    IMMEDIATE
     BOTH
   }
 
@@ -1151,6 +1154,7 @@ export const typeDefs = /* GraphQL */ `
     name: String
     description: String
     isActive: Boolean
+    linkedPageIds: [ID!]
   }
 
   input CreateWorkflowStepInput {
@@ -1595,6 +1599,8 @@ export const typeDefs = /* GraphQL */ `
     MASM
     AIRTEL_VALIDATION
     TNM_BUNDLES
+    AIRTEL_AIRTIME
+    TNM_AIRTIME
   }
 
   enum BillerTransactionStatus {
@@ -1651,6 +1657,7 @@ export const typeDefs = /* GraphQL */ `
   type BillerTransaction {
     id: ID!
     ourTransactionId: String!
+    externalTransactionId: String
     billerType: BillerType!
     billerName: String!
     accountNumber: String!
@@ -1664,9 +1671,9 @@ export const typeDefs = /* GraphQL */ `
     errorCode: String
     requestPayload: JSON
     responsePayload: JSON
-    completedAt: String
-    createdAt: String!
-    updatedAt: String!
+    completedAt: DateTime
+    createdAt: DateTime!
+    updatedAt: DateTime!
   }
 
   type BillerTransactionsResult {
@@ -1767,6 +1774,23 @@ export const typeDefs = /* GraphQL */ `
     
     # Get specific transaction
     billerTransaction(id: ID!): BillerTransaction
+    
+    # Admin: Get all biller transactions
+    billerTransactions(limit: Int, offset: Int): BillerTransactionsListResult!
+    
+    # Admin: Get biller transaction statistics
+    billerTransactionStats: [BillerTransactionStat!]!
+  }
+
+  type BillerTransactionsListResult {
+    transactions: [BillerTransaction!]!
+    totalCount: Int!
+  }
+
+  type BillerTransactionStat {
+    billerType: String!
+    status: String!
+    count: Int!
   }
 
   extend type Mutation {
@@ -2064,17 +2088,45 @@ export const typeDefs = /* GraphQL */ `
     totalPages: Int!
   }
 
-
+  type ProofOfPayment {
+    transactionId: ID!
+    reference: String!
+    t24Reference: String
+    type: TransactionType!
+    status: TransactionStatus!
+    amount: Decimal!
+    currency: String!
+    description: String!
+    createdAt: DateTime!
+    completedAt: DateTime
+    
+    # Party Details
+    fromAccountNumber: String
+    fromAccountName: String
+    toAccountNumber: String
+    toAccountName: String
+    
+    # Biller Details (if applicable)
+    billerName: String
+    billerType: String
+    externalReference: String
+    
+    # Metadata
+    fee: Decimal
+    memo: String
+  }
 
   extend type Query {
     # Proxy Transaction System queries (renamed to avoid conflicts)
     proxyTransaction(id: ID!): Transaction
     proxyTransactionByReference(reference: String!): Transaction
+    proofOfPayment(transactionId: ID!): ProofOfPayment
     proxyTransactions(
       filter: TransactionFilterInput
       page: Int = 1
       limit: Int = 20
     ): TransactionConnection!
+  }
     
     proxyAccountTransactions(
       accountId: Int!
@@ -2210,6 +2262,7 @@ export const typeDefs = /* GraphQL */ `
     transactionId: String
     reference: String
     status: String
+    transaction: BillerTransaction
   }
   
   extend type Mutation {

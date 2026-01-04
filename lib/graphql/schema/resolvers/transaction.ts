@@ -51,6 +51,7 @@ export const transactionResolvers = {
     // Add proxy transaction queries (renamed to avoid conflicts)
     proxyTransaction: proxyTransactionResolvers.Query.transaction,
     proxyTransactionByReference: proxyTransactionResolvers.Query.transactionByReference,
+    proofOfPayment: proxyTransactionResolvers.Query.proofOfPayment,
     proxyTransactions: proxyTransactionResolvers.Query.transactions,
     proxyAccountTransactions: proxyTransactionResolvers.Query.accountTransactions,
   },

@@ -1,5 +1,7 @@
 enum TriggerTiming {
-  BEFORE_STEP // Execute before showing step
-  AFTER_STEP // Execute after user completes step
-  BOTH // Execute before AND after
+  BEFORE_STEP
+  AFTER_STEP
+  ON_NEXT
+  IMMEDIATE
+  BOTH
 }

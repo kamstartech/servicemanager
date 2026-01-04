@@ -1,8 +1,9 @@
-import { PrismaClient, BillerTransaction, BillerTransactionStatus, BillerType } from "@prisma/client";
+import { PrismaClient, BillerTransaction, BillerTransactionStatus } from "@prisma/client";
 import { nanoid } from "nanoid";
 import { BillerServiceFactory } from "./factory";
 import { t24Service } from "../t24-service";
 import { ConfigurationService } from "../configuration-service";
+import { getBillerDefinition } from "@/lib/config/biller-constants";
 
 const prisma = new PrismaClient();
 
@@ -25,6 +26,7 @@ export interface CreateTransactionData {
   invoiceNumber?: string;
   meterNumber?: string;
   metadata?: any;
+  ourTransactionId?: string;
 }
 
 /**
@@ -48,12 +50,27 @@ export class BillerTransactionService {
   ): Promise<BillerTransaction> {
     return await prisma.billerTransaction.create({
       data: {
-        ...data,
+        billerType: data.billerType as any,
+        billerName: data.billerName,
+        accountNumber: data.accountNumber,
+        transactionType: data.transactionType as any,
+        currency: data.currency,
         amount: data.amount
           ? (typeof data.amount === "string" ? parseFloat(data.amount) : data.amount)
           : undefined,
         status: BillerTransactionStatus.PENDING,
-        ourTransactionId: this.generateTransactionId(),
+        ourTransactionId: data.ourTransactionId || this.generateTransactionId(),
+        accountType: data.accountType,
+        customerAccountName: data.customerAccountName,
+        creditAccount: data.creditAccount,
+        creditAccountType: data.creditAccountType,
+        debitAccount: data.debitAccount,
+        debitAccountType: data.debitAccountType,
+        bundleId: data.bundleId,
+        invoiceNumber: data.invoiceNumber,
+        meterNumber: data.meterNumber,
+        metadata: data.metadata,
+        initiatedBy: data.initiatedBy
       } as any,
     });
   }
@@ -111,9 +128,6 @@ export class BillerTransactionService {
   async getTransaction(id: string): Promise<BillerTransaction | null> {
     return await prisma.billerTransaction.findUnique({
       where: { id },
-      include: {
-        billerConfig: true,
-      },
     });
   }
 
@@ -123,9 +137,6 @@ export class BillerTransactionService {
   async getTransactionByOurId(ourTransactionId: string): Promise<BillerTransaction | null> {
     return await prisma.billerTransaction.findUnique({
       where: { ourTransactionId },
-      include: {
-        billerConfig: true,
-      },
     });
   }
 
@@ -165,14 +176,6 @@ export class BillerTransactionService {
     const [transactions, total] = await Promise.all([
       prisma.billerTransaction.findMany({
         where,
-        include: {
-          billerConfig: {
-            select: {
-              billerName: true,
-              displayName: true,
-            },
-          },
-        },
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * pageSize,
         take: pageSize,
@@ -233,24 +236,21 @@ export class BillerTransactionService {
    * Process account lookup
    */
   async processAccountLookup(
-    billerType: BillerType,
+    billerType: string,
     accountNumber: string,
     accountType?: string
   ) {
-    // Get biller config
-    const config = await prisma.billerConfig.findUnique({
-      where: { billerType, isActive: true },
-    });
+    // Get biller definition
+    const config = getBillerDefinition(billerType);
 
-    if (!config) {
+    if (!config || !config.isActive) {
       throw new Error("Biller configuration not found or inactive");
     }
 
     // Create transaction record
     const transaction = await this.createTransaction({
-      billerConfigId: config.id,
       billerType,
-      billerName: config.billerName,
+      billerName: config.name,
       accountNumber,
       accountType,
       currency: config.defaultCurrency,
@@ -296,7 +296,7 @@ export class BillerTransactionService {
    * Process payment
    */
   async processPayment(
-    billerType: BillerType,
+    billerType: string,
     paymentData: {
       accountNumber: string;
       amount: number | string;
@@ -311,12 +311,10 @@ export class BillerTransactionService {
       metadata?: any;
     }
   ) {
-    // Get biller config
-    const config = await prisma.billerConfig.findUnique({
-      where: { billerType, isActive: true },
-    });
+    // Get biller definition
+    const config = getBillerDefinition(billerType);
 
-    if (!config) {
+    if (!config || !config.isActive) {
       throw new Error("Biller configuration not found or inactive");
     }
 
@@ -326,9 +324,8 @@ export class BillerTransactionService {
 
     // Create transaction record
     const transaction = await this.createTransaction({
-      billerConfigId: config.id,
       billerType,
-      billerName: config.billerName,
+      billerName: config.name,
       accountNumber: paymentData.accountNumber,
       amount,
       currency: paymentData.currency || config.defaultCurrency,
@@ -365,7 +362,7 @@ export class BillerTransactionService {
           amount: amount.toString(),
           currency: paymentData.currency || config.defaultCurrency,
           reference: `RES-${transaction.ourTransactionId}`,
-          description: `Biller Reservation: ${config.billerName}`,
+          description: `Biller Reservation: ${config.name}`,
           transferType: "BILLER_RESERVATION" as any
         });
 
@@ -406,7 +403,7 @@ export class BillerTransactionService {
               amount: amount.toString(),
               currency: paymentData.currency || config.defaultCurrency,
               reference: `REV-${transaction.ourTransactionId}`,
-              description: `Reversal: ${config.billerName} Failed`,
+              description: `Reversal: ${config.name} Failed`,
               transferType: "BILLER_REVERSAL" as any
             });
           } catch (reversalError) {
@@ -435,7 +432,7 @@ export class BillerTransactionService {
               amount: amount.toString(),
               currency: paymentData.currency || config.defaultCurrency,
               reference: `REV-${transaction.ourTransactionId}`,
-              description: `Reversal: ${config.billerName} Failed`,
+              description: `Reversal: ${config.name} Failed`,
               transferType: "BILLER_REVERSAL" as any
             });
           } catch (reversalError) {
@@ -484,9 +481,7 @@ export class BillerTransactionService {
     });
 
     // Re-process based on transaction type
-    const config = await prisma.billerConfig.findUnique({
-      where: { billerType: transaction.billerType as BillerType },
-    });
+    const config = getBillerDefinition(transaction.billerType as string);
 
     if (!config) {
       throw new Error("Biller configuration not found");

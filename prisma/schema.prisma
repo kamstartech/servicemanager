@@ -73,6 +73,7 @@ enum BillerTransactionType {
   CONFIRM_INVOICE
   BUNDLE_DETAILS
   CONFIRM_BUNDLE
+  AIRTIME
 }
 
 enum BillerType {
@@ -82,8 +83,10 @@ enum BillerType {
   SRWB_POSTPAID
   SRWB_PREPAID
   MASM
-  AIRTEL_VALIDATION
   TNM_BUNDLES
+  AIRTEL_VALIDATION
+  AIRTEL_AIRTIME
+  TNM_AIRTIME
 }
 
 enum CheckbookRequestStatus {
@@ -266,9 +269,11 @@ enum TransferType {
 }
 
 enum TriggerTiming {
-  BEFORE_STEP // Execute before showing step
-  AFTER_STEP // Execute after user completes step
-  BOTH // Execute before AND after
+  BEFORE_STEP
+  AFTER_STEP
+  ON_NEXT
+  IMMEDIATE
+  BOTH
 }
 
 enum UserAction {
@@ -295,6 +300,7 @@ enum WorkflowStepType {
   REDIRECT
   OTP
   POST_TRANSACTION
+  BILL_TRANSACTION
 }
 
 model ExternalBank {
@@ -594,51 +600,10 @@ model Beneficiary {
   @@map("fdh_beneficiaries")
 }
 
-model BillerConfig {
-  id String @id @default(cuid())
-
-  // Identity
-  billerType  BillerType @unique @map("biller_type")
-  billerName  String     @map("biller_name") @db.Text
-  displayName String     @map("display_name") @db.Text
-  description String?    @db.Text
-  isActive    Boolean    @default(true) @map("is_active")
-
-  // API Configuration
-  baseUrl        String @map("base_url") @db.Text
-  endpoints      Json // { accountDetails, payment, invoice, etc. }
-  authentication Json? // Encrypted credentials
-
-  // Transaction Settings
-  defaultCurrency     String   @default("MWK") @map("default_currency") @db.VarChar(3)
-  supportedCurrencies String[] @default(["MWK"]) @map("supported_currencies")
-  timeoutMs           Int      @default(30000) @map("timeout_ms")
-  retryAttempts       Int      @default(3) @map("retry_attempts")
-
-  // Features & Validation
-  features        Json // { supportsInvoice, supportsBalanceCheck, etc. }
-  validationRules Json // { accountNumberFormat, minAmount, maxAmount }
-
-  // Audit
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  createdBy String?  @map("created_by")
-  updatedBy String?  @map("updated_by")
-
-  // Relations
-  transactions BillerTransaction[]
-
-  @@index([billerType])
-  @@index([isActive])
-  @@map("biller_configs")
-}
-
 model BillerTransaction {
   id String @id @default(cuid())
 
   // Biller Reference
-  billerConfigId String?       @map("biller_config_id")
-  billerConfig   BillerConfig? @relation(fields: [billerConfigId], references: [id])
   billerType     BillerType    @map("biller_type")
   billerName     String        @map("biller_name") @db.Text
 
@@ -696,7 +661,6 @@ model BillerTransaction {
   @@index([ourTransactionId])
   @@index([accountNumber])
   @@index([createdAt])
-  @@index([billerConfigId])
   @@map("biller_transactions")
 }
 
@@ -896,6 +860,10 @@ model FdhTransaction {
   
   // Receiver (To)
   toAccountNumber   String?            @map("to_account_number") @db.VarChar(50)
+  
+  // External Bank Details (only for EXTERNAL_BANK transfers)
+  toBankCode        String?            @map("to_bank_code") @db.VarChar(50)
+  toBankName        String?            @map("to_bank_name") @db.VarChar(255)
   
   // Relationships
   // No Foreign Key constraints on account numbers (for joint account support)

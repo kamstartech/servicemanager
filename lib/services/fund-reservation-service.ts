@@ -24,12 +24,13 @@ export class FundReservationService {
                 toAccount: suspenseAccount,
                 amount: amount.toString(),
                 currency: "MWK", // Defaulting to MWK for now
-                reference: _reference || `HOLD_${Date.now()}`,
-                description: _description || "Fund Reservation Hold",
+                reference: _reference,
+                description: _description,
             });
 
             if (!result.success) {
-                throw new Error(result.message || "Transfer failed");
+                const msg = typeof result.message === 'object' ? JSON.stringify(result.message) : (result.message || "Transfer failed");
+                throw new Error(msg);
             }
 
             return {
@@ -67,7 +68,8 @@ export class FundReservationService {
             });
 
             if (!result.success) {
-                throw new Error(result.message || "Transfer failed");
+                const msg = typeof result.message === 'object' ? JSON.stringify(result.message) : (result.message || "Transfer failed");
+                throw new Error(msg);
             }
 
             return {

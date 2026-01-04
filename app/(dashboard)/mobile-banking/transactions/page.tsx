@@ -213,8 +213,8 @@ export default function MobileBankingTransactionsPage() {
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [fromAccountOpen, setFromAccountOpen] = React.useState(false);
-  const [historyOpen, setHistoryOpen] = React.useState(false);
-  const [historyTransactionId, setHistoryTransactionId] = React.useState<string | null>(null);
+  const [detailsOpen, setDetailsOpen] = React.useState(false);
+  const [selectedTransaction, setSelectedTransaction] = React.useState<any>(null);
 
   const [form, setForm] = React.useState<{
     transferType: string;
@@ -231,11 +231,6 @@ export default function MobileBankingTransactionsPage() {
     toAccountNumber: "",
     fromAccountId: "",
   });
-
-  const [loadHistory, { data: historyData, loading: historyLoading, error: historyError }] =
-    useLazyQuery(GET_TRANSACTION_HISTORY, {
-      fetchPolicy: "network-only",
-    });
 
   const {
     data: accountsData,
@@ -309,7 +304,11 @@ export default function MobileBankingTransactionsPage() {
     {
       id: "type",
       header: translate("common.table.columns.type"),
-      accessor: (row) => row.type,
+      accessor: (row) => (
+        <Badge variant="outline" className="text-xs">
+          {row.type?.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
+        </Badge>
+      ),
       sortKey: "type",
       alignCenter: true,
     },
@@ -358,13 +357,12 @@ export default function MobileBankingTransactionsPage() {
       accessor: (row) => {
         const actions = [
           {
-            key: "history",
-            label: translate("common.actions.history"),
+            key: "details",
+            label: translate("common.actions.details"),
             icon: <History className="h-4 w-4" />,
             onClick: () => {
-              setHistoryTransactionId(row.id);
-              setHistoryOpen(true);
-              void loadHistory({ variables: { id: row.id } });
+              setSelectedTransaction(row);
+              setDetailsOpen(true);
             },
           },
         ];
@@ -503,6 +501,7 @@ export default function MobileBankingTransactionsPage() {
                 "description",
               ]}
               initialSortKey="createdAt"
+              initialSortDirection="desc"
               pageSize={10}
               searchPlaceholder={
                 translate("common.actions.search") || "Search transactions..."
@@ -514,83 +513,48 @@ export default function MobileBankingTransactionsPage() {
         </CardContent>
       </Card>
 
+
       <Dialog
-        open={historyOpen}
+        open={detailsOpen}
         onOpenChange={(open) => {
-          setHistoryOpen(open);
+          setDetailsOpen(open);
           if (!open) {
-            setHistoryTransactionId(null);
+            setSelectedTransaction(null);
           }
         }}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{translate("common.actions.history")}</DialogTitle>
+            <DialogTitle>{translate("common.actions.details")}</DialogTitle>
             <DialogDescription>
-              {historyData?.proxyTransaction?.reference
-                ? `#${historyData.proxyTransaction.reference}`
-                : historyTransactionId
-                  ? `#${historyTransactionId}`
-                  : ""}
+              {translate("common.labels.transactions")} #{selectedTransaction?.reference || ""}
             </DialogDescription>
           </DialogHeader>
 
-          {historyLoading && (
-            <div className="text-sm text-muted-foreground">
-              {translate("common.state.loading")}
-            </div>
-          )}
-
-          {historyError && (
-            <div className="text-sm text-destructive">{historyError.message}</div>
-          )}
-
-          {!historyLoading && !historyError && (
+          <div className="space-y-4">
             <div className="space-y-2">
-              {((historyData?.proxyTransaction?.statusHistory ?? []) as TransactionHistoryRow[])
-                .slice()
-                .sort(
-                  (a, b) =>
-                    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-                )
-                .map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-start justify-between gap-4 rounded-md border p-3"
-                  >
-                    <div className="space-y-1">
-                      <div className="text-sm font-medium">
-                        {translateStatusOneWord(item.fromStatus, translate, item.fromStatus)}
-                        {" "}→{" "}
-                        {translateStatusOneWord(item.toStatus, translate, item.toStatus)}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {new Date(item.createdAt).toLocaleString()}
-                        {item.retryNumber != null ? ` • Retry #${item.retryNumber}` : ""}
-                      </div>
-                      {item.reason ? (
-                        <div className="text-sm text-muted-foreground">
-                          {item.reason}
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                ))}
-
-              {((historyData?.proxyTransaction?.statusHistory ?? []) as TransactionHistoryRow[])
-                .length === 0 && (
-                <div className="text-sm text-muted-foreground">No history found</div>
-              )}
+              <Label>{translate("common.table.columns.reference")}</Label>
+              <div className="text-sm font-mono rounded-md border px-3 py-2 bg-muted/50">
+                {selectedTransaction?.reference || "-"}
+              </div>
             </div>
-          )}
+
+            <div className="space-y-2">
+              <Label>{translate("common.table.columns.description")}</Label>
+              <div className="text-sm rounded-md border px-3 py-2 bg-muted/50">
+                {selectedTransaction?.description || "-"}
+              </div>
+            </div>
+          </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setHistoryOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => setDetailsOpen(false)}>
               {translate("common.actions.close")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
@@ -710,9 +674,8 @@ export default function MobileBankingTransactionsPage() {
                                 }}
                               >
                                 <Check
-                                  className={`mr-2 size-4 ${
-                                    isSelected ? "opacity-100" : "opacity-0"
-                                  }`}
+                                  className={`mr-2 size-4 ${isSelected ? "opacity-100" : "opacity-0"
+                                    }`}
                                 />
                                 <div className="flex flex-col">
                                   <span className="font-mono font-medium">

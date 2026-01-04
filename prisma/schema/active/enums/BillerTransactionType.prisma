@@ -5,4 +5,5 @@ enum BillerTransactionType {
   CONFIRM_INVOICE
   BUNDLE_DETAILS
   CONFIRM_BUNDLE
+  AIRTIME
 }

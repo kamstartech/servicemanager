@@ -2,8 +2,6 @@ model BillerTransaction {
   id String @id @default(cuid())
 
   // Biller Reference
-  billerConfigId String?       @map("biller_config_id")
-  billerConfig   BillerConfig? @relation(fields: [billerConfigId], references: [id])
   billerType     BillerType    @map("biller_type")
   billerName     String        @map("biller_name") @db.Text
 
@@ -61,7 +59,6 @@ model BillerTransaction {
   @@index([ourTransactionId])
   @@index([accountNumber])
   @@index([createdAt])
-  @@index([billerConfigId])
   @@map("biller_transactions")
 }
 

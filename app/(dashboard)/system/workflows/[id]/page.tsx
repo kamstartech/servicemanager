@@ -1,9 +1,16 @@
 "use client";
 
 import { gql, useQuery, useMutation } from "@apollo/client";
+import * as LucideIcons from "lucide-react";
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+
+const DynamicIcon = ({ name, className = "h-4 w-4" }: { name: string; className?: string }) => {
+  const Icon = (LucideIcons as any)[name];
+  if (!Icon) return <span className="text-xs">{name}</span>;
+  return <Icon className={className} />;
+};
 import { VariableExplorer } from "@/components/workflows/variable-explorer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -190,6 +197,30 @@ const UPDATE_WORKFLOW = gql`
       name
       description
       isActive
+      screenPages {
+        page {
+          id
+          name
+        }
+      }
+    }
+  }
+`;
+
+const APP_SCREENS_QUERY = gql`
+  query AppScreens {
+    appScreens {
+      screens {
+        id
+        name
+        icon
+        pages {
+          id
+          name
+          icon
+        }
+      }
+      total
     }
   }
 `;
@@ -203,6 +234,7 @@ const STEP_TYPES = [
   { value: "REDIRECT", label: "🔄 Redirect", description: "Navigate to another screen" },
   { value: "OTP", label: "🔐 OTP", description: "Send and validate One-Time Password" },
   { value: "POST_TRANSACTION", label: "💸 Post Transaction", description: "Post transaction to core banking" },
+  { value: "BILL_TRANSACTION", label: "🧾 Pay Bill", description: "Payment to utility/service provider" },
 ];
 
 const TRANSACTION_TYPES = [
@@ -210,6 +242,19 @@ const TRANSACTION_TYPES = [
   { value: "CREDIT", label: "Credit", description: "Credit an account" },
   { value: "TRANSFER", label: "Transfer", description: "Transfer between accounts" },
   { value: "WALLET_TRANSFER", label: "Wallet Transfer", description: "Transfer between wallets" },
+];
+
+const BILLER_TYPES = [
+  { value: "LWB_POSTPAID", label: "Lilongwe Water Board (Postpaid)" },
+  { value: "BWB_POSTPAID", label: "Blantyre Water Board (Postpaid)" },
+  { value: "SRWB_POSTPAID", label: "Southern Region Water Board (Postpaid)" },
+  { value: "SRWB_PREPAID", label: "Southern Region Water Board (Prepaid)" },
+  { value: "MASM", label: "MASM" },
+  { value: "REGISTER_GENERAL", label: "Register General" },
+  { value: "TNM_BUNDLES", label: "TNM Bundles" },
+  { value: "AIRTEL_VALIDATION", label: "Airtel Validation" },
+  { value: "AIRTEL_AIRTIME", label: "Airtel Airtime" },
+  { value: "TNM_AIRTIME", label: "TNM Airtime" },
 ];
 
 const SYSTEM_SERVICES = [
@@ -414,12 +459,14 @@ export default function WorkflowDetailPage() {
   const [popEnabled, setPopEnabled] = useState<boolean>(false);
   const [popButtonName, setPopButtonName] = useState<string>("");
   const [selectedTransactionType, setSelectedTransactionType] = useState<string>("");
+  const [selectedBillerType, setSelectedBillerType] = useState<string>("");
 
   // Workflow edit dialog state
   const [workflowDialogOpen, setWorkflowDialogOpen] = useState(false);
   const [workflowName, setWorkflowName] = useState("");
   const [workflowDescription, setWorkflowDescription] = useState("");
   const [workflowIsActive, setWorkflowIsActive] = useState(true);
+  const [linkedPages, setLinkedPages] = useState<string[]>([]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -431,6 +478,8 @@ export default function WorkflowDetailPage() {
   const { data, loading, error, refetch } = useQuery(WORKFLOW_QUERY, {
     variables: { id: workflowId },
   });
+
+  const { data: screensData, loading: screensLoading } = useQuery(APP_SCREENS_QUERY);
 
   const { data: formsData, loading: formsLoading } = useQuery(FORMS_QUERY, {
     variables: { isActive: true },
@@ -492,8 +541,9 @@ export default function WorkflowDetailPage() {
           break;
         case "VALIDATION":
         case "POST_TRANSACTION":
-          setExecutionMode("SERVER_VALIDATION");
-          setTriggerTiming("BEFORE_STEP");
+        case "BILL_TRANSACTION":
+          setExecutionMode("SERVER_ASYNC");
+          setTriggerTiming("IMMEDIATE");
           break;
         case "FORM":
         case "CONFIRMATION":
@@ -513,6 +563,8 @@ export default function WorkflowDetailPage() {
     }
   }, [stepType, editingStep]);
 
+  const [linkPagesDialogOpen, setLinkPagesDialogOpen] = useState(false);
+
   const handleOpenWorkflowDialog = () => {
     const workflow = data?.workflow;
     if (workflow) {
@@ -523,7 +575,18 @@ export default function WorkflowDetailPage() {
     }
   };
 
-
+  const handleOpenLinkPagesDialog = () => {
+    const workflow = data?.workflow;
+    if (workflow) {
+      // Populate linked pages
+      if (workflow.screenPages) {
+        setLinkedPages(workflow.screenPages.map((sp: any) => sp.page.id));
+      } else {
+        setLinkedPages([]);
+      }
+      setLinkPagesDialogOpen(true);
+    }
+  };
 
   const handleUpdateWorkflow = async () => {
     if (!workflowName.trim()) {
@@ -538,9 +601,22 @@ export default function WorkflowDetailPage() {
           name: workflowName,
           description: workflowDescription,
           isActive: workflowIsActive,
+          // linkedPageIds removed from here
         },
       },
     });
+  };
+
+  const handleSaveLinkedPages = async () => {
+    await updateWorkflow({
+      variables: {
+        id: workflowId,
+        input: {
+          linkedPageIds: linkedPages,
+        },
+      },
+    });
+    setLinkPagesDialogOpen(false);
   };
 
   const handleOpenDialog = (step?: any) => {
@@ -610,6 +686,17 @@ export default function WorkflowDetailPage() {
         setPopEnabled(step.config?.popEnabled || false);
         setPopButtonName(step.config?.popButtonName || "");
       }
+
+      // Load Bill Transaction config
+      if (step.type === "BILL_TRANSACTION") {
+        setSelectedBillerType(step.config?.billerType || "");
+        if (step.config?.parameterMapping) {
+          setParameterMapping(step.config.parameterMapping);
+        }
+        // Load messages
+        setSuccessMessage(step.config?.successMessage || "");
+        setFailureMessage(step.config?.failureMessage || "");
+      }
     } else {
       setEditingStep(null);
       setStepType("");
@@ -638,7 +725,10 @@ export default function WorkflowDetailPage() {
       setPopEnabled(false);
       setPopEnabled(false);
       setPopButtonName("");
+      setPopEnabled(false);
+      setPopButtonName("");
       setSelectedTransactionType("");
+      setSelectedBillerType("");
     }
     setDialogOpen(true);
   };
@@ -659,7 +749,10 @@ export default function WorkflowDetailPage() {
     setFailureMessage("");
     setPopEnabled(false);
     setPopButtonName("");
+    setPopEnabled(false);
+    setPopButtonName("");
     setSelectedTransactionType("");
+    setSelectedBillerType("");
 
     // Reset confirmation configuration
     setConfirmationMessage("");
@@ -712,7 +805,7 @@ export default function WorkflowDetailPage() {
         return;
       }
       // VALIDATION and POST_TRANSACTION types don't need an explicit trigger endpoint
-      if (!triggerEndpoint && stepType !== "API_CALL" && stepType !== "VALIDATION" && stepType !== "POST_TRANSACTION") {
+      if (!triggerEndpoint && stepType !== "API_CALL" && stepType !== "VALIDATION" && stepType !== "POST_TRANSACTION" && stepType !== "BILL_TRANSACTION") {
         toast.error("Please enter a trigger endpoint for server execution");
         return;
       }
@@ -738,6 +831,13 @@ export default function WorkflowDetailPage() {
     if (stepType === "POST_TRANSACTION") {
       if (!selectedTransactionType) {
         toast.error("Please select a transaction type");
+        return;
+      }
+    }
+
+    if (stepType === "BILL_TRANSACTION") {
+      if (!selectedBillerType) {
+        toast.error("Please select a biller type");
         return;
       }
     }
@@ -843,6 +943,30 @@ export default function WorkflowDetailPage() {
       maxRetries: parseInt(maxRetries),
       initialDelayMs: 1000,
     } : null;
+
+    // Merge config for POST_TRANSACTION
+    if (stepType === "POST_TRANSACTION") {
+      parsedConfig = {
+        ...parsedConfig,
+        transactionType: selectedTransactionType,
+        parameterMapping,
+        successMessage,
+        failureMessage,
+        popEnabled,
+        popButtonName
+      };
+    }
+
+    // Merge config for BILL_TRANSACTION
+    if (stepType === "BILL_TRANSACTION") {
+      parsedConfig = {
+        ...parsedConfig,
+        billerType: selectedBillerType,
+        parameterMapping,
+        successMessage,
+        failureMessage,
+      };
+    }
 
     if (editingStep) {
       await updateStep({
@@ -1092,11 +1216,17 @@ export default function WorkflowDetailPage() {
 
       {/* Attached Pages Card */}
       <Card>
-        <CardHeader>
-          <CardTitle>Attached to Pages</CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">
-            Pages currently using this workflow
-          </p>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Attached to Pages</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Pages currently using this workflow
+            </p>
+          </div>
+          <Button variant="outline" size="sm" onClick={handleOpenLinkPagesDialog}>
+            <Plus className="h-4 w-4 mr-2" />
+            Manage Pages
+          </Button>
         </CardHeader>
         <CardContent>
           {workflow.screenPages.length === 0 ? (
@@ -1111,11 +1241,16 @@ export default function WorkflowDetailPage() {
                   href={`/system/app-screens/${sp.page.screen.id}/pages/${sp.page.id}`}
                 >
                   <div className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                    <span className="text-2xl">{sp.page.screen.icon}</span>
+                    <span className="text-2xl">
+                      <DynamicIcon name={sp.page.screen.icon} className="h-6 w-6" />
+                    </span>
                     <div className="flex-1">
-                      <p className="font-medium">
-                        {sp.page.screen.name} / {sp.page.icon} {sp.page.name}
-                      </p>
+                      <div className="flex items-center gap-1 font-medium">
+                        {sp.page.screen.name}
+                        <span className="text-muted-foreground">/</span>
+                        <DynamicIcon name={sp.page.icon} className="h-4 w-4" />
+                        {sp.page.name}
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         {sp.page.screen.context}
                       </p>
@@ -1189,6 +1324,77 @@ export default function WorkflowDetailPage() {
               {updatingWorkflow
                 ? translate("common.state.updating")
                 : `${translate("common.actions.update")} ${translate("common.entities.workflow")}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Link Pages Dialog */}
+      <Dialog open={linkPagesDialogOpen} onOpenChange={setLinkPagesDialogOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Link Pages</DialogTitle>
+            <DialogDescription>
+              Select the mobile app pages where this workflow should be triggered.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="border rounded-md p-3 max-h-[400px] overflow-y-auto space-y-4">
+              {screensLoading ? (
+                <p className="text-xs text-muted-foreground">Loading screens...</p>
+              ) : (
+                screensData?.appScreens?.screens?.map((screen: any) => (
+                  <div key={screen.id} className="space-y-2">
+                    <div className="flex items-center gap-2 sticky top-0 bg-white/95 backdrop-blur py-1 z-10 border-b">
+                      <DynamicIcon name={screen.icon} className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-semibold text-muted-foreground">
+                        {screen.name}
+                      </span>
+                    </div>
+                    <div className="pl-4 grid grid-cols-1 gap-2">
+                      {screen.pages?.map((page: any) => (
+                        <div key={page.id} className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id={`page-${page.id}`}
+                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                            checked={linkedPages.includes(page.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setLinkedPages([...linkedPages, page.id]);
+                              } else {
+                                setLinkedPages(linkedPages.filter((id) => id !== page.id));
+                              }
+                            }}
+                          />
+                          <Label htmlFor={`page-${page.id}`} className="flex items-center gap-2 text-sm font-normal cursor-pointer select-none">
+                            <DynamicIcon name={page.icon} className="h-4 w-4" />
+                            {page.name}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setLinkPagesDialogOpen(false)}
+              disabled={updatingWorkflow}
+            >
+              {translate("common.actions.cancel")}
+            </Button>
+            <Button
+              onClick={handleSaveLinkedPages}
+              disabled={updatingWorkflow}
+            >
+              {updatingWorkflow ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1339,6 +1545,120 @@ export default function WorkflowDetailPage() {
                       <p className="text-xs text-muted-foreground">
                         Action to take when the user declines the confirmation
                       </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Bill Transaction Configuration */}
+                {stepType === "BILL_TRANSACTION" && (
+                  <div className="space-y-4 border rounded-md p-4 bg-slate-50/50">
+                    <div className="space-y-2">
+                      <Label htmlFor="billerType">Biller Type *</Label>
+                      <Select value={selectedBillerType} onValueChange={setSelectedBillerType}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select biller" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {BILLER_TYPES.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Parameter Mapping</Label>
+                      <div className="space-y-2 border rounded-md p-3 bg-white">
+                        <Label className="text-xs font-semibold uppercase text-muted-foreground">Required Parameters</Label>
+                        <div className="grid gap-2">
+                          <div className="grid grid-cols-2 gap-2 items-center">
+                            <Label className="text-xs">Debit Account</Label>
+                            <Input
+                              placeholder="{{ step_0.accountNumber }}"
+                              className="h-8 text-xs"
+                              value={parameterMapping.debitAccount || ""}
+                              onChange={(e) => setParameterMapping({ ...parameterMapping, debitAccount: e.target.value })}
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 items-center">
+                            <Label className="text-xs">Amount</Label>
+                            <Input
+                              placeholder="{{ step_0.amount }}"
+                              className="h-8 text-xs"
+                              value={parameterMapping.amount || ""}
+                              onChange={(e) => setParameterMapping({ ...parameterMapping, amount: e.target.value })}
+                            />
+                          </div>
+
+                          {/* Conditional Inputs based on Biller Type */}
+                          {(selectedBillerType === "AIRTEL_AIRTIME" || selectedBillerType === "TNM_AIRTIME") ? (
+                            <div className="grid grid-cols-2 gap-2 items-center">
+                              <Label className="text-xs">Phone Number</Label>
+                              <Input
+                                placeholder="{{ step_0.phoneNumber }}"
+                                className="h-8 text-xs"
+                                value={parameterMapping.phoneNumber || ""}
+                                onChange={(e) => setParameterMapping({ ...parameterMapping, phoneNumber: e.target.value })}
+                              />
+                            </div>
+                          ) : selectedBillerType === "REGISTER_GENERAL" ? (
+                            <div className="grid grid-cols-2 gap-2 items-center">
+                              <Label className="text-xs">Invoice Number</Label>
+                              <Input
+                                placeholder="{{ step_0.invoiceNumber }}"
+                                className="h-8 text-xs"
+                                value={parameterMapping.invoiceNumber || ""}
+                                onChange={(e) => setParameterMapping({ ...parameterMapping, invoiceNumber: e.target.value })}
+                              />
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 gap-2 items-center">
+                              <Label className="text-xs">Account Number</Label>
+                              <Input
+                                placeholder="{{ step_0.accountNumber }}"
+                                className="h-8 text-xs"
+                                value={parameterMapping.accountNumber || ""}
+                                onChange={(e) => setParameterMapping({ ...parameterMapping, accountNumber: e.target.value })}
+                              />
+                            </div>
+                          )}
+
+                          {/* Optional Phone Number for non-airtime billers (e.g. for notifications or reference) */}
+                          {selectedBillerType !== "AIRTEL_AIRTIME" && selectedBillerType !== "TNM_AIRTIME" && (
+                            <div className="grid grid-cols-2 gap-2 items-center">
+                              <Label className="text-xs">Phone Number (Optional)</Label>
+                              <Input
+                                placeholder="{{ step_0.phoneNumber }}"
+                                className="h-8 text-xs"
+                                value={parameterMapping.phoneNumber || ""}
+                                onChange={(e) => setParameterMapping({ ...parameterMapping, phoneNumber: e.target.value })}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="successMessage">Success Message</Label>
+                      <Input
+                        id="successMessage"
+                        placeholder="Payment successful"
+                        value={successMessage}
+                        onChange={(e) => setSuccessMessage(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="failureMessage">Failure Message</Label>
+                      <Input
+                        id="failureMessage"
+                        placeholder="Payment failed"
+                        value={failureMessage}
+                        onChange={(e) => setFailureMessage(e.target.value)}
+                      />
                     </div>
                   </div>
                 )}

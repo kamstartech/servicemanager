@@ -1,14 +1,7 @@
 import { GraphQLError } from "graphql";
 import { GraphQLContext } from "../../context";
 import { prisma } from "@/lib/db/prisma";
-import {
-    TransactionSource,
-    TransactionStatus,
-    TransactionType,
-} from "@prisma/client";
-import { generateTransactionReference } from "@/lib/utils/reference-generator";
-import { airtimeService } from "@/lib/services/airtime/airtime-service";
-import { Decimal } from "@prisma/client/runtime/library";
+import { workflowExecutor } from "@/lib/services/workflow/workflow-executor";
 
 export const airtimeResolvers = {
     Mutation: {
@@ -23,116 +16,48 @@ export const airtimeResolvers = {
                 });
             }
 
-            const { provider, msisdn, amount: amountInput, sourceAccountNumber, bundleId } = input;
-            const amount = new Decimal(amountInput);
+            const { provider, msisdn, amount, sourceAccountNumber, bundleId } = input;
 
-            if (amount.lte(0)) {
-                throw new GraphQLError("Amount must be greater than zero", {
-                    extensions: { code: "BAD_USER_INPUT" },
-                });
-            }
+            // Map provider to biller type
+            const billerType = provider === "AIRTEL" ? "AIRTEL_AIRTIME" : "TNM_AIRTIME";
 
-            // Check account ownership
-            const sourceAccount = await prisma.mobileUserAccount.findFirst({
-                where: {
-                    accountNumber: sourceAccountNumber,
-                    mobileUserId: context.userId
-                },
-            });
-
-            if (!sourceAccount) {
-                throw new GraphQLError("Source account not found or unauthorized", {
-                    extensions: { code: "NOT_FOUND" },
-                });
-            }
-
-            const reference = generateTransactionReference();
-
-            // Create transaction record
-            const transaction = await prisma.fdhTransaction.create({
-                data: {
-                    type: TransactionType.AIRTIME,
-                    source: TransactionSource.MOBILE_BANKING,
-                    reference,
-                    status: TransactionStatus.PENDING,
-                    amount,
-                    currency: sourceAccount.currency,
-                    description: `Airtime purchase for ${msisdn} (${provider})`,
-                    fromAccountNumber: sourceAccount.accountNumber,
-                    toAccountNumber: msisdn,
-                    initiatedByUserId: context.userId,
-                },
-            });
-
-            try {
-                let result;
-                const params = {
-                    msisdn,
-                    amount: amount.toNumber(),
-                    externalTxnId: reference,
+            // Execute via workflow executor to get standardized "Hold -> Process -> [Reverse]" logic
+            const result = await workflowExecutor.handleAirtimeTransaction(
+                billerType,
+                {
+                    amount: amount.toString(),
+                    debitAccount: sourceAccountNumber,
+                    phoneNumber: msisdn,
                     bundleId,
-                };
-
-                if (provider === "AIRTEL") {
-                    result = await airtimeService.airtelRecharge(params);
-                } else {
-                    result = await airtimeService.tnmRecharge(params);
+                },
+                {
+                    userId: String(context.userId),
+                    sessionId: "DIRECT_PURCHASE",
+                    transferContext: context.auth?.context, // Pass context from JWT
+                    source: context.auth?.context === 'WALLET' ? 'WALLET' : 'MOBILE_BANKING',
+                    variables: {},
                 }
+            );
 
-                if (result.ok) {
-                    await prisma.fdhTransaction.update({
-                        where: { id: transaction.id },
-                        data: {
-                            status: TransactionStatus.COMPLETED,
-                            t24Reference: reference,
-                        },
-                    });
-
-                    return {
-                        success: true,
-                        message: "Airtime purchase successful",
-                        transactionId: transaction.id,
-                        reference,
-                        status: "COMPLETED",
-                    };
-                } else {
-                    const errorMessage = result.error || result.statusText || "Failed to purchase airtime";
-
-                    await prisma.fdhTransaction.update({
-                        where: { id: transaction.id },
-                        data: {
-                            status: TransactionStatus.FAILED,
-                            errorMessage: errorMessage,
-                        },
-                    });
-
-                    return {
-                        success: false,
-                        message: errorMessage,
-                        transactionId: transaction.id,
-                        reference,
-                        status: "FAILED",
-                    };
-                }
-            } catch (error: any) {
-                console.error("Airtime purchase error:", error);
-
-                await prisma.fdhTransaction.update({
-                    where: { id: transaction.id },
-                    data: {
-                        status: TransactionStatus.FAILED,
-                        errorMessage: error.message,
-                    },
-                });
-
+            if (!result.success) {
                 return {
                     success: false,
-                    message: error.message || "An unexpected error occurred",
-                    transactionId: transaction.id,
-                    reference,
+                    message: result.error || "Failed to purchase airtime",
                     status: "FAILED",
                 };
             }
+
+            // The workflow executor returns both transaction types in the output
+            const output = result.output;
+
+            return {
+                success: true,
+                message: "Airtime purchase successful",
+                transactionId: output.transactionId,
+                reference: output.externalReference || output.transactionId,
+                status: "COMPLETED",
+                transaction: output.billerTransaction, // Return BillerTransaction for auditing
+            };
         },
     },
 };
