@@ -36,6 +36,7 @@ export const passwordResetResolvers = {
         input: {
           username: string;
           secret: string;
+          context: string;
           phoneNumber?: string;
           deviceId: string;
           deviceName?: string;
@@ -43,12 +44,16 @@ export const passwordResetResolvers = {
       }
     ) => {
       try {
-        const { username, secret, phoneNumber, deviceId, deviceName } = input;
+        const { username, secret, context, phoneNumber, deviceId, deviceName } = input;
 
-        // 1. Find user by username
+        // 1. Find user by username/phoneNumber and context
+        // For WALLET context, use phoneNumber; for others, use username
         const user = await prisma.mobileUser.findFirst({
           where: {
-            username: username,
+            ...(context === "WALLET"
+              ? { phoneNumber: username }
+              : { username }),
+            context: context as any,
             isActive: true,
           },
           include: {
