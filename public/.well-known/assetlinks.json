@@ -1,0 +1,15 @@
+[
+    {
+        "relation": [
+            "delegate_permission/common.handle_all_urls",
+            "delegate_permission/common.get_login_creds"
+        ],
+        "target": {
+            "namespace": "android_app",
+            "package_name": "com.fdh.mobile.qrpay",
+            "sha256_cert_fingerprints": [
+                "18:1C:F9:A7:E7:4D:6A:E7:83:F5:91:1F:4B:75:04:86:4A:CD:DA:FB:FE:3E:C1:64:45:B1:A5:4B:1C:9E:93:F5"
+            ]
+        }
+    }
+]
