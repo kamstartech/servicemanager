@@ -131,37 +131,71 @@ export const passkeyResolvers = {
 
                     // Honor multi-session setting for secondary devices
                     if (!isFirstDevice && !user.allowMultiSession) {
-                        throw new Error("Multi-device sessions are disabled for this account.");
+                        // Exception: If we are upgrading an existing device, allow it
+                        const isUpgradingExisting = deviceInfo.deviceId && await tx.mobileDevice.findFirst({
+                            where: { mobileUserId: user.id, deviceId: deviceInfo.deviceId }
+                        });
+
+                        if (!isUpgradingExisting) {
+                            throw new Error("Multi-device sessions are disabled for this account.");
+                        }
                     }
 
                     const shouldBePrimary = isFirstDevice;
                     const isActive = isFirstDevice; // Secondary devices start inactive if multi-session is enabled
 
-                    const created = await tx.mobileDevice.create({
-                        data: {
-                            mobileUserId: user.id,
-                            credentialId: credentialID,
-                            publicKey: credentialPublicKey,
-                            counter: BigInt(counter),
-                            transports: responseJson.response.transports || ["internal"],
-                            name: deviceInfo.name || "Mobile Device",
-                            model: deviceInfo.model,
-                            os: deviceInfo.os,
-                            deviceId: deviceInfo.deviceId,
-                            isPrimary: shouldBePrimary,
-                            isActive: isActive,
-                            verifiedVia: "PASSKEY",
-                        },
-                    });
+                    // Check if device already exists to update it
+                    let deviceIdToUse = deviceInfo.deviceId || crypto.randomUUID();
 
-                    if (shouldBePrimary) {
-                        await tx.mobileDevice.updateMany({
-                            where: { mobileUserId: user.id, id: { not: created.id } },
-                            data: { isPrimary: false },
+                    const existingDevice = deviceInfo.deviceId ? await tx.mobileDevice.findFirst({
+                        where: { mobileUserId: user.id, deviceId: deviceInfo.deviceId }
+                    }) : null;
+
+                    if (existingDevice) {
+                        // Update existing device with Passkey credentials
+                        return await tx.mobileDevice.update({
+                            where: { id: existingDevice.id },
+                            data: {
+                                credentialId: credentialID,
+                                publicKey: credentialPublicKey,
+                                counter: BigInt(counter),
+                                transports: responseJson.response.transports || ["internal"],
+                                verifiedVia: "PASSKEY",
+                                // Update metadata if provided
+                                name: deviceInfo.name || existingDevice.name,
+                                model: deviceInfo.model || existingDevice.model,
+                                os: deviceInfo.os || existingDevice.os,
+                                isActive: true, // Re-activate if it was disabled? Maybe. Let's keep it active.
+                            }
                         });
-                    }
+                    } else {
+                        // Create new device
+                        const created = await tx.mobileDevice.create({
+                            data: {
+                                mobileUserId: user.id,
+                                credentialId: credentialID,
+                                publicKey: credentialPublicKey,
+                                counter: BigInt(counter),
+                                transports: responseJson.response.transports || ["internal"],
+                                name: deviceInfo.name || "Mobile Device",
+                                model: deviceInfo.model,
+                                os: deviceInfo.os,
+                                deviceId: deviceIdToUse,
+                                isPrimary: shouldBePrimary,
+                                isActive: isActive,
+                                verifiedVia: "PASSKEY",
+                            },
+                        });
 
-                    return created;
+                        if (shouldBePrimary) {
+                            await tx.mobileDevice.updateMany({
+                                where: { mobileUserId: user.id, id: { not: created.id } },
+                                data: { isPrimary: false },
+                            });
+                        }
+
+                        return created;
+                    }
                 });
 
                 challengeStore.delete(`reg-${user.id}`);
@@ -219,11 +253,13 @@ export const passkeyResolvers = {
 
             const options = await generateAuthenticationOptions({
                 rpID: RP_ID,
-                allowCredentials: user.devices.map((device: any) => ({
-                    id: device.credentialId, // base64url string
-                    type: "public-key",
-                    transports: device.transports as any[],
-                })),
+                allowCredentials: user.devices
+                    .filter((device: any) => device.credentialId)
+                    .map((device: any) => ({
+                        id: device.credentialId, // base64url string
+                        type: "public-key",
+                        transports: device.transports as any[],
+                    })),
                 userVerification: "preferred",
             });
 
