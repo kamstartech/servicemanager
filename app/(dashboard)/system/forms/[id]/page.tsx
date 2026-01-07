@@ -9,7 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Edit, Calendar, User } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { ArrowLeft, Edit, Calendar, User, Search } from "lucide-react";
 import Link from "next/link";
 
 const GET_FORM = gql`
@@ -30,12 +37,12 @@ const GET_FORM = gql`
 
 interface FormField {
   id: string;
-  type: "text" | "number" | "date" | "dropdown" | "toggle" | "beneficiary" | "account";
+  type: "text" | "number" | "date" | "dropdown" | "toggle" | "beneficiary" | "lookup" | "account" | "phoneNumber";
   label: string;
   required: boolean;
   placeholder?: string;
   options?: string[];
-  beneficiaryType?: "WALLET" | "BANK" | "BANK_INTERNAL" | "BANK_EXTERNAL" | "ALL";
+  beneficiaryType?: "FDH_BANK" | "EXTERNAL_BANK" | "FDH_WALLET" | "EXTERNAL_WALLET" | "AIRTEL_AIRTIME" | "TNM_AIRTIME" | "SELF" | "REGISTER_GENERAL" | "BWB_POSTPAID" | "LWB_POSTPAID" | "SRWB_POSTPAID" | "SRWB_PREPAID" | "MASM" | "TNM_BUNDLES" | "ALL";
   validation?: {
     minLength?: number;
     maxLength?: number;
@@ -304,6 +311,52 @@ export default function ViewFormPage() {
                               </div>
                             )}
 
+                            {field.type === "lookup" && (
+                              <div>
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <div className="relative cursor-pointer">
+                                      <Input
+                                        placeholder="Select a beneficiary"
+                                        readOnly
+                                        className="pr-10 pointer-events-none"
+                                      />
+                                      <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    </div>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>Select Beneficiary</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="space-y-4">
+                                      <Input placeholder="Search beneficiaries..." />
+                                      <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                                        <div className="p-3 border rounded-md hover:bg-muted cursor-pointer transition-colors">
+                                          <p className="font-medium">John Doe</p>
+                                          <p className="text-sm text-muted-foreground">**** 1234</p>
+                                        </div>
+                                        <div className="p-3 border rounded-md hover:bg-muted cursor-pointer transition-colors">
+                                          <p className="font-medium">Jane Smith</p>
+                                          <p className="text-sm text-muted-foreground">
+                                            +265 999 123 456
+                                          </p>
+                                        </div>
+                                        <div className="p-3 border rounded-md hover:bg-muted cursor-pointer transition-colors">
+                                          <p className="font-medium">Robert Johnson</p>
+                                          <p className="text-sm text-muted-foreground">
+                                            Saving - 10101000188
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Filter: {field.beneficiaryType || "All Beneficiaries"}
+                                </p>
+                              </div>
+                            )}
+
                             {field.type === "account" && (
                               <select
                                 className="w-full rounded-md border border-input bg-background px-3 py-2"
@@ -313,6 +366,13 @@ export default function ViewFormPage() {
                                 <option value="sample1">Savings - 1234567890</option>
                                 <option value="sample2">Current - 0987654321</option>
                               </select>
+                            )}
+                            {field.type === "phoneNumber" && (
+                              <Input
+                                type="tel"
+                                placeholder={field.placeholder || "Enter phone number"}
+                                disabled
+                              />
                             )}
                           </div>
 
@@ -329,11 +389,12 @@ export default function ViewFormPage() {
                                       • Min length: {field.validation.minLength}
                                     </p>
                                   )}
-                                  {field.validation.maxLength && (
-                                    <p>
-                                      • Max length: {field.validation.maxLength}
-                                    </p>
-                                  )}
+                                  {(field.type === "text" || field.type === "phoneNumber") &&
+                                    field.validation.maxLength && (
+                                      <p>
+                                        • Max length: {field.validation.maxLength}
+                                      </p>
+                                    )}
                                   {field.validation.min !== undefined && (
                                     <p>• Min value: {field.validation.min}</p>
                                   )}

@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Plus, Trash2, GripVertical, Eye } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, GripVertical, Eye, Search } from "lucide-react";
 import Link from "next/link";
 import {
   DndContext,
@@ -62,12 +62,12 @@ const UPDATE_FORM = gql`
 
 interface FormField {
   id: string;
-  type: "text" | "number" | "date" | "dropdown" | "toggle" | "beneficiary" | "account";
+  type: "text" | "number" | "date" | "dropdown" | "toggle" | "beneficiary" | "lookup" | "account" | "phoneNumber";
   label: string;
   required: boolean;
   placeholder?: string;
   options?: string[];
-  beneficiaryType?: "WALLET" | "BANK" | "BANK_INTERNAL" | "BANK_EXTERNAL" | "ALL";
+  beneficiaryType?: "FDH_BANK" | "EXTERNAL_BANK" | "FDH_WALLET" | "EXTERNAL_WALLET" | "AIRTEL_AIRTIME" | "TNM_AIRTIME" | "SELF" | "REGISTER_GENERAL" | "BWB_POSTPAID" | "LWB_POSTPAID" | "SRWB_POSTPAID" | "SRWB_PREPAID" | "MASM" | "TNM_BUNDLES" | "ALL";
   validation?: {
     minLength?: number;
     maxLength?: number;
@@ -136,7 +136,9 @@ function SortableField({
                   <option value="dropdown">Dropdown</option>
                   <option value="toggle">Toggle</option>
                   <option value="beneficiary">Beneficiary</option>
+                  <option value="lookup">Lookup</option>
                   <option value="account">Account</option>
+                  <option value="phoneNumber">Phone Number</option>
                 </select>
               </div>
 
@@ -152,7 +154,7 @@ function SortableField({
               </div>
             </div>
 
-            {field.type !== "toggle" && field.type !== "beneficiary" && field.type !== "account" && (
+            {field.type !== "toggle" && field.type !== "beneficiary" && field.type !== "lookup" && field.type !== "account" && field.type !== "phoneNumber" && (
               <div className="space-y-2">
                 <Label>Placeholder</Label>
                 <Input
@@ -185,7 +187,7 @@ function SortableField({
               </div>
             )}
 
-            {field.type === "beneficiary" && (
+            {(field.type === "beneficiary" || field.type === "lookup") && (
               <div className="space-y-2">
                 <Label>Beneficiary Type Filter</Label>
                 <select
@@ -198,10 +200,20 @@ function SortableField({
                   }
                 >
                   <option value="ALL">All Beneficiaries</option>
-                  <option value="WALLET">Wallet Only</option>
-                  <option value="BANK">Bank (Internal + External)</option>
-                  <option value="BANK_INTERNAL">Bank Internal Only</option>
-                  <option value="BANK_EXTERNAL">Bank External Only</option>
+                  <option value="FDH_BANK">FDH Bank</option>
+                  <option value="EXTERNAL_BANK">External Bank</option>
+                  <option value="FDH_WALLET">FDH Wallet</option>
+                  <option value="EXTERNAL_WALLET">External Wallet</option>
+                  <option value="AIRTEL_AIRTIME">Airtel Airtime</option>
+                  <option value="TNM_AIRTIME">TNM Airtime</option>
+                  <option value="SELF">Self</option>
+                  <option value="REGISTER_GENERAL">Register General</option>
+                  <option value="BWB_POSTPAID">Blantyre Water Board (Postpaid)</option>
+                  <option value="LWB_POSTPAID">Lilongwe Water Board (Postpaid)</option>
+                  <option value="SRWB_POSTPAID">Southern Region Water Board (Postpaid)</option>
+                  <option value="SRWB_PREPAID">Southern Region Water Board (Prepaid)</option>
+                  <option value="MASM">MASM</option>
+                  <option value="TNM_BUNDLES">TNM Bundles</option>
                 </select>
                 <p className="text-xs text-muted-foreground">
                   Filter beneficiaries by type shown to the user
@@ -210,11 +222,11 @@ function SortableField({
             )}
 
             {/* Validation Rules */}
-            {(field.type === "text" || field.type === "number") && (
+            {(field.type === "text" || field.type === "number" || field.type === "phoneNumber") && (
               <div className="space-y-3 p-3 border rounded-md bg-background">
                 <Label className="text-sm font-semibold">Validation Rules</Label>
                 <div className="grid grid-cols-2 gap-3">
-                  {field.type === "text" && (
+                  {(field.type === "text" || field.type === "phoneNumber") && (
                     <>
                       <div className="space-y-1">
                         <Label className="text-xs">Min Length</Label>
@@ -387,7 +399,7 @@ export default function EditFormPage() {
       setDescription(data.form.description || "");
       setCategory(data.form.category || "");
       setIsActive(data.form.isActive);
-      
+
       // Parse schema if it exists
       if (data.form.schema && data.form.schema.fields) {
         setFields(data.form.schema.fields);
@@ -682,6 +694,22 @@ export default function EditFormPage() {
                               </div>
                             )}
 
+                            {field.type === "lookup" && (
+                              <div>
+                                <div className="relative">
+                                  <Input
+                                    placeholder="Select a beneficiary"
+                                    disabled
+                                    className="pr-10"
+                                  />
+                                  <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Filter: {field.beneficiaryType || "All Beneficiaries"}
+                                </p>
+                              </div>
+                            )}
+
                             {field.type === "account" && (
                               <select
                                 className="w-full rounded-md border border-input bg-background px-3 py-2"
@@ -691,6 +719,13 @@ export default function EditFormPage() {
                                 <option value="sample1">Savings - 1234567890</option>
                                 <option value="sample2">Current - 0987654321</option>
                               </select>
+                            )}
+                            {field.type === "phoneNumber" && (
+                              <Input
+                                type="tel"
+                                placeholder={field.placeholder || "Enter phone number"}
+                                disabled
+                              />
                             )}
                             {field.validation && (
                               <p className="text-xs text-muted-foreground">
