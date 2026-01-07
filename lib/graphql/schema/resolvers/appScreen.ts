@@ -45,7 +45,8 @@ export const appScreenResolvers = {
         context?: MobileUserContext;
         page?: number;
         limit?: number;
-      }
+      },
+      graphqlContext?: any
     ) {
       const { context, page = 1, limit = 100 } = args;
       const skip = (page - 1) * limit;
@@ -53,12 +54,19 @@ export const appScreenResolvers = {
       const where: any = {};
       if (context) where.context = context;
 
+      // For mobile users, only return active screens
+      const isMobileRequest = !graphqlContext?.adminUser && !graphqlContext?.adminId;
+      if (isMobileRequest) {
+        where.isActive = true;
+      }
+
       const [screens, total] = await Promise.all([
         prisma.appScreen.findMany({
           where,
           include: {
             pages: {
               orderBy: { order: "asc" },
+              ...(isMobileRequest ? { where: { isActive: true } } : {}),
             },
           },
           orderBy: [{ context: "asc" }, { order: "asc" }],
@@ -83,17 +91,25 @@ export const appScreenResolvers = {
       };
     },
 
-    async appScreen(_parent: unknown, args: { id: string }) {
+    async appScreen(_parent: unknown, args: { id: string }, graphqlContext?: any) {
+      const isMobileRequest = !graphqlContext?.adminUser && !graphqlContext?.adminId;
+      
       const screen = await prisma.appScreen.findUnique({
         where: { id: args.id },
         include: {
           pages: {
             orderBy: { order: "asc" },
+            ...(isMobileRequest ? { where: { isActive: true } } : {}),
           },
         },
       });
 
       if (!screen) {
+        throw new Error("Screen not found");
+      }
+
+      // For mobile users, check if screen is active
+      if (isMobileRequest && !screen.isActive) {
         throw new Error("Screen not found");
       }
 
@@ -109,9 +125,16 @@ export const appScreenResolvers = {
       };
     },
 
-    async appScreenPages(_parent: unknown, args: { screenId: string }) {
+    async appScreenPages(_parent: unknown, args: { screenId: string }, graphqlContext?: any) {
+      const isMobileRequest = !graphqlContext?.adminUser && !graphqlContext?.adminId;
+      
+      const where: any = { screenId: args.screenId };
+      if (isMobileRequest) {
+        where.isActive = true;
+      }
+      
       const pages = await prisma.appScreenPage.findMany({
-        where: { screenId: args.screenId },
+        where,
         orderBy: { order: "asc" },
       });
 

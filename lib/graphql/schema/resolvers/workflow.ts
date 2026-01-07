@@ -164,8 +164,16 @@ export const workflowResolvers = {
     async pageWorkflows(_parent: unknown, args: { pageId: string }, context: any) {
       requireAuthenticatedContext(context);
 
+      const isMobileRequest = !context?.adminUser && !context?.adminId;
+      
+      const where: any = { pageId: args.pageId };
+      // For mobile users, only return active workflows and pages
+      if (isMobileRequest) {
+        where.isActive = true;
+      }
+
       const workflows = await prisma.appScreenPageWorkflow.findMany({
-        where: { pageId: args.pageId },
+        where,
         include: {
           workflow: true,
           page: {
@@ -177,7 +185,12 @@ export const workflowResolvers = {
         orderBy: { order: "asc" },
       });
 
-      return workflows.map((pw) => ({
+      // For mobile users, filter out inactive workflows
+      const filteredWorkflows = isMobileRequest 
+        ? workflows.filter(pw => pw.workflow.isActive && pw.page.isActive && pw.page.screen.isActive)
+        : workflows;
+
+      return filteredWorkflows.map((pw) => ({
         ...pw,
         createdAt: pw.createdAt.toISOString(),
         updatedAt: pw.updatedAt.toISOString(),
