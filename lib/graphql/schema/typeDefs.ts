@@ -143,6 +143,10 @@ export const typeDefs = /* GraphQL */ `
     FDH_WALLET
     EXTERNAL_WALLET
     BILL
+    AIRTEL_AIRTIME
+    TNM_AIRTIME
+    ESCOM_PREPAID
+    WATER_BOARD
     SELF
     BANK
     WALLET

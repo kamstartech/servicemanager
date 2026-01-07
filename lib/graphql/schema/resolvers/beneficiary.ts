@@ -514,6 +514,21 @@ function validateBeneficiaryInput(input: any): {
         };
       }
       break;
+
+    case "BILL":
+    case "AIRTEL_AIRTIME":
+    case "TNM_AIRTIME":
+    case "ESCOM_PREPAID":
+    case "WATER_BOARD":
+      if (!accountNumber || accountNumber.trim() === "") {
+        return {
+          valid: false,
+          error: "Account/Phone/Meter number is required for this beneficiary type",
+        };
+      }
+      // BankCode is optional for bills (might store bill type like 'PHONE')
+      break;
+
     default:
       return {
         valid: false,
