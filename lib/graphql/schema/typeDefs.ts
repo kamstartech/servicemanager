@@ -518,6 +518,7 @@ export const typeDefs = /* GraphQL */ `
     accountNumber: String
     externalBank: ExternalBank
     externalBankType: ExternalBankType
+    externalBankId: String
     description: String
     isActive: Boolean!
     createdAt: String!
@@ -529,6 +530,7 @@ export const typeDefs = /* GraphQL */ `
     name: String!
     beneficiaryType: BeneficiaryType!
     accountNumber: String
+    externalBankId: String
     externalBankType: ExternalBankType
     description: String
     isActive: Boolean

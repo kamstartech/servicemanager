@@ -14,6 +14,8 @@ model Beneficiary {
 
   // External bank type for bank and wallet has the needed data
   externalBankType ExternalBankType? @map("external_bank_type")
+  externalBankId   String?           @map("external_bank_id")
+  externalBank     ExternalBank?     @relation(fields: [externalBankId], references: [id])
 
   // Optional fields
   description String? @db.Text

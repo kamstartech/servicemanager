@@ -64,6 +64,7 @@ export const beneficiaryResolvers = {
 
 
 
+        externalBankId: b.externalBankId,
         externalBankType: b.externalBankType,
         description: b.description,
         isActive: b.isActive,
@@ -117,6 +118,7 @@ export const beneficiaryResolvers = {
 
 
 
+        externalBankId: b.externalBankId,
         externalBankType: b.externalBankType,
         description: b.description,
         isActive: b.isActive,
@@ -164,6 +166,7 @@ export const beneficiaryResolvers = {
 
 
 
+        externalBankId: beneficiary.externalBankId,
         externalBankType: beneficiary.externalBankType,
         description: beneficiary.description,
         isActive: beneficiary.isActive,
@@ -244,6 +247,7 @@ export const beneficiaryResolvers = {
             beneficiaryType: actualInput.beneficiaryType,
             accountNumber: actualInput.accountNumber?.trim() || null,
             externalBankType: actualInput.externalBankType || null,
+            externalBankId: actualInput.externalBankId || null,
             description: actualInput.description?.trim() || null,
             isActive: actualInput.isActive ?? true,
           },
@@ -266,6 +270,7 @@ export const beneficiaryResolvers = {
 
 
           externalBankType: beneficiary.externalBankType,
+          externalBankId: beneficiary.externalBankId,
           description: beneficiary.description,
           isActive: beneficiary.isActive,
           createdAt: beneficiary.createdAt.toISOString(),
@@ -332,6 +337,7 @@ export const beneficiaryResolvers = {
           beneficiaryType: input.beneficiaryType,
           accountNumber: input.accountNumber?.trim() || null,
           externalBankType: input.externalBankType || null,
+          externalBankId: input.externalBankId || null,
           description: input.description?.trim() || null,
           isActive: input.isActive,
         },
@@ -447,7 +453,8 @@ export const beneficiaryResolvers = {
         accountNumber: updated.accountNumber,
 
 
-
+        externalBankType: updated.externalBankType,
+        externalBankId: updated.externalBankId,
         description: updated.description,
         isActive: updated.isActive,
         createdAt: updated.createdAt.toISOString(),
@@ -470,9 +477,15 @@ export const beneficiaryResolvers = {
   },
   Beneficiary: {
     externalBank: async (parent: any) => {
+      if (parent.externalBankId) {
+        return await prisma.externalBank.findUnique({
+          where: { id: parent.externalBankId },
+        });
+      }
+
       if (!parent.externalBankType) return null;
 
-      // Find the external bank by type
+      // Fallback for legacy data without ID
       const externalBank = await prisma.externalBank.findFirst({
         where: {
           type: parent.externalBankType,
