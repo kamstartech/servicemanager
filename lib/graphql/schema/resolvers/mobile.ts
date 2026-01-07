@@ -397,6 +397,7 @@ export const mobileResolvers = {
         beneficiaryType: b.beneficiaryType,
         accountNumber: b.accountNumber,
         externalBankType: b.externalBankType,
+        externalBankId: b.externalBankId,
         description: b.description,
         isActive: b.isActive,
         createdAt: b.createdAt.toISOString(),
