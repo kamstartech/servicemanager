@@ -364,6 +364,20 @@ export const mobileResolvers = {
           where.beneficiaryType = {
             in: ["FDH_WALLET", "EXTERNAL_WALLET"],
           };
+        } else if (args.type === "BILL") {
+          where.beneficiaryType = {
+            in: [
+              "AIRTEL_AIRTIME",
+              "TNM_AIRTIME",
+              "REGISTER_GENERAL",
+              "BWB_POSTPAID",
+              "LWB_POSTPAID",
+              "SRWB_POSTPAID",
+              "SRWB_PREPAID",
+              "MASM",
+              "TNM_BUNDLES"
+            ],
+          };
         } else {
           where.beneficiaryType = args.type;
         }
