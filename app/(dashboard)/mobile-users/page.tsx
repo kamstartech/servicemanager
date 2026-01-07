@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { COMMON_TABLE_HEADERS, DataTable, type DataTableColumn } from "@/components/data-table";
-import { Calendar, Ban, CheckCircle, Loader2 } from "lucide-react";
+import { Calendar, Ban, CheckCircle, Loader2, UserPlus } from "lucide-react";
 import { translateStatusOneWord } from "@/lib/utils";
 import { useState } from "react";
 import {
@@ -18,6 +18,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -60,6 +68,23 @@ const UNBLOCK_USER_MUTATION = gql`
   }
 `;
 
+const CREATE_PROFILE_MUTATION = gql`
+  mutation CreateMobileUserProfile($input: CreateMobileUserProfileInput!) {
+    createMobileUserProfile(input: $input) {
+      id
+      mobileUserId
+      firstName
+      lastName
+      email
+      phone
+      address
+      city
+      country
+      zip
+    }
+  }
+`;
+
 export default function MobileUsersPage() {
   const { data, loading, error, refetch } = useQuery(MOBILE_USERS_QUERY);
   const { translate } = useI18n();
@@ -67,8 +92,19 @@ export default function MobileUsersPage() {
 
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [unblockDialogOpen, setUnblockDialogOpen] = useState(false);
+  const [createProfileDialogOpen, setCreateProfileDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [blockReason, setBlockReason] = useState("");
+  const [profileData, setProfileData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    country: "",
+    zip: "",
+  });
 
   const [blockUser, { loading: blocking }] = useMutation(BLOCK_USER_MUTATION, {
     onCompleted: () => {
@@ -107,6 +143,34 @@ export default function MobileUsersPage() {
     },
   });
 
+  const [createProfile, { loading: creatingProfile }] = useMutation(CREATE_PROFILE_MUTATION, {
+    onCompleted: () => {
+      toast({
+        title: "Profile Created",
+        description: `Profile for ${selectedUser?.username || selectedUser?.phoneNumber} has been created successfully.`,
+      });
+      setCreateProfileDialogOpen(false);
+      setProfileData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        address: "",
+        city: "",
+        country: "",
+        zip: "",
+      });
+      refetch();
+    },
+    onError: (err) => {
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleBlockClick = (user: any) => {
     setSelectedUser(user);
     setBlockDialogOpen(true);
@@ -115,6 +179,11 @@ export default function MobileUsersPage() {
   const handleUnblockClick = (user: any) => {
     setSelectedUser(user);
     setUnblockDialogOpen(true);
+  };
+
+  const handleCreateProfileClick = (user: any) => {
+    setSelectedUser(user);
+    setCreateProfileDialogOpen(true);
   };
 
   const confirmBlock = () => {
@@ -135,6 +204,19 @@ export default function MobileUsersPage() {
       unblockUser({
         variables: {
           userId: selectedUser.id.toString(),
+        },
+      });
+    }
+  };
+
+  const confirmCreateProfile = () => {
+    if (selectedUser) {
+      createProfile({
+        variables: {
+          input: {
+            mobileUserId: selectedUser.id,
+            ...profileData,
+          },
         },
       });
     }
@@ -210,6 +292,15 @@ export default function MobileUsersPage() {
       header: COMMON_TABLE_HEADERS.actions,
       accessor: (row) => (
         <div className="flex items-center justify-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleCreateProfileClick(row)}
+            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+          >
+            <UserPlus size={14} className="mr-1" />
+            Create Profile
+          </Button>
           {row.isBlocked ? (
             <Button
               variant="outline"
@@ -331,6 +422,118 @@ export default function MobileUsersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Create Profile Dialog */}
+      <Dialog open={createProfileDialogOpen} onOpenChange={setCreateProfileDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Create Mobile User Profile</DialogTitle>
+            <DialogDescription>
+              Create a profile for{" "}
+              <strong>{selectedUser?.username || selectedUser?.phoneNumber}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <div>
+              <Label htmlFor="firstName">First Name</Label>
+              <Input
+                id="firstName"
+                placeholder="Enter first name"
+                value={profileData.firstName}
+                onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })}
+                className="mt-2"
+              />
+            </div>
+            <div>
+              <Label htmlFor="lastName">Last Name</Label>
+              <Input
+                id="lastName"
+                placeholder="Enter last name"
+                value={profileData.lastName}
+                onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })}
+                className="mt-2"
+              />
+            </div>
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Enter email"
+                value={profileData.email}
+                onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                className="mt-2"
+              />
+            </div>
+            <div>
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                id="phone"
+                placeholder="Enter phone number"
+                value={profileData.phone}
+                onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                className="mt-2"
+              />
+            </div>
+            <div className="col-span-2">
+              <Label htmlFor="address">Address</Label>
+              <Input
+                id="address"
+                placeholder="Enter address"
+                value={profileData.address}
+                onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
+                className="mt-2"
+              />
+            </div>
+            <div>
+              <Label htmlFor="city">City</Label>
+              <Input
+                id="city"
+                placeholder="Enter city"
+                value={profileData.city}
+                onChange={(e) => setProfileData({ ...profileData, city: e.target.value })}
+                className="mt-2"
+              />
+            </div>
+            <div>
+              <Label htmlFor="country">Country</Label>
+              <Input
+                id="country"
+                placeholder="Enter country"
+                value={profileData.country}
+                onChange={(e) => setProfileData({ ...profileData, country: e.target.value })}
+                className="mt-2"
+              />
+            </div>
+            <div className="col-span-2">
+              <Label htmlFor="zip">ZIP Code</Label>
+              <Input
+                id="zip"
+                placeholder="Enter ZIP code"
+                value={profileData.zip}
+                onChange={(e) => setProfileData({ ...profileData, zip: e.target.value })}
+                className="mt-2"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCreateProfileDialogOpen(false)}
+              disabled={creatingProfile}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmCreateProfile}
+              disabled={creatingProfile}
+            >
+              {creatingProfile && <Loader2 size={14} className="mr-2 animate-spin" />}
+              Create Profile
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
