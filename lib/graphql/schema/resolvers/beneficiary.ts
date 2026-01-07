@@ -269,8 +269,8 @@ export const beneficiaryResolvers = {
 
 
 
-          externalBankType: beneficiary.externalBankType,
           externalBankId: beneficiary.externalBankId,
+          externalBankType: beneficiary.externalBankType,
           description: beneficiary.description,
           isActive: beneficiary.isActive,
           createdAt: beneficiary.createdAt.toISOString(),
@@ -360,6 +360,7 @@ export const beneficiaryResolvers = {
 
 
         externalBankType: beneficiary.externalBankType,
+        externalBankId: beneficiary.externalBankId,
         description: beneficiary.description,
         isActive: beneficiary.isActive,
         createdAt: beneficiary.createdAt.toISOString(),
