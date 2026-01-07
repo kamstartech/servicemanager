@@ -123,10 +123,14 @@ async function hydrateWorkflowStepsForClient(
 
       const hasAccountField = schema.fields.some((f: any) => f.type === "account");
       const hasBeneficiaryField = schema.fields.some((f: any) => f.type === "beneficiary");
+      const hasBankProviderField = schema.fields.some((f: any) => f.type === "bank_provider");
+      const hasWalletProviderField = schema.fields.some((f: any) => f.type === "wallet_provider");
 
-      if (hasAccountField || hasBeneficiaryField) {
+      if (hasAccountField || hasBeneficiaryField || hasBankProviderField || hasWalletProviderField) {
         let accountOptions: any[] = [];
         let beneficiaryOptionsMap = new Map<string, any[]>();
+        let bankProviderOptions: any[] = [];
+        let walletProviderOptions: any[] = [];
 
         // Fetch accounts if needed
         if (hasAccountField) {
@@ -184,6 +188,40 @@ async function hydrateWorkflowStepsForClient(
           }
         }
 
+        // Fetch bank providers if needed
+        if (hasBankProviderField) {
+          const bankProviders = await prisma.externalBank.findMany({
+            where: {
+              isActive: true,
+              type: "BANK"
+            },
+            orderBy: { name: "asc" },
+          });
+
+          bankProviderOptions = bankProviders.map(provider => ({
+            label: provider.name,
+            value: provider.code,
+            data: provider
+          }));
+        }
+
+        // Fetch wallet providers if needed
+        if (hasWalletProviderField) {
+          const walletProviders = await prisma.externalBank.findMany({
+            where: {
+              isActive: true,
+              type: "WALLET"
+            },
+            orderBy: { name: "asc" },
+          });
+
+          walletProviderOptions = walletProviders.map(provider => ({
+            label: provider.name,
+            value: provider.code,
+            data: provider
+          }));
+        }
+
         // Inject options into fields
         hydratedSchema = {
           ...schema,
@@ -195,6 +233,12 @@ async function hydrateWorkflowStepsForClient(
               const type = f.beneficiaryType || "ALL";
               const options = beneficiaryOptionsMap.get(type) || [];
               return { ...f, options: options.map(opt => opt.label), beneficiaryOptions: options };
+            }
+            if (f.type === "bank_provider") {
+              return { ...f, options: bankProviderOptions.map(opt => opt.label), providerOptions: bankProviderOptions };
+            }
+            if (f.type === "wallet_provider") {
+              return { ...f, options: walletProviderOptions.map(opt => opt.label), providerOptions: walletProviderOptions };
             }
             return f;
           })
