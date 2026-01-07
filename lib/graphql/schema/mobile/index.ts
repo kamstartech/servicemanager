@@ -29,6 +29,8 @@ const MOBILE_QUERY_FIELDS = new Set([
   "myTickets",
   "ticket",
   "externalBanks",
+  "externalBankProviders",
+  "externalWalletProviders",
   "myNotifications",
   "unreadNotificationCount",
 ]);
