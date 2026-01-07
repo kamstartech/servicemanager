@@ -1,10 +1,11 @@
 model ExternalBank {
-  id              String   @id @default(cuid())
+  id              String           @id @default(cuid())
   name            String
-  code            String   @unique // Sort Code
+  code            String           @unique // Sort Code
   institutionCode String?
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
+  type            ExternalBankType @default(BANK)
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
 
   @@map("external_banks")
 }

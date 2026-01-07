@@ -228,80 +228,6 @@ async function seedMobileUsers() {
   console.log("      Demo password:", password);
 }
 
-// Seed biller configs
-async function seedBillerConfigs() {
-  console.log("🌱 Seeding biller configurations...");
-
-  const existingBillers = await prisma.billerConfig.count();
-  if (existingBillers > 0) {
-    console.log("   ⏭️  Biller configs already exist, skipping");
-    return;
-  }
-
-  const billers = [
-    {
-      billerType: "LWB_POSTPAID",
-      billerName: "Lilongwe Water Board",
-      displayName: "LWB Water Bill",
-      description: "Lilongwe Water Board postpaid water bills",
-      baseUrl: "https://lwb-api.example.com",
-      endpoints: {
-        accountDetails: "/soap/GetAccountDetails",
-        payment: "/soap/PostPayment",
-      },
-      authentication: {
-        type: "basic",
-        username: "api_user",
-        password: "change_me",
-      },
-      features: {
-        supportsInvoice: false,
-        supportsBalanceCheck: true,
-      },
-      validationRules: {
-        accountNumberFormat: "^[0-9]{6,10}$",
-        minAmount: 100,
-        maxAmount: 1000000,
-      },
-    },
-    {
-      billerType: "BWB_POSTPAID",
-      billerName: "Blantyre Water Board",
-      displayName: "BWB Water Bill",
-      description: "Blantyre Water Board postpaid water bills",
-      baseUrl: "https://bwb-api.example.com",
-      endpoints: {
-        accountDetails: "/soap/GetAccountDetails",
-        payment: "/soap/PostPayment",
-      },
-      authentication: {
-        type: "basic",
-        username: "api_user",
-        password: "change_me",
-      },
-      features: {
-        supportsInvoice: false,
-        supportsBalanceCheck: true,
-      },
-      validationRules: {
-        accountNumberFormat: "^[0-9]{6,10}$",
-        minAmount: 100,
-        maxAmount: 1000000,
-      },
-    },
-  ];
-
-  for (const biller of billers) {
-    await prisma.billerConfig.upsert({
-      where: { billerType: biller.billerType as any },
-      update: {},
-      create: biller as any,
-    });
-  }
-
-  console.log(`   ✅ ${billers.length} biller configurations created`);
-}
-
 // Main seeder
 async function main() {
   console.log("\n🚀 Starting database seeding...\n");
@@ -311,7 +237,7 @@ async function main() {
     await ensureIndexes();
     await seedWalletTiers();
     await seedMobileUsers();
-    await seedBillerConfigs();
+
 
     console.log("\n✨ Database seeding completed successfully!\n");
   } catch (error) {

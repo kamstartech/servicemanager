@@ -22,6 +22,7 @@ import {
   Plus 
 } from "lucide-react";
 import { translateStatusOneWord } from "@/lib/utils";
+import { ACTION_BUTTON_STYLES } from "@/lib/constants/button-styles";
 
 const RegistrationStatus = {
   PENDING: "PENDING",
@@ -270,17 +271,17 @@ export default function RegistrationRequestsPage() {
           <Button
             size="sm"
             variant="outline"
-            className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
+            className={ACTION_BUTTON_STYLES.view}
             onClick={() => router.push(`/mobile-banking/registration-requests/${row.id}`)}
           >
             <Eye className="h-3 w-3 mr-1" />
-            View
+            {translate("common.actions.view")}
           </Button>
           {row.status === RegistrationStatus.PENDING && (
             <Button
               size="sm"
               variant="outline"
-              className="text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 border-amber-200"
+              className={ACTION_BUTTON_STYLES.warning}
               onClick={() => handleProcess(row.id)}
             >
               <PlayCircle className="h-3 w-3 mr-2" />

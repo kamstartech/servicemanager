@@ -53,8 +53,16 @@ enum BeneficiaryType {
   EXTERNAL_BANK
   FDH_WALLET
   EXTERNAL_WALLET
-  BILL
+  AIRTEL_AIRTIME
+  TNM_AIRTIME
   SELF
+  REGISTER_GENERAL
+  BWB_POSTPAID
+  LWB_POSTPAID
+  SRWB_POSTPAID
+  SRWB_PREPAID
+  MASM
+  TNM_BUNDLES
 }
 
 enum BillerTransactionStatus {
@@ -101,6 +109,11 @@ enum CheckbookRequestStatus {
 enum CoreBankingAuthType {
   BASIC
   BEARER
+}
+
+enum ExternalBankType {
+  WALLET
+  BANK
 }
 
 enum LoginAlertMode {
@@ -304,12 +317,13 @@ enum WorkflowStepType {
 }
 
 model ExternalBank {
-  id              String   @id @default(cuid())
+  id              String           @id @default(cuid())
   name            String
-  code            String   @unique // Sort Code
+  code            String           @unique // Sort Code
   institutionCode String?
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
+  type            ExternalBankType @default(BANK)
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
 
   @@map("external_banks")
 }
@@ -571,16 +585,11 @@ model Beneficiary {
   name            String          @db.Text
   beneficiaryType BeneficiaryType @map("beneficiary_type")
 
-  // For WALLET beneficiaries
-  phoneNumber String? @map("phone_number") @db.Text
-
-  // For BANK_INTERNAL and BANK_EXTERNAL beneficiaries
+  // Unified account number for internal and external bank beneficiaries and wallet
   accountNumber String? @map("account_number") @db.Text
 
-  // For BANK_EXTERNAL only
-  bankCode String? @map("bank_code") @db.Text
-  bankName String? @map("bank_name") @db.Text
-  branch   String? @db.Text
+  // External bank type for bank and wallet has the needed data
+  externalBankType ExternalBankType? @map("external_bank_type")
 
   // Optional fields
   description String? @db.Text
@@ -592,9 +601,7 @@ model Beneficiary {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Unique constraints per type
-  @@unique([userId, phoneNumber, beneficiaryType], name: "unique_user_wallet")
-  @@unique([userId, accountNumber, beneficiaryType], name: "unique_user_internal_bank")
-  @@unique([userId, accountNumber, bankCode, beneficiaryType], name: "unique_user_external_bank")
+  @@unique([userId, accountNumber, beneficiaryType], name: "unique_user_beneficiary")
   @@index([userId])
   @@index([beneficiaryType])
   @@map("fdh_beneficiaries")
@@ -1061,6 +1068,10 @@ model MobileUser {
   allowMultiSession  Boolean @default(false) @map("allow_multi_session")
 
   isActive  Boolean  @default(true)
+  isBlocked   Boolean  @default(false) @map("is_blocked")
+  blockedAt   DateTime? @map("blocked_at")
+  blockedBy   Int?     @map("blocked_by")
+  blockReason String?  @db.Text @map("block_reason")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

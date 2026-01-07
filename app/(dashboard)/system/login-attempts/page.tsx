@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useI18n } from "@/components/providers/i18n-provider";
 import {
+  COMMON_TABLE_HEADERS,
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table";
@@ -17,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, CheckCircle, Clock, XCircle } from "lucide-react";
+import { Calendar, CheckCircle, Clock, XCircle, RefreshCw, Activity, AlertCircle, Ban } from "lucide-react";
 import { translateStatusOneWord } from "@/lib/utils";
 
 const GET_LOGIN_ATTEMPTS = gql`
@@ -145,6 +146,7 @@ function getStatusPill(status: string, translate: (key: string) => string) {
 export default function LoginAttemptsPage() {
   const { translate } = useI18n();
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [refreshing, setRefreshing] = useState(false);
 
   const { data, loading, error, refetch } = useQuery(GET_LOGIN_ATTEMPTS, {
     variables: {
@@ -160,7 +162,7 @@ export default function LoginAttemptsPage() {
   const columns: DataTableColumn<LoginAttemptRow>[] = [
     {
       id: "attemptedAt",
-      header: translate("common.table.columns.dateTime"),
+      header: COMMON_TABLE_HEADERS.dateTime,
       accessor: (row) => {
         if (!row.attemptedAt) return "-";
         try {
@@ -188,7 +190,7 @@ export default function LoginAttemptsPage() {
     },
     {
       id: "username",
-      header: translate("common.table.columns.user"),
+      header: COMMON_TABLE_HEADERS.user,
       accessor: (row) => (
         <div className="space-y-1">
           <div className="font-medium">{row.username}</div>
@@ -201,7 +203,7 @@ export default function LoginAttemptsPage() {
     },
     {
       id: "device",
-      header: translate("common.table.columns.device"),
+      header: COMMON_TABLE_HEADERS.device,
       accessor: (row) => (
         <div className="space-y-1">
           <div className="text-sm">{row.deviceName || "Unknown"}</div>
@@ -213,7 +215,7 @@ export default function LoginAttemptsPage() {
     },
     {
       id: "location",
-      header: translate("common.table.columns.location"),
+      header: COMMON_TABLE_HEADERS.location,
       accessor: (row) => (
         <div className="space-y-1">
           <div className="text-sm font-mono text-xs">{row.ipAddress}</div>
@@ -225,7 +227,7 @@ export default function LoginAttemptsPage() {
     },
     {
       id: "attemptType",
-      header: translate("common.table.columns.type"),
+      header: COMMON_TABLE_HEADERS.type,
       accessor: (row) => (
         <Badge variant="outline" className="text-xs">
           {row.attemptType?.replace(/_/g, " ")}
@@ -235,14 +237,14 @@ export default function LoginAttemptsPage() {
     },
     {
       id: "status",
-      header: translate("common.table.columns.status"),
+      header: COMMON_TABLE_HEADERS.status,
       accessor: (row) => getStatusPill(row.status, translate),
       sortKey: "status",
       alignCenter: true,
     },
     {
       id: "details",
-      header: translate("common.table.columns.details"),
+      header: COMMON_TABLE_HEADERS.details,
       accessor: (row) => (
         <div className="text-xs space-y-1">
           {row.failureReason && (
@@ -273,45 +275,78 @@ export default function LoginAttemptsPage() {
   ).length;
   const total = rows.length;
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background px-4 py-6">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold">Login Attempts</h1>
+        <p className="text-muted-foreground mt-2">
+          Monitor and track authentication attempts across the system
+        </p>
+      </div>
+
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total attempts</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{total}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Successful</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {successCount}
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-full">
+                <Activity className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Attempts</p>
+                <p className="text-2xl font-bold">{total}</p>
+              </div>
             </div>
           </CardContent>
         </Card>
+
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">
-              {pendingCount}
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-green-100 dark:bg-green-900 rounded-full">
+                <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Successful</p>
+                <p className="text-2xl font-bold">{successCount}</p>
+              </div>
             </div>
           </CardContent>
         </Card>
+
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Failed</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {failedCount}
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-yellow-100 dark:bg-yellow-900 rounded-full">
+                <Clock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Pending</p>
+                <p className="text-2xl font-bold">{pendingCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-red-100 dark:bg-red-900 rounded-full">
+                <XCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Failed</p>
+                <p className="text-2xl font-bold">{failedCount}</p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -351,19 +386,27 @@ export default function LoginAttemptsPage() {
                 </SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" size="sm" onClick={() => refetch()}>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRefresh}
+              disabled={refreshing}
+            >
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
+              />
               Refresh
             </Button>
           </div>
         </CardHeader>
         <CardContent>
-          {loading && (
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          )}
-          {error && (
-            <p className="text-sm text-destructive">Error: {error.message}</p>
-          )}
-          {!loading && !error && (
+          {loading ? (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              Loading login attempts...
+            </p>
+          ) : error ? (
+            <p className="text-sm text-red-600">Error loading login attempts: {error.message}</p>
+          ) : (
             <DataTable<LoginAttemptRow>
               data={rows}
               columns={columns}

@@ -175,8 +175,8 @@ async function hydrateWorkflowStepsForClient(
             });
 
             const options = beneficiaries.map(b => ({
-              label: `${b.name} - ${b.accountNumber || b.phoneNumber} (${b.beneficiaryType})`,
-              value: b.accountNumber || b.phoneNumber,
+              label: `${b.name} - ${b.accountNumber || 'N/A'} (${b.beneficiaryType})`,
+              value: b.accountNumber || '',
               data: b
             }));
 

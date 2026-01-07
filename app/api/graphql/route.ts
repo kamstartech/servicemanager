@@ -36,23 +36,23 @@ const yoga = createYoga({
     Response,
     Headers,
   },
-  
+
   // Security plugins
   plugins: [
     {
       onValidate: ({ addValidationRule }: any) => {
         // Limit query depth to 15 levels (increased for nested data)
         addValidationRule(depthLimit(15));
-        
+
         // Limit query complexity
         addValidationRule(complexityRule as any);
       },
     },
   ],
-  
+
   // Disable introspection in production
   graphiql: process.env.NODE_ENV !== "production",
-  
+
   // Performance: disable batching to prevent abuse
   batching: false,
 });
@@ -65,7 +65,12 @@ export async function POST(request: NextRequest) {
   return handleGraphQLRequest(request);
 }
 
+export async function PUT(request: NextRequest) {
+  return handleGraphQLRequest(request);
+}
+
 async function handleGraphQLRequest(request: NextRequest) {
+  console.log(`[GraphQL] ${request.method} request to ${request.url}`);
   // Enforce strict separation:
   // - /api/graphql is admin-only (cookie based)
   // - mobile JWT clients must use /api/mobile/graphql
@@ -108,10 +113,10 @@ async function handleGraphQLRequest(request: NextRequest) {
 
   const rateLimitConfig = RATE_LIMIT.admin;
   const rateLimitKey = `admin:${clientId}`;
-  
+
   // Check rate limit
   const rateLimitResult = checkRateLimit(rateLimitKey, rateLimitConfig);
-  
+
   if (!rateLimitResult.success) {
     return NextResponse.json(
       {
@@ -140,19 +145,24 @@ async function handleGraphQLRequest(request: NextRequest) {
       }
     );
   }
-  
+
   // Process GraphQL request
   const response = await yoga(request);
-  
+
+  // Return directly to preserve streaming body for SSE
+  return response;
+
+  /*
   // Add rate limit headers to response
   const headers = new Headers(response.headers);
   headers.set("X-RateLimit-Limit", String(rateLimitResult.limit));
   headers.set("X-RateLimit-Remaining", String(rateLimitResult.remaining));
   headers.set("X-RateLimit-Reset", String(rateLimitResult.resetAt));
-  
+
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
     headers,
   });
+  */
 }

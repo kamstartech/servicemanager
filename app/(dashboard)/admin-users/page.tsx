@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { translateStatusOneWord } from "@/lib/utils";
+import { ACTION_BUTTON_STYLES } from "@/lib/constants/button-styles";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -241,11 +242,13 @@ export default function AdminUsersPage() {
             size="sm"
             onClick={() => handleResetPassword(user.id, user.name)}
             disabled={resettingUserId === user.id}
-            title="Reset Password"
-            className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={translate("common.actions.resetPassword")}
+            className={`${ACTION_BUTTON_STYLES.warning} disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             <Key className="mr-2 h-4 w-4" />
-            {resettingUserId === user.id ? "Resetting..." : "Reset Password"}
+            {resettingUserId === user.id 
+              ? translate("common.actions.resetting")
+              : translate("common.actions.resetPassword")}
           </Button>
         </div>
       ),

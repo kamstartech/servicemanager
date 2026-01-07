@@ -2,6 +2,9 @@ import { GraphQLError } from "graphql";
 import { prisma } from "@/lib/db/prisma";
 import { TicketStatus, TicketPriority, MobileUserContext, MessageSenderType } from "@prisma/client";
 import { GraphQLContext } from "@/lib/graphql/context";
+import { PushNotificationService } from "@/lib/services/push-notification";
+import { pubsub, EVENTS } from "@/lib/graphql/pubsub";
+import { withFilter } from "graphql-subscriptions";
 
 export const ticketsResolvers = {
     Query: {
@@ -134,6 +137,32 @@ export const ticketsResolvers = {
                 return msg;
             });
 
+            // Publish event for live chat
+            console.log(`[PubSub] 📢 Publishing TICKET_MESSAGE_ADDED for ticket ${ticketId}`, {
+                messageId: newMessage.id,
+                ticketId: newMessage.ticketId,
+            });
+            pubsub.publish(EVENTS.TICKET_MESSAGE_ADDED, { ticketMessageAdded: newMessage });
+            console.log(`[PubSub] ✅ Published TICKET_MESSAGE_ADDED event`);
+
+            // If ADMIN replied to a User's ticket, send push notification
+            if (!isMobileUser && ticket.userId) {
+                try {
+                    await PushNotificationService.send({
+                        userId: ticket.userId,
+                        type: 'TICKET_REPLY',
+                        priority: 'HIGH',
+                        title: `New Reply on Ticket #${ticket.id}`,
+                        body: message.substring(0, 100) + (message.length > 100 ? '...' : ''),
+                        actionUrl: `/customer-care/tickets/${ticket.id}`,
+                        actionData: { ticketId: ticket.id },
+                        skipPersistence: true
+                    });
+                } catch (error) {
+                    console.error("Failed to send ticket reply push notification:", error);
+                }
+            }
+
             return newMessage;
         },
 
@@ -181,6 +210,26 @@ export const ticketsResolvers = {
             // The schema has `readAt`.
             // For now return 0 or implement precise logic later
             return 0;
+        }
+    },
+
+    Subscription: {
+        ticketMessageAdded: {
+            subscribe: withFilter(
+                () => {
+                    console.log("[Subscription] 🎧 ticketMessageAdded: Client connected, starting asyncIterator");
+                    return pubsub.asyncIterator(EVENTS.TICKET_MESSAGE_ADDED);
+                },
+                (payload, variables) => {
+                    const matches = payload.ticketMessageAdded.ticketId === parseInt(variables.ticketId);
+                    console.log("[Subscription] 🔍 Filter check:", {
+                        payloadTicketId: payload.ticketMessageAdded.ticketId,
+                        requestedTicketId: variables.ticketId,
+                        matches: matches ? "✅ MATCH" : "❌ NO MATCH"
+                    });
+                    return matches;
+                }
+            )
         }
     }
 };

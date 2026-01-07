@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { DataTable, type DataTableColumn } from '@/components/data-table';
+import { DataTable, COMMON_TABLE_HEADERS, type DataTableColumn } from '@/components/data-table';
+import { useI18n } from '@/components/providers/i18n-provider';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -73,6 +74,7 @@ interface WalletTier {
 
 export default function WalletTiersPage() {
   const router = useRouter();
+  const { translate } = useI18n();
   const [deleteId, setDeleteId] = useState<number | null>(null);
   
   const { data, loading, error, refetch } = useQuery(GET_WALLET_TIERS);
@@ -97,7 +99,7 @@ export default function WalletTiersPage() {
   const columns: DataTableColumn<WalletTier>[] = [
     {
       id: 'name',
-      header: 'Name',
+      header: COMMON_TABLE_HEADERS.name,
       accessor: (row) => (
         <div>
           <div className="flex items-center gap-2">
@@ -117,7 +119,7 @@ export default function WalletTiersPage() {
     },
     {
       id: 'position',
-      header: 'Position',
+      header: COMMON_TABLE_HEADERS.order,
       accessor: (row) => (
         <Badge variant={getTierBadgeVariant(row.position)} className="text-xs">
           {row.position}
@@ -175,7 +177,7 @@ export default function WalletTiersPage() {
     },
     {
       id: 'actions',
-      header: 'Actions',
+      header: COMMON_TABLE_HEADERS.actions,
       accessor: (row) => (
         <div className="flex flex-wrap justify-center gap-2">
           <Button

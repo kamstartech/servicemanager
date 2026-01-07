@@ -9,9 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { COMMON_TABLE_HEADERS, DataTable, type DataTableColumn } from "@/components/data-table";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { translateStatusOneWord } from "@/lib/utils";
+import { ACTION_BUTTON_STYLES } from "@/lib/constants/button-styles";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -162,13 +163,13 @@ export default function WorkflowsPage() {
   const columns: DataTableColumn<any>[] = [
     {
       id: "name",
-      header: translate("common.table.columns.name"),
+      header: COMMON_TABLE_HEADERS.name,
       accessor: (row) => <p className="font-medium">{row.name}</p>,
       sortKey: "name",
     },
     {
       id: "description",
-      header: translate("common.table.columns.description"),
+      header: COMMON_TABLE_HEADERS.description,
       accessor: (row) => (
         <p className="text-sm text-muted-foreground truncate max-w-xs">
           {row.description || "—"}
@@ -177,7 +178,7 @@ export default function WorkflowsPage() {
     },
     {
       id: "status",
-      header: translate("common.table.columns.status"),
+      header: COMMON_TABLE_HEADERS.status,
       accessor: (row) =>
         row.isActive ? (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -195,13 +196,13 @@ export default function WorkflowsPage() {
     },
     {
       id: "version",
-      header: translate("common.table.columns.version"),
+      header: COMMON_TABLE_HEADERS.version,
       accessor: (row) => <Badge variant="outline">v{row.version}</Badge>,
       sortKey: "version",
     },
     {
       id: "attachedTo",
-      header: translate("common.table.columns.attachedTo"),
+      header: COMMON_TABLE_HEADERS.attachedTo,
       accessor: (row) =>
         row.screenPages?.length > 0 ? (
           <div className="flex flex-col gap-1">
@@ -222,7 +223,7 @@ export default function WorkflowsPage() {
     },
     {
       id: "actions",
-      header: translate("common.table.columns.actions"),
+      header: COMMON_TABLE_HEADERS.actions,
       accessor: (row) => (
         <div className="flex justify-center">
           <DropdownMenu>
@@ -230,7 +231,7 @@ export default function WorkflowsPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
+                className={ACTION_BUTTON_STYLES.view}
               >
                 <MoreVertical className="h-4 w-4 mr-2" />
                 {translate("common.actions.actions")}
@@ -410,7 +411,7 @@ export default function WorkflowsPage() {
               pageSize={10}
               searchPlaceholder="Search workflows..."
               showRowNumbers
-              rowNumberHeader={translate("common.table.columns.index")}
+              rowNumberHeader={COMMON_TABLE_HEADERS.index}
             />
           )}
 

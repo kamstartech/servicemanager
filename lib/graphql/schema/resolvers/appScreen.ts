@@ -418,7 +418,7 @@ export const appScreenResolvers = {
 
   Subscription: {
     appStructureUpdated: {
-      subscribe: () => pubsub.subscribe(EVENTS.APP_STRUCTURE_UPDATED),
+      subscribe: () => pubsub.asyncIterator(EVENTS.APP_STRUCTURE_UPDATED),
       resolve: (payload: any) => payload,
     },
   },

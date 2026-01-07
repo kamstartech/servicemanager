@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import {
     Search,
     Filter,
@@ -120,6 +121,7 @@ const GET_TICKETS = gql`
 `;
 
 export default function TicketsPage() {
+    const router = useRouter();
     const [searchTerm, setSearchTerm] = React.useState("");
     const [statusFilter, setStatusFilter] = React.useState<string>("ALL");
     const [contextFilters, setContextFilters] = React.useState<Record<string, boolean>>({
@@ -195,6 +197,24 @@ export default function TicketsPage() {
                 <span>Wallet</span>
             </div>
         );
+    };
+
+    // Helper to safely format date
+    const formatDate = (dateString: string) => {
+        if (!dateString) return "N/A";
+        const date = new Date(dateString);
+        // Check if date is valid
+        if (isNaN(date.getTime())) return "N/A";
+        return date.toLocaleDateString();
+    };
+
+    // Helper to safely format time
+    const formatTime = (dateString: string) => {
+        if (!dateString) return "";
+        const date = new Date(dateString);
+        // Check if date is valid
+        if (isNaN(date.getTime())) return "";
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
     return (
@@ -296,7 +316,11 @@ export default function TicketsPage() {
                                             </TableRow>
                                         ) : tickets.length > 0 ? (
                                             tickets.map((ticket) => (
-                                                <TableRow key={ticket.id} className="cursor-pointer hover:bg-muted/50">
+                                                <TableRow
+                                                    key={ticket.id}
+                                                    className="cursor-pointer hover:bg-muted/50"
+                                                    onClick={() => router.push(`/customer-care/tickets/${ticket.id}`)}
+                                                >
                                                     <TableCell className="font-mono text-xs text-muted-foreground">
                                                         #{ticket.id}
                                                     </TableCell>
@@ -338,8 +362,8 @@ export default function TicketsPage() {
                                                     <TableCell>{renderPriority(ticket.priority)}</TableCell>
                                                     <TableCell>
                                                         <div className="flex flex-col text-xs text-muted-foreground">
-                                                            <span>{new Date(ticket.updatedAt).toLocaleDateString()}</span>
-                                                            <span>{new Date(ticket.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                            <span>{formatDate(ticket.updatedAt)}</span>
+                                                            <span>{formatTime(ticket.updatedAt)}</span>
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
@@ -350,10 +374,15 @@ export default function TicketsPage() {
                                                                 </Button>
                                                             </DropdownMenuTrigger>
                                                             <DropdownMenuContent align="end">
-                                                                <DropdownMenuItem>View Details</DropdownMenuItem>
-                                                                <DropdownMenuItem>Reply</DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    router.push(`/customer-care/tickets/${ticket.id}`);
+                                                                }}>
+                                                                    View Details
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={(e) => e.stopPropagation()}>Reply</DropdownMenuItem>
                                                                 <DropdownMenuSeparator />
-                                                                <DropdownMenuItem className="text-destructive">
+                                                                <DropdownMenuItem className="text-destructive" onClick={(e) => e.stopPropagation()}>
                                                                     Close Ticket
                                                                 </DropdownMenuItem>
                                                             </DropdownMenuContent>

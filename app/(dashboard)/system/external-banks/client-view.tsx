@@ -67,6 +67,7 @@ export function ExternalBanksClientView({
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Bank Name</TableHead>
+                                <TableHead>Type</TableHead>
                                 <TableHead>Sort Code</TableHead>
                                 <TableHead>Inst. Code</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
@@ -76,7 +77,7 @@ export function ExternalBanksClientView({
                             {banks.length === 0 ? (
                                 <TableRow>
                                     <TableCell
-                                        colSpan={3}
+                                        colSpan={5}
                                         className="text-center text-muted-foreground h-24"
                                     >
                                         No banks configured yet.
@@ -86,6 +87,9 @@ export function ExternalBanksClientView({
                                 banks.map((bank) => (
                                     <TableRow key={bank.id}>
                                         <TableCell className="font-medium">{bank.name}</TableCell>
+                                        <TableCell>
+                                            {bank.type === "WALLET" ? "WALLET" : "Bank"}
+                                        </TableCell>
                                         <TableCell>{bank.code}</TableCell>
                                         <TableCell>{bank.institutionCode || "-"}</TableCell>
                                         <TableCell className="text-right">

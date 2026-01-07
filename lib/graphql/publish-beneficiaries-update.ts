@@ -34,7 +34,10 @@ export async function publishBeneficiariesUpdate(userId: number): Promise<void> 
             } : null,
         }));
 
-        pubsub.publish(EVENTS.BENEFICIARIES_UPDATED, userId.toString(), payload);
+        pubsub.publish(EVENTS.BENEFICIARIES_UPDATED, {
+            userId: userId.toString(),
+            beneficiaries: payload,
+        });
     } catch (error) {
         console.error(`Failed to publish beneficiaries update for user ${userId}:`, error);
     }

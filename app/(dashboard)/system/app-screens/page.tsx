@@ -55,6 +55,7 @@ import {
   FileText, Lock, Phone, MapPin, Store, File, Lightbulb
 } from "lucide-react";
 import Link from "next/link";
+import { ACTION_BUTTON_STYLES } from "@/lib/constants/button-styles";
 import {
   DndContext,
   closestCenter,
@@ -264,7 +265,7 @@ function SortableScreenRow({
               asChild
               variant="outline"
               size="sm"
-              className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
+              className={ACTION_BUTTON_STYLES.view}
             >
               <Link href={`/system/app-screens/${screen.id}`}>
                 <Eye className="h-4 w-4 mr-2" />
@@ -275,7 +276,7 @@ function SortableScreenRow({
               type="button"
               variant="outline"
               size="sm"
-              className="text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 border-amber-200"
+              className={ACTION_BUTTON_STYLES.warning}
               onClick={() => onEdit(screen)}
             >
               <Edit className="h-4 w-4 mr-2" />
@@ -285,7 +286,7 @@ function SortableScreenRow({
               type="button"
               variant="outline"
               size="sm"
-              className="text-red-700 bg-red-50 hover:bg-red-100 hover:text-red-800 border-red-200"
+              className={ACTION_BUTTON_STYLES.delete}
               onClick={() => onDelete(screen.id, screen.name)}
             >
               <Trash2 className="h-4 w-4 mr-2" />

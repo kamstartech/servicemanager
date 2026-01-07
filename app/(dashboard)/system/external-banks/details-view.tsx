@@ -47,6 +47,12 @@ export function ExternalBankDetailsView({ bank }: ExternalBankDetailsViewProps) 
                         <span className="text-lg font-semibold">{bank.name}</span>
                     </div>
                     <div className="grid gap-1">
+                        <span className="text-sm font-medium text-muted-foreground">Type</span>
+                        <span className="text-lg">
+                            {bank.type === "WALLET" ? "Mobile Network Operator" : "Bank"}
+                        </span>
+                    </div>
+                    <div className="grid gap-1">
                         <span className="text-sm font-medium text-muted-foreground">Sort Code</span>
                         <span className="text-lg">{bank.code}</span>
                     </div>

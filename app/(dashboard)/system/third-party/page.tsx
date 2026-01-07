@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/providers/i18n-provider";
-import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { COMMON_TABLE_HEADERS, DataTable, type DataTableColumn } from "@/components/data-table";
 import {
   Plus,
   RefreshCw,
@@ -44,7 +44,7 @@ export default function ThirdPartyClientsPage() {
   const columns: DataTableColumn<ThirdPartyClient>[] = [
     {
       id: "name",
-      header: translate("common.table.columns.name"),
+      header: COMMON_TABLE_HEADERS.name,
       accessor: (client) => (
         <div>
           <p className="font-medium">{client.name}</p>
@@ -57,14 +57,14 @@ export default function ThirdPartyClientsPage() {
     },
     {
       id: "contactEmail",
-      header: translate("common.table.columns.contactEmail"),
+      header: COMMON_TABLE_HEADERS.contactEmail,
       accessor: (client) =>
         client.contactEmail || <span className="text-muted-foreground">-</span>,
       sortKey: "contactEmail",
     },
     {
       id: "status",
-      header: translate("common.table.columns.status"),
+      header: COMMON_TABLE_HEADERS.status,
       accessor: (client) =>
         client.isActive ? (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -82,7 +82,7 @@ export default function ThirdPartyClientsPage() {
     },
     {
       id: "tokens",
-      header: translate("common.table.columns.tokens"),
+      header: COMMON_TABLE_HEADERS.tokens,
       accessor: (client) => (
         <span className="inline-flex items-center justify-center gap-1">
           <Key className="h-4 w-4 text-fdh-orange" />
@@ -93,7 +93,7 @@ export default function ThirdPartyClientsPage() {
     },
     {
       id: "apiCalls",
-      header: translate("common.table.columns.apiCalls"),
+      header: COMMON_TABLE_HEADERS.apiCalls,
       accessor: (client) => (
         <span className="inline-flex items-center justify-center gap-1">
           <Activity className="h-4 w-4 text-blue-600" />
@@ -104,7 +104,7 @@ export default function ThirdPartyClientsPage() {
     },
     {
       id: "createdAt",
-      header: translate("common.table.columns.created"),
+      header: COMMON_TABLE_HEADERS.created,
       accessor: (client) => (
         <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
           <Calendar size={16} />
@@ -123,7 +123,7 @@ export default function ThirdPartyClientsPage() {
     },
     {
       id: "actions",
-      header: translate("common.table.columns.actions"),
+      header: COMMON_TABLE_HEADERS.actions,
       accessor: (client) => (
         <div className="flex justify-center">
           <Button

@@ -5,8 +5,9 @@ import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { COMMON_TABLE_HEADERS, DataTable, type DataTableColumn } from "@/components/data-table";
 import { translateStatusOneWord } from "@/lib/utils";
+import { ACTION_BUTTON_STYLES } from "@/lib/constants/button-styles";
 import { useI18n } from "@/components/providers/i18n-provider";
 import {
   AlertDialog,
@@ -101,13 +102,13 @@ export default function FormsPage() {
   const columns: DataTableColumn<any>[] = [
     {
       id: "name",
-      header: translate("common.table.columns.name"),
+      header: COMMON_TABLE_HEADERS.name,
       accessor: (row) => <span className="font-medium">{row.name}</span>,
       sortKey: "name",
     },
     {
       id: "description",
-      header: translate("common.table.columns.description"),
+      header: COMMON_TABLE_HEADERS.description,
       accessor: (row) => (
         <span className="text-muted-foreground max-w-md truncate block">
           {row.description || "—"}
@@ -116,7 +117,7 @@ export default function FormsPage() {
     },
     {
       id: "category",
-      header: translate("common.table.columns.category"),
+      header: COMMON_TABLE_HEADERS.category,
       accessor: (row) =>
         row.category ? (
           <Badge variant="secondary">{row.category}</Badge>
@@ -127,7 +128,7 @@ export default function FormsPage() {
     },
     {
       id: "status",
-      header: translate("common.table.columns.status"),
+      header: COMMON_TABLE_HEADERS.status,
       accessor: (row) =>
         row.isActive ? (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -145,7 +146,7 @@ export default function FormsPage() {
     },
     {
       id: "version",
-      header: translate("common.table.columns.version"),
+      header: COMMON_TABLE_HEADERS.version,
       accessor: (row) => (
         <span className="text-sm text-muted-foreground">v{row.version}</span>
       ),
@@ -153,7 +154,7 @@ export default function FormsPage() {
     },
     {
       id: "createdAt",
-      header: translate("common.table.columns.created"),
+      header: COMMON_TABLE_HEADERS.created,
       accessor: (row) => (
         <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
           <Calendar size={16} />
@@ -172,7 +173,7 @@ export default function FormsPage() {
     },
     {
       id: "actions",
-      header: translate("common.table.columns.actions"),
+      header: COMMON_TABLE_HEADERS.actions,
       accessor: (row) => (
         <div className="flex justify-center">
           <DropdownMenu>
@@ -180,7 +181,7 @@ export default function FormsPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
+                className={ACTION_BUTTON_STYLES.view}
               >
                 <MoreVertical className="h-4 w-4 mr-2" />
                 Actions
@@ -318,7 +319,7 @@ export default function FormsPage() {
               pageSize={10}
               searchPlaceholder="Search forms..."
               showRowNumbers
-              rowNumberHeader={translate("common.table.columns.index")}
+              rowNumberHeader={COMMON_TABLE_HEADERS.index}
             />
           )}
 

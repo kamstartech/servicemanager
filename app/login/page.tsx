@@ -1,5 +1,8 @@
 "use client";
 
+// Prevent static prerendering - this page uses client hooks that require runtime
+export const dynamic = "force-dynamic";
+
 import { useState, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -38,10 +41,10 @@ function LoginForm() {
         // Successful login - wait a moment for cookie to be set
         console.log("Login successful, redirecting to:", redirect);
         toast.success("Login successful! Redirecting...");
-        
+
         // Small delay to ensure cookie is set
         await new Promise(resolve => setTimeout(resolve, 100));
-        
+
         // Force full page reload to re-run middleware
         window.location.href = redirect;
       } else {
@@ -87,22 +90,20 @@ function LoginForm() {
             <button
               type="button"
               onClick={() => setUsePasskey(false)}
-              className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${
-                !usePasskey
+              className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${!usePasskey
                   ? "bg-[#154E9E] text-white"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+                }`}
             >
               Password
             </button>
             <button
               type="button"
               onClick={() => setUsePasskey(true)}
-              className={`flex-1 py-2 px-4 rounded-lg font-medium transition flex items-center justify-center gap-2 ${
-                usePasskey
+              className={`flex-1 py-2 px-4 rounded-lg font-medium transition flex items-center justify-center gap-2 ${usePasskey
                   ? "bg-[#154E9E] text-white"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+                }`}
             >
               <Key className="h-4 w-4" />
               Passkey
@@ -113,59 +114,59 @@ function LoginForm() {
             <PasskeyLogin onSuccess={handlePasskeySuccess} />
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Email
-              </label>
-              <input
-                type="email"
-                id="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#154E9E] focus:border-transparent transition"
-                placeholder="Enter your email"
-              />
-            </div>
+              <div>
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Email
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#154E9E] focus:border-transparent transition"
+                  placeholder="Enter your email"
+                />
+              </div>
 
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Password
-              </label>
-              <input
-                type="password"
-                id="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#154E9E] focus:border-transparent transition"
-                placeholder="Enter your password"
-              />
-            </div>
+              <div>
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Password
+                </label>
+                <input
+                  type="password"
+                  id="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#154E9E] focus:border-transparent transition"
+                  placeholder="Enter your password"
+                />
+              </div>
 
-            <div className="flex items-center justify-between">
-              <Link
-                href="/forgot-password"
-                className="text-sm font-semibold text-[#154E9E] hover:underline"
-              >
-                Forgot your password?
-              </Link>
-            </div>
+              <div className="flex items-center justify-between">
+                <Link
+                  href="/forgot-password"
+                  className="text-sm font-semibold text-[#154E9E] hover:underline"
+                >
+                  Forgot your password?
+                </Link>
+              </div>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-[#f59e0b] text-white rounded-full py-3 px-4 hover:bg-[#d97706] transition duration-300 font-semibold text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? "Logging in..." : "Log in →"}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-[#f59e0b] text-white rounded-full py-3 px-4 hover:bg-[#d97706] transition duration-300 font-semibold text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? "Logging in..." : "Log in →"}
+              </button>
+            </form>
           )}
         </div>
       </div>

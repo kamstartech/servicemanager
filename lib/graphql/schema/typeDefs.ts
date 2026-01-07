@@ -142,14 +142,16 @@ export const typeDefs = /* GraphQL */ `
     EXTERNAL_BANK
     FDH_WALLET
     EXTERNAL_WALLET
-    BILL
     AIRTEL_AIRTIME
     TNM_AIRTIME
-    ESCOM_PREPAID
-    WATER_BOARD
     SELF
-    BANK
-    WALLET
+    REGISTER_GENERAL
+    BWB_POSTPAID
+    LWB_POSTPAID
+    SRWB_POSTPAID
+    SRWB_PREPAID
+    MASM
+    TNM_BUNDLES
   }
 
   type TestResult {
@@ -200,6 +202,10 @@ export const typeDefs = /* GraphQL */ `
     profile: MobileUserProfile
     walletTier: MobileUserWalletTier
     isActive: Boolean!
+    isBlocked: Boolean!
+    blockedAt: DateTime
+    blockedBy: Int
+    blockReason: String
     hasSecret: Boolean!
     allowMultiSession: Boolean!
     createdAt: String!
@@ -256,6 +262,11 @@ export const typeDefs = /* GraphQL */ `
   input UpdateMobileUserInput {
     id: ID!
     isActive: Boolean
+  }
+
+  input BlockMobileUserInput {
+    userId: ID!
+    reason: String
   }
 
   input ResetMobileUserPasswordInput {
@@ -504,11 +515,9 @@ export const typeDefs = /* GraphQL */ `
     user: MobileUser
     name: String!
     beneficiaryType: BeneficiaryType!
-    phoneNumber: String
     accountNumber: String
-    bankCode: String
-    bankName: String
-    branch: String
+    externalBank: ExternalBank
+    externalBankType: ExternalBankType
     description: String
     isActive: Boolean!
     createdAt: String!
@@ -519,11 +528,8 @@ export const typeDefs = /* GraphQL */ `
     userId: Int # Optional - will be ignored and overridden with authenticated user's ID
     name: String!
     beneficiaryType: BeneficiaryType!
-    phoneNumber: String
     accountNumber: String
-    bankCode: String
-    bankName: String
-    branch: String
+    externalBankType: ExternalBankType
     description: String
     isActive: Boolean
   }
@@ -615,11 +621,17 @@ export const typeDefs = /* GraphQL */ `
     timeZone: String
   }
 
+  enum ExternalBankType {
+    WALLET
+    BANK
+  }
+
   type ExternalBank {
     id: ID!
     name: String!
     code: String!
     institutionCode: String
+    type: ExternalBankType!
     isActive: Boolean!
     createdAt: String!
     updatedAt: String!
@@ -662,6 +674,8 @@ export const typeDefs = /* GraphQL */ `
     allBeneficiaries(type: String): [Beneficiary!]!
     beneficiary(id: ID!): Beneficiary
     externalBanks: [ExternalBank!]!
+    externalBankProviders: [ExternalBank!]!
+    externalWalletProviders: [ExternalBank!]!
   }
 
   type Mutation {
@@ -676,6 +690,8 @@ export const typeDefs = /* GraphQL */ `
     
     createMobileUser(input: CreateMobileUserInput!): MobileUser!
     updateMobileUser(input: UpdateMobileUserInput!): MobileUser!
+    blockMobileUser(input: BlockMobileUserInput!): MobileUser!
+    unblockMobileUser(userId: ID!): MobileUser!
     resetMobileUserPassword(input: ResetMobileUserPasswordInput!): ResetMobileUserPasswordResult!
 
     createDbConnection(input: DatabaseConnectionInput!): DatabaseConnection!
@@ -761,7 +777,10 @@ export const typeDefs = /* GraphQL */ `
     accountsUpdated(userId: ID!): AccountsUpdatePayload!
     beneficiariesUpdated(userId: ID!): [Beneficiary!]!
     appStructureUpdated: [AppScreen!]!
+    ticketMessageAdded(ticketId: ID!): TicketMessage!
   }
+
+
 
   type DeviceApprovalResult {
     deviceId: String!
@@ -2130,15 +2149,12 @@ export const typeDefs = /* GraphQL */ `
       page: Int = 1
       limit: Int = 20
     ): TransactionConnection!
-  }
-    
+
     proxyAccountTransactions(
       accountId: Int!
       page: Int = 1
       limit: Int = 20
     ): TransactionConnection!
-    
-
   }
 
   extend type Mutation {
@@ -2431,13 +2447,7 @@ export const typeDefs = /* GraphQL */ `
     ADMIN
   }
 
-  type TicketMessage {
-    id: ID!
-    message: String!
-    senderType: MessageSenderType!
-    createdAt: String!
-    readAt: String
-  }
+
 
   type SupportTicket {
     id: ID!
@@ -2449,8 +2459,8 @@ export const typeDefs = /* GraphQL */ `
     user: MobileUser
     messages: [TicketMessage!]!
     lastMessage: String
-    createdAt: String!
-    updatedAt: String!
+    createdAt: DateTime!
+    updatedAt: DateTime!
     unreadCount: Int!
   }
 
@@ -2471,6 +2481,17 @@ export const typeDefs = /* GraphQL */ `
     ): TicketResponse!
     ticket(id: ID!): SupportTicket
     myTickets(page: Int, limit: Int): TicketResponse!
+  }
+
+  type TicketMessage {
+    id: ID!
+    ticketId: Int!
+    message: String!
+    senderType: MessageSenderType!
+    senderId: Int
+    attachmentUrl: String
+    createdAt: DateTime!
+    readAt: DateTime
   }
 
   extend type Mutation {

@@ -144,7 +144,7 @@ export default function BillersPage() {
     },
     {
       id: "billerName",
-      header: translate("common.table.columns.biller"),
+      header: COMMON_TABLE_HEADERS.biller,
       accessor: (row) => {
         const biller = getBillerDefinition(row.billerType);
         return (
@@ -160,7 +160,7 @@ export default function BillersPage() {
     },
     {
       id: "transactionType",
-      header: translate("common.table.columns.type"),
+      header: COMMON_TABLE_HEADERS.type,
       accessor: (row) => (
         <Badge variant="outline" className="text-xs">
           {row.transactionType === "POST_TRANSACTION" ? "Payment" : row.transactionType?.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
@@ -171,7 +171,7 @@ export default function BillersPage() {
     },
     {
       id: "accountNumber",
-      header: translate("common.table.columns.accountNumber"),
+      header: COMMON_TABLE_HEADERS.accountNumber,
       accessor: (row) => <span className="font-mono text-xs">{row.accountNumber}</span>,
     },
     {
@@ -194,7 +194,7 @@ export default function BillersPage() {
     },
     {
       id: "externalTransactionId",
-      header: translate("common.table.columns.externalRef"),
+      header: COMMON_TABLE_HEADERS.externalRef,
       accessor: (row) => (
         <span className="font-mono text-xs text-muted-foreground">
           {row.externalTransactionId || "-"}
@@ -314,7 +314,7 @@ export default function BillersPage() {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">
-                          {translate("common.table.columns.type")}:
+                          {COMMON_TABLE_HEADERS.type}:
                         </span>
                         <span className="font-medium text-xs">
                           {config.type?.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
@@ -382,7 +382,7 @@ export default function BillersPage() {
                   translate("common.actions.searchPlaceholder") || "Search transactions..."
                 }
                 showRowNumbers
-                rowNumberHeader={translate("common.table.columns.index")}
+                rowNumberHeader={COMMON_TABLE_HEADERS.index}
               />
             )}
           </CardContent>

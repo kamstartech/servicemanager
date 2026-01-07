@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { COMMON_TABLE_HEADERS, DataTable, type DataTableColumn } from "@/components/data-table";
 import { useI18n } from "@/components/providers/i18n-provider";
 import type { CheckbookRequestWithUser } from "@/types/checkbook";
 import {
@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { translateStatusOneWord } from "@/lib/utils";
+import { ACTION_BUTTON_STYLES } from "@/lib/constants/button-styles";
 
 const CheckbookRequestStatus = {
   PENDING: "PENDING",
@@ -161,7 +162,7 @@ function CheckbookRequestsContent() {
   const columns: DataTableColumn<CheckbookRequest>[] = [
     {
       id: "mobileUser",
-      header: translate("common.table.columns.user"),
+      header: COMMON_TABLE_HEADERS.user,
       accessor: (request) => (
         <div className="space-y-1">
           <div className="font-medium">
@@ -177,21 +178,21 @@ function CheckbookRequestsContent() {
     },
     {
       id: "accountNumber",
-      header: translate("common.table.columns.account"),
+      header: COMMON_TABLE_HEADERS.account,
       accessor: (request) => (
         <span className="font-mono text-sm">{request.accountNumber}</span>
       ),
     },
     {
       id: "numberOfCheckbooks",
-      header: translate("common.table.columns.quantity"),
+      header: COMMON_TABLE_HEADERS.quantity,
       accessor: (request) => (
         <span className="font-semibold">{request.numberOfCheckbooks}</span>
       ),
     },
     {
       id: "collectionPoint",
-      header: translate("common.table.columns.collectionPoint"),
+      header: COMMON_TABLE_HEADERS.collectionPoint,
       accessor: (request) => (
         <div className="flex items-center gap-2">
           <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -201,7 +202,7 @@ function CheckbookRequestsContent() {
     },
     {
       id: "status",
-      header: translate("common.table.columns.status"),
+      header: COMMON_TABLE_HEADERS.status,
       accessor: (request) => {
         const config = statusConfig[request.status];
         const Icon = config.icon;
@@ -238,7 +239,7 @@ function CheckbookRequestsContent() {
     },
     {
       id: "requestedAt",
-      header: translate("common.table.columns.requested"),
+      header: COMMON_TABLE_HEADERS.requested,
       accessor: (request) => (
         <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
           <Calendar size={16} />
@@ -256,7 +257,7 @@ function CheckbookRequestsContent() {
     },
     {
       id: "actions",
-      header: translate("common.table.columns.actions"),
+      header: COMMON_TABLE_HEADERS.actions,
       accessor: (request) => (
         <div className="flex flex-wrap justify-center gap-2">
           {request.status === CheckbookRequestStatus.PENDING && (
@@ -264,7 +265,7 @@ function CheckbookRequestsContent() {
               <Button
                 size="sm"
                 variant="outline"
-                className="text-green-700 bg-green-50 hover:bg-green-100 hover:text-green-800 border-green-200"
+                className={ACTION_BUTTON_STYLES.success}
                 onClick={() => handleStatusChange(request.id, CheckbookRequestStatus.APPROVED)}
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
@@ -273,7 +274,7 @@ function CheckbookRequestsContent() {
               <Button
                 size="sm"
                 variant="outline"
-                className="text-red-700 bg-red-50 hover:bg-red-100 hover:text-red-800 border-red-200"
+                className={ACTION_BUTTON_STYLES.delete}
                 onClick={() => handleStatusChange(request.id, CheckbookRequestStatus.REJECTED)}
               >
                 <XCircle className="h-4 w-4 mr-2" />
@@ -285,7 +286,7 @@ function CheckbookRequestsContent() {
             <Button
               size="sm"
               variant="outline"
-              className="text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 border-amber-200"
+              className={ACTION_BUTTON_STYLES.warning}
               onClick={() => handleStatusChange(request.id, CheckbookRequestStatus.READY_FOR_COLLECTION)}
             >
               <Package className="h-4 w-4 mr-2" />
@@ -296,7 +297,7 @@ function CheckbookRequestsContent() {
             <Button
               size="sm"
               variant="outline"
-              className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
+              className={ACTION_BUTTON_STYLES.view}
               onClick={() => handleStatusChange(request.id, CheckbookRequestStatus.COLLECTED)}
             >
               <CheckCircle className="h-4 w-4 mr-2" />

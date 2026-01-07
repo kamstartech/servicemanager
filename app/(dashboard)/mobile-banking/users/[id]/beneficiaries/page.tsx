@@ -26,11 +26,14 @@ const GET_BENEFICIARIES = gql`
       id
       name
       beneficiaryType
-      phoneNumber
       accountNumber
-      bankCode
-      bankName
-      branch
+      externalBank {
+        id
+        name
+        code
+        type
+      }
+      externalBankType
       description
       isActive
       createdAt
@@ -107,9 +110,13 @@ export default function BeneficiariesPage() {
   const getIdentifier = (beneficiary: any) => {
     switch (beneficiary.beneficiaryType) {
       case "WALLET":
-        return beneficiary.phoneNumber;
+      case "FDH_WALLET":
+      case "EXTERNAL_WALLET":
+        return beneficiary.accountNumber; // Phone number stored in accountNumber
       case "BANK_INTERNAL":
+      case "FDH_BANK":
       case "BANK_EXTERNAL":
+      case "EXTERNAL_BANK":
         return beneficiary.accountNumber;
       default:
         return "-";
@@ -117,11 +124,17 @@ export default function BeneficiariesPage() {
   };
 
   const getBankInfo = (beneficiary: any) => {
-    if (beneficiary.beneficiaryType === "BANK_INTERNAL") {
+    if (beneficiary.beneficiaryType === "BANK_INTERNAL" || beneficiary.beneficiaryType === "FDH_BANK") {
       return "FDH Bank";
     }
-    if (beneficiary.beneficiaryType === "BANK_EXTERNAL") {
-      return beneficiary.bankName || beneficiary.bankCode || "-";
+    if (beneficiary.beneficiaryType === "FDH_WALLET") {
+      return "FDH Wallet";
+    }
+    if (beneficiary.externalBank) {
+      return beneficiary.externalBank.name;
+    }
+    if (beneficiary.beneficiaryType === "BANK_EXTERNAL" || beneficiary.beneficiaryType === "EXTERNAL_BANK" || beneficiary.beneficiaryType === "EXTERNAL_WALLET") {
+      return "External";
     }
     return "-";
   };

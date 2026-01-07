@@ -22,6 +22,7 @@ import { COMMON_TABLE_HEADERS, DataTable, type DataTableColumn } from "@/compone
 import { toast } from "sonner";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { translateStatusOneWord } from "@/lib/utils";
+import { ACTION_BUTTON_STYLES } from "@/lib/constants/button-styles";
 
 interface ServiceStatus {
   balanceSync: {
@@ -362,7 +363,7 @@ export default function ServicesMonitorPage() {
   const serviceColumns: DataTableColumn<ServiceTableRow>[] = [
     {
       id: "name",
-      header: COMMON_TABLE_HEADERS.serviceName,
+      header: COMMON_TABLE_HEADERS.name,
       accessor: (row) => <span className="font-medium">{row.name}</span>,
       sortKey: "name",
     },
@@ -447,14 +448,14 @@ export default function ServicesMonitorPage() {
       id: "actions",
       header: COMMON_TABLE_HEADERS.actions,
       accessor: (row) => (
-        <div className="flex gap-2">
+        <div className="flex gap-2 justify-center">
           <Button
             size="sm"
             variant="outline"
             onClick={() => handleViewLogs(row)}
-            className="h-7 text-xs"
+            className={ACTION_BUTTON_STYLES.view}
           >
-            <FileText className="h-3 w-3 mr-1" />
+            <FileText className="h-4 w-4 mr-2" />
             {translate("common.actions.logs")}
           </Button>
           {row.testable && (
@@ -462,9 +463,9 @@ export default function ServicesMonitorPage() {
               size="sm"
               variant="outline"
               onClick={() => handleTestService(row)}
-              className="h-7 text-xs"
+              className={ACTION_BUTTON_STYLES.warning}
             >
-              <TestTube className="h-3 w-3 mr-1" />
+              <TestTube className="h-4 w-4 mr-2" />
               {translate("common.actions.test")}
             </Button>
           )}
@@ -827,175 +828,115 @@ export default function ServicesMonitorPage() {
   ] : [];
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Background Services Monitor</h1>
-          <p className="text-muted-foreground">
-            Real-time service status updates via Server-Sent Events
-            {connected && (
-              <span className="ml-2 inline-flex items-center gap-1 text-green-600">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                </span>
-                Connected
+    <div className="min-h-screen bg-background px-4 py-6">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold">Background Services Monitor</h1>
+        <p className="text-muted-foreground mt-2">
+          Real-time service status updates via Server-Sent Events
+          {connected && (
+            <span className="ml-2 inline-flex items-center gap-1 text-green-600">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
               </span>
-            )}
-            {!connected && (
-              <span className="ml-2 inline-flex items-center gap-1 text-red-600">
-                <span className="relative flex h-2 w-2">
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                </span>
-                Disconnected
+              Connected
+            </span>
+          )}
+          {!connected && (
+            <span className="ml-2 inline-flex items-center gap-1 text-red-600">
+              <span className="relative flex h-2 w-2">
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
               </span>
-            )}
-          </p>
-        </div>
+              Disconnected
+            </span>
+          )}
+        </p>
       </div>
 
       {/* Service Status Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              {status?.balanceSync.processing ? (
-                <RefreshCw className="h-5 w-5 animate-spin text-blue-500" />
-              ) : (
-                <CheckCircle className="h-5 w-5 text-green-500" />
-              )}
-              Balance Sync Service
-            </CardTitle>
-            <CardDescription>Syncs account balances from T24</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Status:</span>
-              <Badge variant={status?.balanceSync.processing ? "default" : "secondary"}>
-                {status?.balanceSync.processing ? "Processing" : "Idle"}
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Priority Queue:</span>
-              <Badge variant="outline">{status?.balanceSync.priority || 0}</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Background Queue:</span>
-              <Badge variant="outline">{status?.balanceSync.background || 0}</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Interval:</span>
-              <span className="text-sm text-muted-foreground">
-                {status?.balanceSync.intervalMinutes} minutes
-              </span>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-full">
+                {status?.balanceSync.processing ? (
+                  <RefreshCw className="h-6 w-6 animate-spin text-blue-600 dark:text-blue-400" />
+                ) : (
+                  <CheckCircle className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                )}
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Balance Sync</p>
+                <p className="text-lg font-bold">
+                  {status?.balanceSync.processing ? "Processing" : "Idle"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Queue: {status?.balanceSync.priority || 0}/{status?.balanceSync.background || 0}
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              {status?.accountDiscovery.discovering ? (
-                <RefreshCw className="h-5 w-5 animate-spin text-blue-500" />
-              ) : (
-                <CheckCircle className="h-5 w-5 text-green-500" />
-              )}
-              Account Discovery Service
-            </CardTitle>
-            <CardDescription>Discovers new accounts from T24</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Status:</span>
-              <Badge variant={status?.accountDiscovery.running ? "default" : "destructive"}>
-                {status?.accountDiscovery.running ? "Running" : "Stopped"}
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Currently Discovering:</span>
-              <Badge variant={status?.accountDiscovery.discovering ? "default" : "secondary"}>
-                {status?.accountDiscovery.discovering ? "Yes" : "No"}
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Pagination Queue:</span>
-              <Badge variant="outline">{status?.accountDiscovery.paginationQueueSize || 0}</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Interval:</span>
-              <span className="text-sm text-muted-foreground">
-                {status?.accountDiscovery.intervalHours} hours
-              </span>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-green-100 dark:bg-green-900 rounded-full">
+                {status?.accountDiscovery.discovering ? (
+                  <RefreshCw className="h-6 w-6 animate-spin text-green-600 dark:text-green-400" />
+                ) : (
+                  <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+                )}
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Account Discovery</p>
+                <p className="text-lg font-bold">
+                  {status?.accountDiscovery.running ? "Running" : "Stopped"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {status?.accountDiscovery.discovering ? "Discovering" : "Idle"}
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              {status?.accountEnrichment.enriching ? (
-                <RefreshCw className="h-5 w-5 animate-spin text-blue-500" />
-              ) : (
-                <CheckCircle className="h-5 w-5 text-green-500" />
-              )}
-              Account Enrichment Service
-            </CardTitle>
-            <CardDescription>Enriches accounts with T24 details</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Status:</span>
-              <Badge variant={status?.accountEnrichment.running ? "default" : "destructive"}>
-                {status?.accountEnrichment.running ? "Running" : "Stopped"}
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Currently Enriching:</span>
-              <Badge variant={status?.accountEnrichment.enriching ? "default" : "secondary"}>
-                {status?.accountEnrichment.enriching ? "Yes" : "No"}
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Interval:</span>
-              <span className="text-sm text-muted-foreground">
-                {status?.accountEnrichment.intervalHours} hours
-              </span>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-purple-100 dark:bg-purple-900 rounded-full">
+                {status?.accountEnrichment.enriching ? (
+                  <RefreshCw className="h-6 w-6 animate-spin text-purple-600 dark:text-purple-400" />
+                ) : (
+                  <CheckCircle className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                )}
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Account Enrichment</p>
+                <p className="text-lg font-bold">
+                  {status?.accountEnrichment.running ? "Running" : "Stopped"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {status?.accountEnrichment.enriching ? "Enriching" : "Idle"}
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              {smsStats && smsStats.successRate >= 90 ? (
-                <CheckCircle className="h-5 w-5 text-green-500" />
-              ) : (
-                <Activity className="h-5 w-5 text-orange-500" />
-              )}
-              SMS Notifications
-            </CardTitle>
-            <CardDescription>ESB Gateway SMS delivery</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Success Rate:</span>
-              <Badge variant={smsStats && smsStats.successRate >= 90 ? "default" : "destructive"}>
-                {smsStats ? `${smsStats.successRate.toFixed(1)}%` : "Loading..."}
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Sent (24h):</span>
-              <Badge variant="outline">{smsStats?.sent || 0}</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Failed (24h):</span>
-              <Badge variant={smsStats && smsStats.failed > 0 ? "destructive" : "outline"}>
-                {smsStats?.failed || 0}
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Pending:</span>
-              <Badge variant="secondary">{smsStats?.pending || 0}</Badge>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-orange-100 dark:bg-orange-900 rounded-full">
+                <Activity className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">SMS Service</p>
+                <p className="text-lg font-bold">{smsStats?.total || 0}</p>
+                <p className="text-xs text-muted-foreground">
+                  Sent: {smsStats?.sent || 0} / Failed: {smsStats?.failed || 0}
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -1004,13 +945,7 @@ export default function ServicesMonitorPage() {
       {/* Services Overview Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            Services Overview
-          </CardTitle>
-          <CardDescription>
-            All available services and their current status
-          </CardDescription>
+          <CardTitle>Services Overview</CardTitle>
         </CardHeader>
         <CardContent>
           <DataTable

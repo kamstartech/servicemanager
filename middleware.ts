@@ -9,11 +9,13 @@ const publicRoutes = [
   "/reset-password",
   "/setup-password",
   "/api/auth/login",
+  "/api/auth/passkey/login", // Allow passkey login start/complete
   "/api/auth/logout",
   "/api/auth/forgot-password",
   "/api/auth/reset-password",
   "/api/auth/validate-reset-token",
   "/api/graphql", // Allow GraphQL for mobile login and public operations
+  "/api/graphql/stream", // SSE streaming endpoint for subscriptions
   "/api/mobile/graphql",
   "/api/services/airtel-airtime-test",
   "/api/services/tnm-airtime-test",
@@ -36,6 +38,21 @@ export default async function middleware(request: NextRequest) {
   // Debug logging (remove in production)
   if (pathname === "/" || pathname === "/login") {
     console.log(`[Middleware] Path: ${pathname}, Token exists: ${!!token}`);
+  }
+
+  // Security: Log IP for suspicious requests
+  if (
+    pathname.endsWith(".php") ||
+    pathname.includes("/wp-") ||
+    pathname.includes("/.env") ||
+    pathname.includes(".git")
+  ) {
+    const ip =
+      request.headers.get("cf-connecting-ip") ||
+      request.headers.get("x-forwarded-for")?.split(",")[0] ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    console.warn(`[Security] Suspicious request from IP ${ip}: ${pathname} (${request.method})`);
   }
 
   // If user is authenticated and trying to access login page, redirect to dashboard

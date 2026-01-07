@@ -1,7 +1,11 @@
 "use client";
 
-import { ApolloClient, InMemoryCache, HttpLink, from } from "@apollo/client";
+import { ApolloClient, InMemoryCache, HttpLink, from, split } from "@apollo/client";
 import { onError } from "@apollo/client/link/error";
+import { getMainDefinition } from "@apollo/client/utilities";
+import { ApolloLink, Operation, FetchResult, Observable } from "@apollo/client";
+import { print } from "graphql";
+import { createClient } from "graphql-sse";
 
 // Error handling link
 const errorLink = onError(({ graphQLErrors, networkError }) => {
@@ -31,8 +35,60 @@ const httpLink = new HttpLink({
   },
 });
 
+const sseClient = createClient({
+  url: "/api/graphql/stream",
+  credentials: "include",
+  // graphql-sse uses POST by default with proper SSE handling
+});
+
+const sseLink = new ApolloLink((operation: Operation) => {
+  return new Observable((sink) => {
+    console.log(`[SSE-Link] Starting subscription for: ${operation.operationName}`, operation.variables);
+    
+    const unsubscribe = sseClient.subscribe(
+      {
+        ...operation,
+        query: print(operation.query),
+      },
+      {
+        next: (result) => {
+          console.log(`[SSE-Link] ✅ Received data for: ${operation.operationName}`, result);
+          sink.next(result as FetchResult);
+        },
+        complete: () => {
+          console.log(`[SSE-Link] ⚠️ Completed: ${operation.operationName}`);
+          sink.complete();
+        },
+        error: (err) => {
+          console.error(`[SSE-Link] ❌ Error in: ${operation.operationName}`, err);
+          sink.error(err);
+        },
+      }
+    );
+    
+    console.log(`[SSE-Link] 🔗 Subscription active for: ${operation.operationName}`);
+    
+    return () => {
+      console.log(`[SSE-Link] 🔌 Unsubscribing from: ${operation.operationName}`);
+      unsubscribe();
+    };
+  });
+});
+
+const splitLink = split(
+  ({ query }) => {
+    const definition = getMainDefinition(query);
+    return (
+      definition.kind === "OperationDefinition" &&
+      definition.operation === "subscription"
+    );
+  },
+  sseLink,
+  httpLink
+);
+
 export const apolloClient = new ApolloClient({
-  link: from([errorLink, httpLink]),
+  link: from([errorLink, splitLink]),
   cache: new InMemoryCache({
     typePolicies: {
       Query: {

@@ -55,6 +55,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { translateStatusOneWord } from "@/lib/utils";
+import { ACTION_BUTTON_STYLES } from "@/lib/constants/button-styles";
 import { toast } from "sonner";
 
 const TRANSFER_TYPE_OPTIONS = [
@@ -303,7 +304,7 @@ export default function MobileBankingTransactionsPage() {
     },
     {
       id: "type",
-      header: translate("common.table.columns.type"),
+      header: COMMON_TABLE_HEADERS.type,
       accessor: (row) => (
         <Badge variant="outline" className="text-xs">
           {row.type?.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
@@ -314,21 +315,21 @@ export default function MobileBankingTransactionsPage() {
     },
     {
       id: "transferType",
-      header: translate("common.table.columns.transactionType"),
+      header: COMMON_TABLE_HEADERS.transactionType,
       accessor: (row) => getTransferTypeLabel(row.transferType),
       sortKey: "transferType",
       alignCenter: true,
     },
     {
       id: "fromAccountNumber",
-      header: translate("common.table.columns.fromAccount"),
+      header: COMMON_TABLE_HEADERS.fromAccount,
       accessor: (row) => (
         <span className="font-mono">{row.fromAccountNumber ?? "-"}</span>
       ),
     },
     {
       id: "toAccountNumber",
-      header: translate("common.table.columns.toAccount"),
+      header: COMMON_TABLE_HEADERS.toAccount,
       accessor: (row) => (
         <span className="font-mono">{row.toAccountNumber ?? "-"}</span>
       ),
@@ -540,7 +541,7 @@ export default function MobileBankingTransactionsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>{translate("common.table.columns.description")}</Label>
+              <Label>{COMMON_TABLE_HEADERS.description}</Label>
               <div className="text-sm rounded-md border px-3 py-2 bg-muted/50">
                 {selectedTransaction?.description || "-"}
               </div>
@@ -564,7 +565,7 @@ export default function MobileBankingTransactionsPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label>{translate("common.table.columns.transactionType")}</Label>
+              <Label>{COMMON_TABLE_HEADERS.transactionType}</Label>
               <Select
                 value={form.transferType}
                 onValueChange={(value) =>
@@ -605,7 +606,7 @@ export default function MobileBankingTransactionsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>{translate("common.table.columns.description")}</Label>
+              <Label>{COMMON_TABLE_HEADERS.description}</Label>
               <Input
                 value={form.description}
                 onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
@@ -615,7 +616,7 @@ export default function MobileBankingTransactionsPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>{translate("common.table.columns.fromAccount")}</Label>
+                <Label>{COMMON_TABLE_HEADERS.fromAccount}</Label>
                 <Popover open={fromAccountOpen} onOpenChange={setFromAccountOpen}>
                   <PopoverTrigger asChild>
                     <Button
@@ -695,7 +696,7 @@ export default function MobileBankingTransactionsPage() {
                 </Popover>
               </div>
               <div className="space-y-2">
-                <Label>{translate("common.table.columns.toAccount")}</Label>
+                <Label>{COMMON_TABLE_HEADERS.toAccount}</Label>
                 <Input
                   value={form.toAccountNumber}
                   onChange={(e) =>

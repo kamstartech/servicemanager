@@ -158,6 +158,10 @@ export const mobileUserResolvers = {
         customerNumber: mobileUser.customerNumber,
         accountNumber: mobileUser.accountNumber,
         isActive: mobileUser.isActive,
+        isBlocked: mobileUser.isBlocked,
+        blockedAt: mobileUser.blockedAt?.toISOString() || null,
+        blockedBy: mobileUser.blockedBy,
+        blockReason: mobileUser.blockReason,
         createdAt: mobileUser.createdAt.toISOString(),
         updatedAt: mobileUser.updatedAt.toISOString(),
       }));
@@ -264,8 +268,8 @@ export const mobileUserResolvers = {
 
       return {
         success: true,
-        message: existingUser.secretHash 
-          ? "Memo word changed successfully" 
+        message: existingUser.secretHash
+          ? "Memo word changed successfully"
           : "Memo word set successfully",
         user: {
           id: user.id,
@@ -313,6 +317,93 @@ export const mobileUserResolvers = {
           updatedAt: screen.updatedAt.toISOString(),
         })))
       };
+    },
+
+    async blockMobileUser(
+      _parent: unknown,
+      args: { input: { userId: string; reason?: string } },
+      context: any
+    ) {
+      const userId = parseInt(args.input.userId);
+      const adminId = context.adminId;
+
+      // Block the user and revoke all sessions in a transaction
+      const [user] = await prisma.$transaction([
+        prisma.mobileUser.update({
+          where: { id: userId },
+          data: {
+            isActive: false,
+            isBlocked: true,
+            blockedAt: new Date(),
+            blockedBy: adminId || null,
+            blockReason: args.input.reason || null,
+          },
+        }),
+        // Revoke all active sessions
+        prisma.deviceSession.updateMany({
+          where: {
+            mobileUserId: userId,
+            isActive: true,
+          },
+          data: {
+            isActive: false,
+            revokedAt: new Date(),
+          },
+        }),
+      ]);
+
+      const formattedUser = {
+        id: user.id,
+        context: user.context,
+        username: user.username,
+        phoneNumber: user.phoneNumber,
+        customerNumber: user.customerNumber,
+        isActive: user.isActive,
+        isBlocked: user.isBlocked,
+        blockedAt: user.blockedAt?.toISOString() || null,
+        blockedBy: user.blockedBy,
+        blockReason: user.blockReason,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt.toISOString(),
+      };
+
+      pubsub.publish(EVENTS.MOBILE_USER_UPDATED, formattedUser);
+
+      return formattedUser;
+    },
+
+    async unblockMobileUser(_parent: unknown, args: { userId: string }) {
+      const userId = parseInt(args.userId);
+
+      const user = await prisma.mobileUser.update({
+        where: { id: userId },
+        data: {
+          isActive: true,
+          isBlocked: false,
+          blockedAt: null,
+          blockedBy: null,
+          blockReason: null,
+        },
+      });
+
+      const formattedUser = {
+        id: user.id,
+        context: user.context,
+        username: user.username,
+        phoneNumber: user.phoneNumber,
+        customerNumber: user.customerNumber,
+        isActive: user.isActive,
+        isBlocked: user.isBlocked,
+        blockedAt: null,
+        blockedBy: null,
+        blockReason: null,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt.toISOString(),
+      };
+
+      pubsub.publish(EVENTS.MOBILE_USER_UPDATED, formattedUser);
+
+      return formattedUser;
     },
   },
 };

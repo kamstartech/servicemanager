@@ -2,6 +2,7 @@ import { GraphQLError } from "graphql";
 import { prisma } from "@/lib/db/prisma";
 import { TicketStatus, TicketPriority, MobileUserContext, MessageSenderType } from "@prisma/client";
 import { GraphQLContext } from "@/lib/graphql/context";
+import { pubsub, EVENTS } from "@/lib/graphql/pubsub";
 
 export const mobileTicketsResolvers = {
     Query: {
@@ -108,6 +109,9 @@ export const mobileTicketsResolvers = {
 
                 return msg;
             });
+
+            // Publish event for live chat
+            pubsub.publish(EVENTS.TICKET_MESSAGE_ADDED, { ticketMessageAdded: newMessage });
 
             return newMessage;
         },

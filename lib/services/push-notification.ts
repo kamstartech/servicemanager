@@ -13,6 +13,7 @@ export interface SendPushNotificationParams {
   actionData?: any;
   deviceId?: string; // Send to specific device, or all if null
   primaryOnly?: boolean; // Send exclusively to the primary device
+  skipPersistence?: boolean; // If true, do not record in database
 }
 
 export class PushNotificationService {
@@ -31,6 +32,7 @@ export class PushNotificationService {
       actionData,
       deviceId,
       primaryOnly,
+      skipPersistence = false,
     } = params;
 
     try {
@@ -39,11 +41,16 @@ export class PushNotificationService {
         throw new Error('Firebase messaging not initialized');
       }
 
-      // Check global user push preference
+      // Check global user push preference and blocked status
       const user = await prisma.mobileUser.findUnique({
         where: { id: userId },
-        select: { pushNotifications: true }
+        select: { pushNotifications: true, isBlocked: true, isActive: true }
       });
+
+      if (user && (user.isBlocked || !user.isActive)) {
+        console.log(`User ${userId} is blocked or inactive, skipping push notification`);
+        return null;
+      }
 
       if (user && !user.pushNotifications) {
         console.log(`Push notifications are globally disabled for user ${userId}`);
@@ -91,22 +98,24 @@ export class PushNotificationService {
       // Create notification ID
       const notificationId = crypto.randomUUID();
 
-      // Create notification record in database
-      const notification = await prisma.pushNotification.create({
-        data: {
-          id: notificationId,
-          mobileUserId: userId,
-          deviceId: deviceId || null,
-          type: type as any,
-          priority: priority as any,
-          title,
-          body,
-          imageUrl,
-          actionUrl,
-          actionData,
-          status: 'PENDING',
-        },
-      });
+      // Create notification record in database (unless skipped)
+      if (!skipPersistence) {
+        await prisma.pushNotification.create({
+          data: {
+            id: notificationId,
+            mobileUserId: userId,
+            deviceId: deviceId || null,
+            type: type as any,
+            priority: priority as any,
+            title,
+            body,
+            imageUrl,
+            actionUrl,
+            actionData,
+            status: 'PENDING',
+          },
+        });
+      }
 
       // Prepare message
       const message: any = {
@@ -153,17 +162,19 @@ export class PushNotificationService {
 
       console.log(`Push notification sent: ${response.successCount} success, ${response.failureCount} failed`);
 
-      // Update notification status in database
-      await prisma.pushNotification.update({
-        where: { id: notificationId },
-        data: {
-          status: response.successCount > 0 ? 'SENT' : 'FAILED',
-          sentAt: new Date(),
-          ...(response.failureCount > 0 && {
-            failureReason: response.responses.find((r) => r.error)?.error?.message,
-          }),
-        },
-      });
+      // Update notification status in database (unless skipped)
+      if (!skipPersistence) {
+        await prisma.pushNotification.update({
+          where: { id: notificationId },
+          data: {
+            status: response.successCount > 0 ? 'SENT' : 'FAILED',
+            sentAt: new Date(),
+            ...(response.failureCount > 0 && {
+              failureReason: response.responses.find((r) => r.error)?.error?.message,
+            }),
+          },
+        });
+      }
 
       // Handle invalid tokens
       if (response.failureCount > 0) {

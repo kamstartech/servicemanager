@@ -59,11 +59,12 @@ export const beneficiaryResolvers = {
         userId: b.userId,
         name: b.name,
         beneficiaryType: b.beneficiaryType,
-        phoneNumber: b.phoneNumber,
+
         accountNumber: b.accountNumber,
-        bankCode: b.bankCode,
-        bankName: b.bankName,
-        branch: b.branch,
+
+
+
+        externalBankType: b.externalBankType,
         description: b.description,
         isActive: b.isActive,
         createdAt: b.createdAt.toISOString(),
@@ -111,11 +112,12 @@ export const beneficiaryResolvers = {
         userId: b.userId,
         name: b.name,
         beneficiaryType: b.beneficiaryType,
-        phoneNumber: b.phoneNumber,
+
         accountNumber: b.accountNumber,
-        bankCode: b.bankCode,
-        bankName: b.bankName,
-        branch: b.branch,
+
+
+
+        externalBankType: b.externalBankType,
         description: b.description,
         isActive: b.isActive,
         createdAt: b.createdAt.toISOString(),
@@ -157,11 +159,12 @@ export const beneficiaryResolvers = {
         userId: beneficiary.userId,
         name: beneficiary.name,
         beneficiaryType: beneficiary.beneficiaryType,
-        phoneNumber: beneficiary.phoneNumber,
+
         accountNumber: beneficiary.accountNumber,
-        bankCode: beneficiary.bankCode,
-        bankName: beneficiary.bankName,
-        branch: beneficiary.branch,
+
+
+
+        externalBankType: beneficiary.externalBankType,
         description: beneficiary.description,
         isActive: beneficiary.isActive,
         createdAt: beneficiary.createdAt.toISOString(),
@@ -217,14 +220,12 @@ export const beneficiaryResolvers = {
         });
       }
 
-      // Pre-check for duplicates to avoid SQL Server unique constraint issues with NULLs
+      // Pre-check for duplicates
       const existing = await prisma.beneficiary.findFirst({
         where: {
           userId: actualInput.userId,
           beneficiaryType: actualInput.beneficiaryType,
-          phoneNumber: actualInput.phoneNumber?.trim() || null,
           accountNumber: actualInput.accountNumber?.trim() || null,
-          bankCode: actualInput.bankCode?.trim() || null,
         },
       });
 
@@ -241,11 +242,8 @@ export const beneficiaryResolvers = {
             userId: actualInput.userId,
             name: actualInput.name.trim(),
             beneficiaryType: actualInput.beneficiaryType,
-            phoneNumber: actualInput.phoneNumber?.trim() || null,
             accountNumber: actualInput.accountNumber?.trim() || null,
-            bankCode: actualInput.bankCode?.trim() || null,
-            bankName: actualInput.bankName?.trim() || null,
-            branch: actualInput.branch?.trim() || null,
+            externalBankType: actualInput.externalBankType || null,
             description: actualInput.description?.trim() || null,
             isActive: actualInput.isActive ?? true,
           },
@@ -262,11 +260,12 @@ export const beneficiaryResolvers = {
           userId: beneficiary.userId,
           name: beneficiary.name,
           beneficiaryType: beneficiary.beneficiaryType,
-          phoneNumber: beneficiary.phoneNumber,
+
           accountNumber: beneficiary.accountNumber,
-          bankCode: beneficiary.bankCode,
-          bankName: beneficiary.bankName,
-          branch: beneficiary.branch,
+
+
+
+          externalBankType: beneficiary.externalBankType,
           description: beneficiary.description,
           isActive: beneficiary.isActive,
           createdAt: beneficiary.createdAt.toISOString(),
@@ -331,11 +330,8 @@ export const beneficiaryResolvers = {
         data: {
           name: input.name?.trim(),
           beneficiaryType: input.beneficiaryType,
-          phoneNumber: input.phoneNumber?.trim() || null,
           accountNumber: input.accountNumber?.trim() || null,
-          bankCode: input.bankCode?.trim() || null,
-          bankName: input.bankName?.trim() || null,
-          branch: input.branch?.trim() || null,
+          externalBankType: input.externalBankType || null,
           description: input.description?.trim() || null,
           isActive: input.isActive,
         },
@@ -352,11 +348,12 @@ export const beneficiaryResolvers = {
         userId: beneficiary.userId,
         name: beneficiary.name,
         beneficiaryType: beneficiary.beneficiaryType,
-        phoneNumber: beneficiary.phoneNumber,
+
         accountNumber: beneficiary.accountNumber,
-        bankCode: beneficiary.bankCode,
-        bankName: beneficiary.bankName,
-        branch: beneficiary.branch,
+
+
+
+        externalBankType: beneficiary.externalBankType,
         description: beneficiary.description,
         isActive: beneficiary.isActive,
         createdAt: beneficiary.createdAt.toISOString(),
@@ -446,11 +443,11 @@ export const beneficiaryResolvers = {
         userId: updated.userId,
         name: updated.name,
         beneficiaryType: updated.beneficiaryType,
-        phoneNumber: updated.phoneNumber,
+
         accountNumber: updated.accountNumber,
-        bankCode: updated.bankCode,
-        bankName: updated.bankName,
-        branch: updated.branch,
+
+
+
         description: updated.description,
         isActive: updated.isActive,
         createdAt: updated.createdAt.toISOString(),
@@ -467,8 +464,23 @@ export const beneficiaryResolvers = {
   Subscription: {
     beneficiariesUpdated: {
       subscribe: (_parent: any, { userId }: { userId: string }) =>
-        pubsub.subscribe(EVENTS.BENEFICIARIES_UPDATED, userId),
+        pubsub.asyncIterator([EVENTS.BENEFICIARIES_UPDATED]),
       resolve: (payload: any) => payload,
+    },
+  },
+  Beneficiary: {
+    externalBank: async (parent: any) => {
+      if (!parent.externalBankType) return null;
+
+      // Find the external bank by type
+      const externalBank = await prisma.externalBank.findFirst({
+        where: {
+          type: parent.externalBankType,
+          isActive: true,
+        },
+      });
+
+      return externalBank;
     },
   },
 };
@@ -478,15 +490,29 @@ function validateBeneficiaryInput(input: any): {
   valid: boolean;
   error?: string;
 } {
-  const { beneficiaryType, phoneNumber, accountNumber, bankCode } = input;
+  const { beneficiaryType, accountNumber, externalBankType } = input;
 
   switch (beneficiaryType) {
     case "FDH_WALLET":
-    case "EXTERNAL_WALLET":
-      if (!phoneNumber || phoneNumber.trim() === "") {
+      if (!accountNumber || accountNumber.trim() === "") {
         return {
           valid: false,
           error: `Phone number is required for ${beneficiaryType} beneficiaries`,
+        };
+      }
+      break;
+
+    case "EXTERNAL_WALLET":
+      if (!accountNumber || accountNumber.trim() === "") {
+        return {
+          valid: false,
+          error: `Phone number is required for ${beneficiaryType} beneficiaries`,
+        };
+      }
+      if (!externalBankType || externalBankType !== "WALLET") {
+        return {
+          valid: false,
+          error: "External bank type must be WALLET for wallet beneficiaries",
         };
       }
       break;
@@ -507,10 +533,10 @@ function validateBeneficiaryInput(input: any): {
           error: "Account number is required for EXTERNAL_BANK beneficiaries",
         };
       }
-      if (!bankCode || bankCode.trim() === "") {
+      if (!externalBankType || externalBankType !== "BANK") {
         return {
           valid: false,
-          error: "Bank code is required for EXTERNAL_BANK beneficiaries",
+          error: "External bank type must be BANK for bank beneficiaries",
         };
       }
       break;

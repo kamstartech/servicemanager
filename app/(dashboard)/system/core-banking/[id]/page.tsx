@@ -11,6 +11,7 @@ import { useI18n } from "@/components/providers/i18n-provider";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { Beaker, Pencil } from "lucide-react";
 import { translateStatusOneWord } from "@/lib/utils";
+import { ACTION_BUTTON_STYLES } from "@/lib/constants/button-styles";
 import {
   CoreBankingConnectionDialog,
   type CoreBankingConnection,
@@ -176,7 +177,7 @@ export default function CoreBankingConnectionPage() {
           <Button
             variant="outline"
             size="sm"
-            className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
+            className={ACTION_BUTTON_STYLES.view}
             onClick={async () => {
               const endpoint = (connection?.endpoints ?? []).find(
                 (e: any) => e.id === row.id,
@@ -198,7 +199,7 @@ export default function CoreBankingConnectionPage() {
           <Button
             variant="outline"
             size="sm"
-            className="text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 border-amber-200"
+            className={ACTION_BUTTON_STYLES.warning}
             onClick={() => {
               const endpoint = (connection?.endpoints ?? []).find(
                 (e: any) => e.id === row.id,

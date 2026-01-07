@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { COMMON_TABLE_HEADERS, DataTable, type DataTableColumn } from "@/components/data-table";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { CheckCircle, Eye, Star, XCircle } from "lucide-react";
 import { translateStatusOneWord } from "@/lib/utils";
+import { ACTION_BUTTON_STYLES } from "@/lib/constants/button-styles";
 
 const GET_ACCOUNTS = gql`
   query GetMobileUserAccounts {
@@ -62,7 +63,7 @@ export default function AccountsPage() {
   const columns: DataTableColumn<Account>[] = [
     {
       id: "accountNumber",
-      header: translate("common.table.columns.accountNumber"),
+      header: COMMON_TABLE_HEADERS.accountNumber,
       accessor: (row) => (
         <span className="font-medium font-mono">{row.accountNumber}</span>
       ),
@@ -70,13 +71,13 @@ export default function AccountsPage() {
     },
     {
       id: "holderName",
-      header: translate("common.table.columns.holderName"),
+      header: COMMON_TABLE_HEADERS.holderName,
       accessor: (row) => row.holderName || row.accountName || "-",
       sortKey: "holderName",
     },
     {
       id: "type",
-      header: translate("common.table.columns.type"),
+      header: COMMON_TABLE_HEADERS.type,
       accessor: (row) => (
         <Badge variant="outline" className="text-xs">
           {row.accountType || "N/A"}
@@ -85,7 +86,7 @@ export default function AccountsPage() {
     },
     {
       id: "category",
-      header: translate("common.table.columns.category"),
+      header: COMMON_TABLE_HEADERS.category,
       accessor: (row) => (
         <div className="text-sm">
           {row.categoryName ? (
@@ -105,7 +106,7 @@ export default function AccountsPage() {
     },
     {
       id: "status",
-      header: translate("common.table.columns.status"),
+      header: COMMON_TABLE_HEADERS.status,
       accessor: (row) => (
         <div className="flex flex-col gap-1">
           {row.isPrimary && (
@@ -137,13 +138,13 @@ export default function AccountsPage() {
     },
     {
       id: "actions",
-      header: translate("common.table.columns.actions"),
+      header: COMMON_TABLE_HEADERS.actions,
       accessor: (row) => (
         <div className="flex justify-center">
           <Button
             size="sm"
             variant="outline"
-            className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
+            className={ACTION_BUTTON_STYLES.view}
             onClick={() => router.push(`/mobile-banking/accounts/${row.accountNumber}`)}
           >
             <Eye className="h-4 w-4 mr-2" />
@@ -196,7 +197,7 @@ export default function AccountsPage() {
               pageSize={20}
               searchPlaceholder="Search by account number, holder name, type..."
               showRowNumbers
-              rowNumberHeader={translate("common.table.columns.index")}
+              rowNumberHeader={COMMON_TABLE_HEADERS.index}
             />
           )}
         </CardContent>

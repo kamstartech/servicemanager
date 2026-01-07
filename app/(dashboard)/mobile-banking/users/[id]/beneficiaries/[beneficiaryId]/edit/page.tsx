@@ -15,6 +15,24 @@ import {
   RadioGroup,
   RadioGroupItem,
 } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const GET_EXTERNAL_BANKS = gql`
+  query GetExternalBanks {
+    externalBanks {
+      id
+      name
+      code
+      type
+    }
+  }
+`;
 
 const GET_BENEFICIARY = gql`
   query GetBeneficiary($id: ID!) {
@@ -22,13 +40,18 @@ const GET_BENEFICIARY = gql`
       id
       name
       beneficiaryType
-      phoneNumber
       accountNumber
-      bankCode
-      bankName
-      branch
+      externalBank {
+        id
+        name
+        code
+        type
+      }
+      externalBankType
       description
       isActive
+      createdAt
+      updatedAt
     }
   }
 `;
@@ -49,15 +72,29 @@ export default function EditBeneficiaryPage() {
   const userId = params.id as string;
   const beneficiaryId = params.beneficiaryId as string;
 
-  const [beneficiaryType, setBeneficiaryType] = useState<string>("WALLET");
+  const [beneficiaryType, setBeneficiaryType] = useState<string>("FDH_WALLET");
   const [name, setName] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState(""); // Using accountNumber field
   const [accountNumber, setAccountNumber] = useState("");
   const [bankCode, setBankCode] = useState("");
   const [bankName, setBankName] = useState("");
   const [branch, setBranch] = useState("");
+  const [externalBankType, setExternalBankType] = useState<string>("BANK");
   const [description, setDescription] = useState("");
   const [isActive, setIsActive] = useState(true);
+
+  // Fetch external banks
+  const { data: externalBanksData } = useQuery(GET_EXTERNAL_BANKS);
+
+  // Filter banks based on beneficiary type
+  const availableBanks = externalBanksData?.externalBanks?.filter((bank: any) => {
+    if (beneficiaryType === "EXTERNAL_BANK") {
+      return bank.type === "BANK";
+    } else if (beneficiaryType === "EXTERNAL_WALLET") {
+      return bank.type === "WALLET";
+    }
+    return false;
+  }) || [];
 
   const { data, loading: queryLoading } = useQuery(GET_BENEFICIARY, {
     variables: { id: beneficiaryId },
@@ -66,11 +103,12 @@ export default function EditBeneficiaryPage() {
       if (b) {
         setBeneficiaryType(b.beneficiaryType);
         setName(b.name || "");
-        setPhoneNumber(b.phoneNumber || "");
+        setPhoneNumber(b.accountNumber || ""); // Phone stored in accountNumber for wallets
         setAccountNumber(b.accountNumber || "");
         setBankCode(b.bankCode || "");
         setBankName(b.bankName || "");
         setBranch(b.branch || "");
+        setExternalBankType(b.externalBankType || "BANK");
         setDescription(b.description || "");
         setIsActive(b.isActive);
       }
@@ -97,15 +135,21 @@ export default function EditBeneficiaryPage() {
       isActive,
     };
 
-    if (beneficiaryType === "WALLET") {
-      input.phoneNumber = phoneNumber.trim();
-    } else if (beneficiaryType === "BANK_INTERNAL") {
+    if (beneficiaryType === "FDH_WALLET") {
+      input.accountNumber = phoneNumber.trim(); // Phone stored in accountNumber
+    } else if (beneficiaryType === "EXTERNAL_WALLET") {
+      input.accountNumber = phoneNumber.trim(); // Phone stored in accountNumber
+      input.bankCode = bankCode.trim();
+      if (bankName.trim()) input.bankName = bankName.trim();
+      input.externalBankType = "WALLET";
+    } else if (beneficiaryType === "FDH_BANK") {
       input.accountNumber = accountNumber.trim();
-    } else if (beneficiaryType === "BANK_EXTERNAL") {
+    } else if (beneficiaryType === "EXTERNAL_BANK") {
       input.accountNumber = accountNumber.trim();
       input.bankCode = bankCode.trim();
       if (bankName.trim()) input.bankName = bankName.trim();
       if (branch.trim()) input.branch = branch.trim();
+      input.externalBankType = "BANK";
     }
 
     if (description.trim()) {

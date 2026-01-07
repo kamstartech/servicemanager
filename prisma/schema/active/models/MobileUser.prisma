@@ -19,6 +19,10 @@ model MobileUser {
   allowMultiSession  Boolean @default(false) @map("allow_multi_session")
 
   isActive  Boolean  @default(true)
+  isBlocked   Boolean  @default(false) @map("is_blocked")
+  blockedAt   DateTime? @map("blocked_at")
+  blockedBy   Int?     @map("blocked_by")
+  blockReason String?  @db.Text @map("block_reason")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

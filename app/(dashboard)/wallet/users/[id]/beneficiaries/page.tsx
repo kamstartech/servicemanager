@@ -26,11 +26,11 @@ const GET_BENEFICIARIES = gql`
       id
       name
       beneficiaryType
-      phoneNumber
       accountNumber
       bankCode
       bankName
       branch
+      externalBankType
       description
       isActive
       createdAt
@@ -107,7 +107,7 @@ export default function BeneficiariesPage() {
   const getIdentifier = (beneficiary: any) => {
     switch (beneficiary.beneficiaryType) {
       case "WALLET":
-        return beneficiary.phoneNumber;
+        return beneficiary.accountNumber; // Phone number
       case "BANK_INTERNAL":
       case "BANK_EXTERNAL":
         return beneficiary.accountNumber;

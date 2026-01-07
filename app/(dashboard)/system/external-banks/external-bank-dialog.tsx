@@ -14,6 +14,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { upsertExternalBank } from "./actions";
 
 interface ExternalBankDialogProps {
@@ -33,6 +40,9 @@ export function ExternalBankDialog({
         message: "",
         success: false,
     });
+    const [selectedType, setSelectedType] = useState<string>(
+        initialData?.type || "BANK"
+    );
 
     // Close dialog on success
     useEffect(() => {
@@ -62,6 +72,7 @@ export function ExternalBankDialog({
                 <form action={formAction}>
                     <div className="grid gap-4 py-4">
                         <input type="hidden" name="id" value={initialData?.id || ""} />
+                        <input type="hidden" name="type" value={selectedType} />
 
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="name" className="text-right">
@@ -74,6 +85,23 @@ export function ExternalBankDialog({
                                 className="col-span-3"
                                 required
                             />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="type" className="text-right">
+                                Type
+                            </Label>
+                            <Select
+                                value={selectedType}
+                                onValueChange={setSelectedType}
+                            >
+                                <SelectTrigger className="col-span-3">
+                                    <SelectValue placeholder="Select type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="BANK">Bank</SelectItem>
+                                    <SelectItem value="WALLET">Mobile Network Operator</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="code" className="text-right">

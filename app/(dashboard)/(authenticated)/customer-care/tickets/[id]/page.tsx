@@ -80,6 +80,18 @@ const UPDATE_TICKET_STATUS = gql`
   }
 `;
 
+const TICKET_MESSAGE_SUBSCRIPTION = gql`
+  subscription OnTicketMessageAdded($ticketId: ID!) {
+    ticketMessageAdded(ticketId: $ticketId) {
+      id
+      message
+      senderType
+      createdAt
+      readAt
+    }
+  }
+`;
+
 // --- Types ---
 
 enum TicketStatus {
@@ -116,10 +128,34 @@ export default function TicketDetailsPage() {
 
     const [messageInput, setMessageInput] = React.useState("");
 
-    const { data, loading, error, refetch } = useQuery(GET_TICKET_DETAILS, {
+
+
+    const { data, loading, error, refetch, subscribeToMore } = useQuery(GET_TICKET_DETAILS, {
         variables: { id },
-        pollInterval: 5000,
     });
+
+    React.useEffect(() => {
+        const unsubscribe = subscribeToMore({
+            document: TICKET_MESSAGE_SUBSCRIPTION,
+            variables: { ticketId: id },
+            updateQuery: (prev, { subscriptionData }) => {
+                if (!subscriptionData.data) return prev;
+                const newMessage = subscriptionData.data.ticketMessageAdded;
+
+                // Check duplicates (optional but good practice)
+                if (prev.ticket.messages.some((m: any) => m.id === newMessage.id)) return prev;
+
+                return {
+                    ...prev,
+                    ticket: {
+                        ...prev.ticket,
+                        messages: [...prev.ticket.messages, newMessage]
+                    }
+                };
+            }
+        });
+        return () => unsubscribe();
+    }, [subscribeToMore, id]);
 
     const [replyToTicket, { loading: sending }] = useMutation(REPLY_TO_TICKET, {
         onCompleted: () => {

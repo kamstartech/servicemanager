@@ -612,7 +612,7 @@ export const mobileUserAccountResolvers = {
   Subscription: {
     accountsUpdated: {
       subscribe: (_parent: unknown, { userId }: { userId: string }) =>
-        pubsub.subscribe(EVENTS.ACCOUNTS_UPDATED, userId),
+        pubsub.asyncIterator([EVENTS.ACCOUNTS_UPDATED]),
       resolve: (payload: any) => payload,
     },
   },

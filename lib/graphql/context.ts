@@ -113,9 +113,9 @@ export async function createGraphQLContext({
       return {};
     }
 
-    // 4. Check user is active
-    if (!session.mobileUser.isActive) {
-      console.log("User account inactive");
+    // 4. Check user is active and not blocked
+    if (!session.mobileUser.isActive || session.mobileUser.isBlocked) {
+      console.log("User account inactive or blocked");
       return {};
     }
 

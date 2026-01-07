@@ -91,10 +91,14 @@ const BENEFICIARIES_QUERY = gql`
       id
       name
       beneficiaryType
-      phoneNumber
       accountNumber
-      bankCode
-      bankName
+      externalBank {
+        id
+        name
+        code
+        type
+      }
+      externalBankType
       isActive
     }
   }
@@ -437,13 +441,8 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
   };
 
   const getIdentifier = (beneficiary: any) => {
-    if (beneficiary.beneficiaryType.includes("WALLET")) {
-      return beneficiary.phoneNumber;
-    }
-    if (beneficiary.beneficiaryType.includes("BANK")) {
-      return beneficiary.accountNumber;
-    }
-    return beneficiary.phoneNumber || beneficiary.accountNumber || "-";
+    // Phone numbers and account numbers are now both stored in accountNumber field
+    return beneficiary.accountNumber || "-";
   };
 
   const basePath = context === "MOBILE_BANKING"
@@ -672,7 +671,9 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
       id: "bank",
       header: COMMON_TABLE_HEADERS.bank,
       accessor: (row) => (
-        <span className="text-sm text-muted-foreground">{row.bankName || row.bankCode || "-"}</span>
+        <span className="text-sm text-muted-foreground">
+          {row.externalBank?.name || (row.beneficiaryType.includes("FDH") ? "FDH" : "-")}
+        </span>
       ),
     },
     {
@@ -727,10 +728,10 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
       ),
     },
     {
-      id: "phoneNumber",
-      header: COMMON_TABLE_HEADERS.phoneNumber,
+      id: "accountNumber",
+      header: "Account/Phone",
       accessor: (row) => (
-        <span className="text-sm font-mono">{row.phoneNumber || "-"}</span>
+        <span className="text-sm font-mono">{row.accountNumber || "-"}</span>
       ),
     },
     {
@@ -1161,7 +1162,7 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
                 <DataTable
                   data={beneficiaries.filter((b: any) => b.beneficiaryType.includes("BANK"))}
                   columns={bankBeneficiaryColumns}
-                  searchableKeys={["name", "accountNumber", "bankName", "bankCode"]}
+                  searchableKeys={["name", "accountNumber"]}
                   initialSortKey="name"
                   pageSize={5}
                   searchPlaceholder="Search bank..."

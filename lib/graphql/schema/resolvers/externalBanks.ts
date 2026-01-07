@@ -1,14 +1,28 @@
 import { prisma } from "@/lib/db/prisma";
-import type { GraphQLContext } from "@/lib/graphql/context";
-import { requireAuth } from "@/lib/graphql/auth-guard";
 
 export const externalBanksResolvers = {
     Query: {
-        externalBanks: async (_: unknown, __: unknown, context: GraphQLContext) => {
-            requireAuth(context);
-
+        externalBanks: async () => {
             return await prisma.externalBank.findMany({
                 where: { isActive: true },
+                orderBy: { name: "asc" },
+            });
+        },
+        externalBankProviders: async () => {
+            return await prisma.externalBank.findMany({
+                where: { 
+                    isActive: true,
+                    type: "BANK"
+                },
+                orderBy: { name: "asc" },
+            });
+        },
+        externalWalletProviders: async () => {
+            return await prisma.externalBank.findMany({
+                where: { 
+                    isActive: true,
+                    type: "WALLET"
+                },
                 orderBy: { name: "asc" },
             });
         },

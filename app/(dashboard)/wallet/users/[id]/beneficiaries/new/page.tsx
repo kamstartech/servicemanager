@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, gql } from "@apollo/client";
+import { useQuery, useMutation, gql } from "@apollo/client";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,9 +12,27 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   RadioGroup,
   RadioGroupItem,
 } from "@/components/ui/radio-group";
+
+const GET_EXTERNAL_BANKS = gql`
+  query GetExternalBanks {
+    externalBanks {
+      id
+      name
+      code
+      type
+    }
+  }
+`;
 
 const CREATE_BENEFICIARY = gql`
   mutation CreateBeneficiary($input: BeneficiaryInput!) {
@@ -31,15 +49,29 @@ export default function NewBeneficiaryPage() {
   const router = useRouter();
   const userId = params.id as string;
 
-  const [beneficiaryType, setBeneficiaryType] = useState<string>("WALLET");
+  const [beneficiaryType, setBeneficiaryType] = useState<string>("FDH_WALLET");
   const [name, setName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [bankCode, setBankCode] = useState("");
   const [bankName, setBankName] = useState("");
   const [branch, setBranch] = useState("");
+  const [externalBankType, setExternalBankType] = useState<string>("BANK");
   const [description, setDescription] = useState("");
   const [isActive, setIsActive] = useState(true);
+
+  // Fetch external banks
+  const { data: externalBanksData } = useQuery(GET_EXTERNAL_BANKS);
+  
+  // Filter banks based on beneficiary type
+  const availableBanks = externalBanksData?.externalBanks?.filter((bank: any) => {
+    if (beneficiaryType === "EXTERNAL_BANK") {
+      return bank.type === "BANK";
+    } else if (beneficiaryType === "EXTERNAL_WALLET") {
+      return bank.type === "WALLET";
+    }
+    return false;
+  }) || [];
 
   const [createBeneficiary, { loading }] = useMutation(CREATE_BENEFICIARY, {
     onCompleted: () => {
@@ -61,13 +93,14 @@ export default function NewBeneficiaryPage() {
       isActive,
     };
 
-    if (beneficiaryType === "WALLET") {
-      input.phoneNumber = phoneNumber.trim();
-    } else if (beneficiaryType === "BANK_INTERNAL") {
+    if (beneficiaryType === "FDH_WALLET" || beneficiaryType === "EXTERNAL_WALLET") {
+      input.accountNumber = phoneNumber.trim(); // Phone stored in accountNumber
+    } else if (beneficiaryType === "FDH_BANK") {
       input.accountNumber = accountNumber.trim();
-    } else if (beneficiaryType === "BANK_EXTERNAL") {
+    } else if (beneficiaryType === "EXTERNAL_BANK") {
       input.accountNumber = accountNumber.trim();
       input.bankCode = bankCode.trim();
+      input.externalBankType = externalBankType;
       if (bankName.trim()) input.bankName = bankName.trim();
       if (branch.trim()) input.branch = branch.trim();
     }

@@ -2,7 +2,7 @@
 
 import { gql, useMutation, useQuery } from "@apollo/client";
 import { toast } from "sonner";
-import { Calendar, Download, Plus, RefreshCw, Trash2, RotateCcw, Upload } from "lucide-react";
+import { Calendar, Download, Plus, RefreshCw, Trash2, RotateCcw, Upload, HardDrive, Clock, Database } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
@@ -24,6 +24,7 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
+    COMMON_TABLE_HEADERS,
     DataTable,
     type DataTableColumn,
 } from "@/components/data-table";
@@ -102,6 +103,8 @@ function formatBytes(bytes: string | number, decimals = 2) {
 
 export default function BackupsPage() {
     const { translate } = useI18n();
+    const [refreshing, setRefreshing] = useState(false);
+    
     const { data, loading, error, refetch } = useQuery(BACKUPS_QUERY, {
         pollInterval: 10000, // Auto-refresh every 10s
     });
@@ -245,22 +248,41 @@ export default function BackupsPage() {
 
     const rows: BackupRow[] = data?.backups ?? [];
 
+    // Calculate stats
+    const totalBackups = rows.length;
+    const totalSize = rows.reduce((sum, row) => sum + Number(row.sizeBytes), 0);
+    const latestBackup = rows.length > 0 
+        ? rows.reduce((latest, row) => new Date(row.createdAt) > new Date(latest.createdAt) ? row : latest)
+        : null;
+    const oldestBackup = rows.length > 0
+        ? rows.reduce((oldest, row) => new Date(row.createdAt) < new Date(oldest.createdAt) ? row : oldest)
+        : null;
+
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        try {
+            await refetch();
+        } finally {
+            setRefreshing(false);
+        }
+    };
+
     const columns: DataTableColumn<BackupRow>[] = [
         {
             id: "filename",
-            header: translate("common.table.columns.filename"),
+            header: COMMON_TABLE_HEADERS.filename,
             accessor: (row) => row.filename,
             sortKey: "filename",
         },
         {
             id: "size",
-            header: translate("common.table.columns.size"),
+            header: COMMON_TABLE_HEADERS.size,
             accessor: (row) => formatBytes(row.sizeBytes),
             sortKey: "sizeBytes",
         },
         {
             id: "createdAt",
-            header: translate("common.table.columns.created"),
+            header: COMMON_TABLE_HEADERS.created,
             accessor: (row) => (
                 <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
                     <Calendar size={16} />
@@ -279,7 +301,7 @@ export default function BackupsPage() {
         },
         {
             id: "actions",
-            header: translate("common.table.columns.actions"),
+            header: COMMON_TABLE_HEADERS.actions,
             accessor: (row) => (
                 <div className="flex flex-wrap justify-center gap-2">
                     {/* Download */}
@@ -365,17 +387,102 @@ export default function BackupsPage() {
 
     return (
         <div className="min-h-screen bg-background px-4 py-6">
+            <div className="mb-6">
+                <h1 className="text-3xl font-bold">Database Backups</h1>
+                <p className="text-muted-foreground mt-2">
+                    Manage database snapshots for disaster recovery
+                </p>
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <Card>
+                    <CardContent className="pt-6">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-full">
+                                <Database className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-muted-foreground">Total Backups</p>
+                                <p className="text-2xl font-bold">{totalBackups}</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardContent className="pt-6">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-purple-100 dark:bg-purple-900 rounded-full">
+                                <HardDrive className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-muted-foreground">Total Size</p>
+                                <p className="text-2xl font-bold">{formatBytes(totalSize)}</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardContent className="pt-6">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-green-100 dark:bg-green-900 rounded-full">
+                                <Clock className="h-6 w-6 text-green-600 dark:text-green-400" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-muted-foreground">Latest Backup</p>
+                                <p className="text-sm font-bold">
+                                    {latestBackup 
+                                        ? new Date(latestBackup.createdAt).toLocaleDateString(undefined, {
+                                            month: 'short',
+                                            day: '2-digit',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        })
+                                        : 'N/A'
+                                    }
+                                </p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardContent className="pt-6">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-orange-100 dark:bg-orange-900 rounded-full">
+                                <Calendar className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-muted-foreground">Oldest Backup</p>
+                                <p className="text-sm font-bold">
+                                    {oldestBackup
+                                        ? new Date(oldestBackup.createdAt).toLocaleDateString(undefined, {
+                                            month: 'short',
+                                            day: '2-digit',
+                                            year: 'numeric'
+                                        })
+                                        : 'N/A'
+                                    }
+                                </p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
             <Card className="w-full">
                 <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                        <CardTitle>Database Backups</CardTitle>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            Manage database snapshots for disaster recovery.
-                        </p>
-                    </div>
+                    <CardTitle>Backup Files</CardTitle>
                     <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={loading}>
-                            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={handleRefresh} 
+                            disabled={refreshing}
+                        >
+                            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                             {translate("common.actions.refresh")}
                         </Button>
                         <Button variant="outline" size="sm" onClick={handleUploadClick} disabled={uploading}>
@@ -391,7 +498,12 @@ export default function BackupsPage() {
                             onChange={handleFileSelect}
                             className="hidden"
                         />
-                        <Button size="sm" onClick={handleCreateBackup} disabled={creating}>
+                        <Button 
+                            size="sm" 
+                            onClick={handleCreateBackup} 
+                            disabled={creating}
+                            className="bg-fdh-orange hover:bg-fdh-orange/90"
+                        >
                             <Plus className="h-4 w-4 mr-2" />
                             {creating
                                 ? translate("common.state.creating")
@@ -477,16 +589,22 @@ export default function BackupsPage() {
                         <p className="mb-4 text-sm text-red-600">Error loading backups: {error.message}</p>
                     )}
 
-                    <DataTable<BackupRow>
-                        data={rows}
-                        columns={columns}
-                        searchableKeys={["filename"]}
-                        initialSortKey="createdAt"
-                        pageSize={10}
-                        searchPlaceholder="Search backups..."
-                        showRowNumbers
-                        rowNumberHeader={translate("common.table.columns.index")}
-                    />
+                    {loading ? (
+                        <p className="text-sm text-muted-foreground text-center py-8">
+                            Loading backups...
+                        </p>
+                    ) : (
+                        <DataTable<BackupRow>
+                            data={rows}
+                            columns={columns}
+                            searchableKeys={["filename"]}
+                            initialSortKey="createdAt"
+                            pageSize={10}
+                            searchPlaceholder="Search backups..."
+                            showRowNumbers
+                            rowNumberHeader={translate("common.table.columns.index")}
+                        />
+                    )}
                 </CardContent>
             </Card>
         </div>

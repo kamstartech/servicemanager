@@ -70,7 +70,6 @@ export const authResolvers = {
             ? { phoneNumber: username }
             : { username }),
           context: context as any,
-          isActive: true,
         },
       });
 
@@ -98,6 +97,62 @@ export const authResolvers = {
           password,
           "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYIBL0dKzGK"
         );
+        throw new GraphQLError("Invalid credentials", {
+          extensions: {
+            code: 'UNAUTHENTICATED',
+            http: { status: 401 },
+          },
+        });
+      }
+
+      // 1b. Check if user is blocked
+      if (user.isBlocked) {
+        await prisma.deviceLoginAttempt.create({
+          data: {
+            mobileUserId: user.id,
+            username,
+            context,
+            deviceId,
+            deviceName,
+            deviceModel,
+            deviceOs,
+            ipAddress,
+            location,
+            attemptType: "PASSWORD_LOGIN",
+            status: "FAILED_DEVICE_BLOCKED",
+            failureReason: "User account is blocked",
+            attemptedAt: new Date(),
+          },
+        });
+
+        throw new GraphQLError("Your account has been blocked. Please contact support for assistance.", {
+          extensions: {
+            code: 'ACCOUNT_BLOCKED',
+            http: { status: 403 },
+          },
+        });
+      }
+
+      // 1c. Check if user is inactive
+      if (!user.isActive) {
+        await prisma.deviceLoginAttempt.create({
+          data: {
+            mobileUserId: user.id,
+            username,
+            context,
+            deviceId,
+            deviceName,
+            deviceModel,
+            deviceOs,
+            ipAddress,
+            location,
+            attemptType: "PASSWORD_LOGIN",
+            status: "FAILED_CREDENTIALS",
+            failureReason: "User account is inactive",
+            attemptedAt: new Date(),
+          },
+        });
+
         throw new GraphQLError("Invalid credentials", {
           extensions: {
             code: 'UNAUTHENTICATED',

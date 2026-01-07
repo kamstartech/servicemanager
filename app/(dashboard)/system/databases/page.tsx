@@ -12,6 +12,7 @@ import { useI18n } from "@/components/providers/i18n-provider";
 import { CheckCircle, Clock, Eye, FlaskConical, XCircle } from "lucide-react";
 import { DatabaseConnectionDialog } from "@/components/database-connection-dialog";
 import { translateStatusOneWord } from "@/lib/utils";
+import { ACTION_BUTTON_STYLES } from "@/lib/constants/button-styles";
 import {
   COMMON_TABLE_HEADERS,
   DataTable,
@@ -186,14 +187,14 @@ export default function DatabaseConnectionsPage() {
     },
     {
       id: "actions",
-      header: translate("databaseConnections.actions"),
+      header: COMMON_TABLE_HEADERS.actions,
       accessor: (row) => (
         <div className="flex flex-wrap justify-center gap-2">
           <Button
             asChild
             variant="outline"
             size="sm"
-            className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
+            className={ACTION_BUTTON_STYLES.view}
           >
             <Link href={`/system/databases/${row.id}`}>
               <Eye className="h-4 w-4 mr-2" />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, gql } from "@apollo/client";
+import { useQuery, useMutation, gql } from "@apollo/client";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,24 @@ import {
   RadioGroup,
   RadioGroupItem,
 } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const GET_EXTERNAL_BANKS = gql`
+  query GetExternalBanks {
+    externalBanks {
+      id
+      name
+      code
+      type
+    }
+  }
+`;
 
 const CREATE_BENEFICIARY = gql`
   mutation CreateBeneficiary($input: BeneficiaryInput!) {
@@ -31,15 +49,29 @@ export default function NewBeneficiaryPage() {
   const router = useRouter();
   const userId = params.id as string;
 
-  const [beneficiaryType, setBeneficiaryType] = useState<string>("WALLET");
+  const [beneficiaryType, setBeneficiaryType] = useState<string>("FDH_WALLET");
   const [name, setName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [bankCode, setBankCode] = useState("");
   const [bankName, setBankName] = useState("");
   const [branch, setBranch] = useState("");
+  const [externalBankType, setExternalBankType] = useState<string>("BANK");
   const [description, setDescription] = useState("");
   const [isActive, setIsActive] = useState(true);
+
+  // Fetch external banks
+  const { data: externalBanksData } = useQuery(GET_EXTERNAL_BANKS);
+  
+  // Filter banks based on beneficiary type
+  const availableBanks = externalBanksData?.externalBanks?.filter((bank: any) => {
+    if (beneficiaryType === "EXTERNAL_BANK") {
+      return bank.type === "BANK";
+    } else if (beneficiaryType === "EXTERNAL_WALLET") {
+      return bank.type === "WALLET";
+    }
+    return false;
+  }) || [];
 
   const [createBeneficiary, { loading }] = useMutation(CREATE_BENEFICIARY, {
     onCompleted: () => {
@@ -61,15 +93,21 @@ export default function NewBeneficiaryPage() {
       isActive,
     };
 
-    if (beneficiaryType === "WALLET") {
-      input.phoneNumber = phoneNumber.trim();
-    } else if (beneficiaryType === "BANK_INTERNAL") {
+    if (beneficiaryType === "FDH_WALLET") {
+      input.accountNumber = phoneNumber.trim(); // Phone stored in accountNumber
+    } else if (beneficiaryType === "EXTERNAL_WALLET") {
+      input.accountNumber = phoneNumber.trim(); // Phone stored in accountNumber
+      input.bankCode = bankCode.trim();
+      if (bankName.trim()) input.bankName = bankName.trim();
+      input.externalBankType = "WALLET";
+    } else if (beneficiaryType === "FDH_BANK") {
       input.accountNumber = accountNumber.trim();
-    } else if (beneficiaryType === "BANK_EXTERNAL") {
+    } else if (beneficiaryType === "EXTERNAL_BANK") {
       input.accountNumber = accountNumber.trim();
       input.bankCode = bankCode.trim();
       if (bankName.trim()) input.bankName = bankName.trim();
       if (branch.trim()) input.branch = branch.trim();
+      input.externalBankType = "BANK";
     }
 
     if (description.trim()) {
@@ -110,20 +148,26 @@ export default function NewBeneficiaryPage() {
                 onValueChange={setBeneficiaryType}
               >
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="WALLET" id="wallet" />
-                  <Label htmlFor="wallet" className="font-normal cursor-pointer">
-                    Wallet (Phone Number)
+                  <RadioGroupItem value="FDH_WALLET" id="fdh-wallet" />
+                  <Label htmlFor="fdh-wallet" className="font-normal cursor-pointer">
+                    FDH Wallet (Phone Number)
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="BANK_INTERNAL" id="bank-internal" />
-                  <Label htmlFor="bank-internal" className="font-normal cursor-pointer">
-                    Internal Bank Account (FDH)
+                  <RadioGroupItem value="EXTERNAL_WALLET" id="external-wallet" />
+                  <Label htmlFor="external-wallet" className="font-normal cursor-pointer">
+                    External Wallet (Phone Number)
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="BANK_EXTERNAL" id="bank-external" />
-                  <Label htmlFor="bank-external" className="font-normal cursor-pointer">
+                  <RadioGroupItem value="FDH_BANK" id="fdh-bank" />
+                  <Label htmlFor="fdh-bank" className="font-normal cursor-pointer">
+                    FDH Bank Account
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="EXTERNAL_BANK" id="external-bank" />
+                  <Label htmlFor="external-bank" className="font-normal cursor-pointer">
                     External Bank Account
                   </Label>
                 </div>
@@ -142,8 +186,54 @@ export default function NewBeneficiaryPage() {
               />
             </div>
 
+            {/* Wallet External Fields */}
+            {beneficiaryType === "EXTERNAL_WALLET" && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="phoneNumber">Phone Number *</Label>
+                  <Input
+                    id="phoneNumber"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="+265991234567"
+                    required
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Include country code (e.g., +265)
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="mno">Mobile Network Operator *</Label>
+                  <Select
+                    value={bankCode}
+                    onValueChange={(value) => {
+                      const selectedBank = availableBanks.find((b: any) => b.code === value);
+                      setBankCode(value);
+                      setBankName(selectedBank?.name || "");
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select MNO" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableBanks.length === 0 ? (
+                        <SelectItem value="none" disabled>No MNOs configured</SelectItem>
+                      ) : (
+                        availableBanks.map((bank: any) => (
+                          <SelectItem key={bank.id} value={bank.code}>
+                            {bank.name}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+
             {/* Wallet Fields */}
-            {beneficiaryType === "WALLET" && (
+            {beneficiaryType === "FDH_WALLET" && (
               <div className="space-y-2">
                 <Label htmlFor="phoneNumber">Phone Number *</Label>
                 <Input
@@ -160,7 +250,7 @@ export default function NewBeneficiaryPage() {
             )}
 
             {/* Bank Internal Fields */}
-            {beneficiaryType === "BANK_INTERNAL" && (
+            {beneficiaryType === "FDH_BANK" && (
               <div className="space-y-2">
                 <Label htmlFor="accountNumber">FDH Account Number *</Label>
                 <Input
@@ -174,8 +264,35 @@ export default function NewBeneficiaryPage() {
             )}
 
             {/* Bank External Fields */}
-            {beneficiaryType === "BANK_EXTERNAL" && (
+            {beneficiaryType === "EXTERNAL_BANK" && (
               <>
+                <div className="space-y-2">
+                  <Label htmlFor="bank">Select Bank *</Label>
+                  <Select
+                    value={bankCode}
+                    onValueChange={(value) => {
+                      const selectedBank = availableBanks.find((b: any) => b.code === value);
+                      setBankCode(value);
+                      setBankName(selectedBank?.name || "");
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select bank" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableBanks.length === 0 ? (
+                        <SelectItem value="none" disabled>No banks configured</SelectItem>
+                      ) : (
+                        availableBanks.map((bank: any) => (
+                          <SelectItem key={bank.id} value={bank.code}>
+                            {bank.name} ({bank.code})
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="accountNumber">Account Number *</Label>
                   <Input
@@ -184,30 +301,6 @@ export default function NewBeneficiaryPage() {
                     onChange={(e) => setAccountNumber(e.target.value)}
                     placeholder="Enter account number"
                     required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="bankCode">Bank Code *</Label>
-                  <Input
-                    id="bankCode"
-                    value={bankCode}
-                    onChange={(e) => setBankCode(e.target.value)}
-                    placeholder="e.g., SBICMWMW"
-                    required
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    SWIFT/BIC code or local bank code
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="bankName">Bank Name</Label>
-                  <Input
-                    id="bankName"
-                    value={bankName}
-                    onChange={(e) => setBankName(e.target.value)}
-                    placeholder="e.g., Standard Bank"
                   />
                 </div>
 

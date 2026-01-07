@@ -49,6 +49,7 @@ import { ArrowLeft, Calendar, Plus, Edit, Trash2, GripVertical, Workflow as Work
   FileText, Lock, Phone, MapPin, Store, File, Lightbulb, Search
 } from "lucide-react";
 import Link from "next/link";
+import { ACTION_BUTTON_STYLES } from "@/lib/constants/button-styles";
 import {
   DndContext,
   closestCenter,
@@ -238,7 +239,7 @@ function SortablePageRow({
               asChild
               variant="outline"
               size="sm"
-              className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
+              className={ACTION_BUTTON_STYLES.view}
             >
               <Link href={`/system/app-screens/${screenId}/pages/${page.id}`}>
                 <WorkflowIcon className="h-4 w-4 mr-2" />
@@ -249,7 +250,7 @@ function SortablePageRow({
               type="button"
               variant="outline"
               size="sm"
-              className="text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 border-amber-200"
+              className={ACTION_BUTTON_STYLES.warning}
               onClick={() => onEdit(page)}
             >
               <Edit className="h-4 w-4 mr-2" />
@@ -259,7 +260,7 @@ function SortablePageRow({
               type="button"
               variant="outline"
               size="sm"
-              className="text-red-700 bg-red-50 hover:bg-red-100 hover:text-red-800 border-red-200"
+              className={ACTION_BUTTON_STYLES.delete}
               onClick={() => onDelete(page.id, page.name)}
             >
               <Trash2 className="h-4 w-4 mr-2" />

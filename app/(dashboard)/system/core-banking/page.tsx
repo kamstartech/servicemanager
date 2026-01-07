@@ -20,6 +20,7 @@ import {
 } from "@/components/core-banking/core-banking-connection-dialog";
 import { Calendar, CheckCircle, Eye, FlaskConical, Pencil, XCircle } from "lucide-react";
 import { translateStatusOneWord } from "@/lib/utils";
+import { ACTION_BUTTON_STYLES } from "@/lib/constants/button-styles";
 
 const CORE_BANKING_CONNECTIONS_QUERY = gql`
   query CoreBankingConnections {
@@ -93,13 +94,13 @@ export default function CoreBankingConnectionsPage() {
   const columns: DataTableColumn<CoreBankingConnectionRow>[] = [
     {
       id: "name",
-      header: translate("coreBanking.connections.columns.name"),
+      header: COMMON_TABLE_HEADERS.name,
       accessor: (row) => row.name,
       sortKey: "name",
     },
     {
       id: "username",
-      header: translate("coreBanking.connections.columns.username"),
+      header: COMMON_TABLE_HEADERS.username,
       accessor: (row) => row.username,
       sortKey: "username",
     },
@@ -111,7 +112,7 @@ export default function CoreBankingConnectionsPage() {
     },
     {
       id: "status",
-      header: translate("coreBanking.connections.columns.status"),
+      header: COMMON_TABLE_HEADERS.status,
       accessor: (row) =>
         row.isActive ? (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -162,14 +163,14 @@ export default function CoreBankingConnectionsPage() {
     },
     {
       id: "actions",
-      header: translate("coreBanking.connections.columns.actions"),
+      header: COMMON_TABLE_HEADERS.actions,
       accessor: (row) => (
         <div className="flex flex-wrap justify-center gap-2">
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
+            className={ACTION_BUTTON_STYLES.view}
             disabled={testing}
             onClick={async () => {
               try {
@@ -206,7 +207,7 @@ export default function CoreBankingConnectionsPage() {
             type="button"
             variant="outline"
             size="sm"
-            className="text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 border-amber-200"
+            className={ACTION_BUTTON_STYLES.warning}
             onClick={() => {
               setSelectedConnection({
                 id: row.id,
@@ -226,7 +227,7 @@ export default function CoreBankingConnectionsPage() {
             asChild
             size="sm"
             variant="outline"
-            className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
+            className={ACTION_BUTTON_STYLES.view}
           >
             <Link href={`/system/core-banking/${row.id}`}>
               <Eye className="h-4 w-4 mr-2" />

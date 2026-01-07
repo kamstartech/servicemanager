@@ -5,6 +5,7 @@ import { gql, useMutation, useQuery } from "@apollo/client";
 import { toast } from "sonner";
 import { Calendar, Clock, Repeat, Eye, Edit, Trash2, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { translateStatusOneWord } from "@/lib/utils";
+import { ACTION_BUTTON_STYLES } from "@/lib/constants/button-styles";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
+  COMMON_TABLE_HEADERS,
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table";
@@ -95,7 +97,7 @@ export default function MigrationsPage() {
   const columns: DataTableColumn<MigrationRow>[] = [
     {
       id: "name",
-      header: translate("common.table.columns.name"),
+      header: COMMON_TABLE_HEADERS.name,
       accessor: (row) => (
         <div className="flex items-center gap-2">
           {row.name}
@@ -110,19 +112,19 @@ export default function MigrationsPage() {
     },
     {
       id: "source",
-      header: translate("common.table.columns.source"),
+      header: COMMON_TABLE_HEADERS.source,
       accessor: (row) => row.sourceConnectionName,
       sortKey: "sourceConnectionName",
     },
     {
       id: "target",
-      header: translate("common.table.columns.targetTable"),
+      header: COMMON_TABLE_HEADERS.targetTable,
       accessor: (row) => row.targetTable,
       sortKey: "targetTable",
     },
     {
       id: "status",
-      header: translate("common.table.columns.status"),
+      header: COMMON_TABLE_HEADERS.status,
       accessor: (row) => {
         const label = translateStatusOneWord(row.status, translate, "UNKNOWN");
 
@@ -165,7 +167,7 @@ export default function MigrationsPage() {
     },
     {
       id: "lastRun",
-      header: translate("common.table.columns.lastRun"),
+      header: COMMON_TABLE_HEADERS.lastRun,
       accessor: (row) => {
         if (!row.lastRunAt) {
           return <span className="text-sm text-muted-foreground">Never</span>;
@@ -198,7 +200,7 @@ export default function MigrationsPage() {
     },
     {
       id: "nextRun",
-      header: translate("common.table.columns.nextRun"),
+      header: COMMON_TABLE_HEADERS.nextRun,
       accessor: (row) => {
         if (!row.isRecurring || !row.nextRunAt) return "";
         return (
@@ -220,14 +222,14 @@ export default function MigrationsPage() {
     },
     {
       id: "actions",
-      header: translate("common.table.columns.actions"),
+      header: COMMON_TABLE_HEADERS.actions,
       accessor: (row) => (
         <div className="flex flex-wrap justify-center gap-2">
           <Button
             asChild
             variant="outline"
             size="sm"
-            className="text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
+            className={ACTION_BUTTON_STYLES.view}
           >
             <Link href={`/system/migrations/${row.id}`}>
               <Eye className="h-4 w-4 mr-2" />
@@ -238,7 +240,7 @@ export default function MigrationsPage() {
             asChild
             variant="outline"
             size="sm"
-            className="text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 border-amber-200"
+            className={ACTION_BUTTON_STYLES.warning}
           >
             <Link href={`/system/migrations/${row.id}/edit`}>
               <Edit className="h-4 w-4 mr-2" />
@@ -257,7 +259,7 @@ export default function MigrationsPage() {
                 type="button"
                 variant="outline"
                 size="sm"
-                className="text-red-700 bg-red-50 hover:bg-red-100 hover:text-red-800 border-red-200"
+                className={ACTION_BUTTON_STYLES.delete}
                 disabled={deleting || row.status === "RUNNING"}
               >
                 <Trash2 className="h-4 w-4 mr-2" />
@@ -341,7 +343,7 @@ export default function MigrationsPage() {
               pageSize={10}
               searchPlaceholder="Search migrations"
               showRowNumbers
-              rowNumberHeader={translate("common.table.columns.index")}
+              rowNumberHeader={COMMON_TABLE_HEADERS.index}
             />
           )}
         </CardContent>

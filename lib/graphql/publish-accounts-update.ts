@@ -12,7 +12,7 @@ export async function publishAccountsUpdate(userId: number): Promise<void> {
             orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
         });
 
-        pubsub.publish(EVENTS.ACCOUNTS_UPDATED, userId.toString(), {
+        pubsub.publish(EVENTS.ACCOUNTS_UPDATED, {
             userId: userId.toString(),
             accounts: accounts.map(account => ({
                 id: account.id.toString(),

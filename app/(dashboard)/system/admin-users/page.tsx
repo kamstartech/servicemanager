@@ -30,19 +30,19 @@ export default function AdminWebUsersPage() {
   const columns: DataTableColumn<any>[] = [
     {
       id: "email",
-      header: translate("adminUsers.columns.email"),
+      header: COMMON_TABLE_HEADERS.email,
       accessor: (row) => row.email,
       sortKey: "email",
     },
     {
       id: "name",
-      header: translate("adminUsers.columns.name"),
+      header: COMMON_TABLE_HEADERS.name,
       accessor: (row) => row.name ?? "-",
       sortKey: "name",
     },
     {
       id: "status",
-      header: translate("adminUsers.columns.status"),
+      header: COMMON_TABLE_HEADERS.status,
       accessor: (row) =>
         row.isActive
           ? translateStatusOneWord("ACTIVE", translate, "ACTIVE")
