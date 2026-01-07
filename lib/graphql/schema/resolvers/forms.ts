@@ -45,7 +45,7 @@ export const formsResolvers = {
       ]);
 
       return {
-        forms: forms.map((form) => ({
+        forms: forms.map((form: any) => ({
           ...form,
           createdAt: form.createdAt.toISOString(),
           updatedAt: form.updatedAt.toISOString(),
@@ -152,6 +152,41 @@ export const formsResolvers = {
         ...updated,
         createdAt: updated.createdAt.toISOString(),
         updatedAt: updated.updatedAt.toISOString(),
+      };
+    },
+
+    async duplicateForm(
+      _parent: unknown,
+      args: { id: string; name: string },
+      context: { userId?: number }
+    ) {
+      const { id, name } = args;
+      // TODO: Get actual user ID from auth context
+      const userId = context.userId || 1;
+
+      const form = await prisma.form.findUnique({
+        where: { id },
+      });
+
+      if (!form) {
+        throw new Error("Form not found");
+      }
+
+      const newForm = await prisma.form.create({
+        data: {
+          name: name,
+          description: form.description,
+          category: form.category,
+          schema: form.schema as any,
+          isActive: false,
+          createdBy: userId,
+        },
+      });
+
+      return {
+        ...newForm,
+        createdAt: newForm.createdAt.toISOString(),
+        updatedAt: newForm.updatedAt.toISOString(),
       };
     },
   },

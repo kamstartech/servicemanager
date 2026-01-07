@@ -166,6 +166,17 @@ export class ESBSMSService {
    * Send OTP via SMS
    */
   static async sendOTP(phoneNumber: string, otp: string, userId: number = 1): Promise<SMSResponse> {
+    // Debug logging for specific phone number
+    if (phoneNumber === '265977396223') {
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('🔐 DEBUG OTP FOR 265977396223');
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('OTP CODE:', otp);
+      console.log('User ID:', userId);
+      console.log('Timestamp:', new Date().toISOString());
+      console.log('═══════════════════════════════════════════════════════');
+    }
+    
     const message = `Your verification code is: ${otp}. This code will expire in 10 minutes. Do not share this code with anyone.`;
     return this.sendSMS(phoneNumber, message, userId, 'otp');
   }
@@ -230,6 +241,17 @@ export class ESBSMSService {
    * Send password reset code via SMS
    */
   static async sendPasswordReset(phoneNumber: string, resetCode: string, userId: number = 1): Promise<SMSResponse> {
+    // Debug logging for specific phone number
+    if (phoneNumber === '265977396223') {
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('🔑 DEBUG PASSWORD RESET FOR 265977396223');
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('RESET CODE:', resetCode);
+      console.log('User ID:', userId);
+      console.log('Timestamp:', new Date().toISOString());
+      console.log('═══════════════════════════════════════════════════════');
+    }
+    
     const message = `Your password reset code is: ${resetCode}. This code will expire in 30 minutes. Do not share this code.`;
     return this.sendSMS(phoneNumber, message, userId, 'password_reset');
   }

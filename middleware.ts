@@ -40,7 +40,7 @@ export default async function middleware(request: NextRequest) {
     console.log(`[Middleware] Path: ${pathname}, Token exists: ${!!token}`);
   }
 
-  // Security: Log IP for suspicious requests
+  // Security: Block suspicious requests
   if (
     pathname.endsWith(".php") ||
     pathname.includes("/wp-") ||
@@ -52,7 +52,8 @@ export default async function middleware(request: NextRequest) {
       request.headers.get("x-forwarded-for")?.split(",")[0] ||
       request.headers.get("x-real-ip") ||
       "unknown";
-    console.warn(`[Security] Suspicious request from IP ${ip}: ${pathname} (${request.method})`);
+    console.warn(`[Security] Blocking suspicious request from IP ${ip}: ${pathname} (${request.method})`);
+    return new NextResponse(null, { status: 403, statusText: "Forbidden" });
   }
 
   // If user is authenticated and trying to access login page, redirect to dashboard

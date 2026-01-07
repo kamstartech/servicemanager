@@ -34,8 +34,19 @@ import {
   Calendar,
   CheckCircle,
   XCircle,
+  Copy,
 } from "lucide-react";
 import Link from "next/link";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const FORMS_QUERY = gql`
   query Forms($isActive: Boolean, $category: String, $page: Int, $limit: Int) {
@@ -70,6 +81,15 @@ const DELETE_FORM = gql`
   }
 `;
 
+const DUPLICATE_FORM = gql`
+  mutation DuplicateForm($id: ID!, $name: String!) {
+    duplicateForm(id: $id, name: $name) {
+      id
+      name
+    }
+  }
+`;
+
 export default function FormsPage() {
   const { translate } = useI18n();
   const [activeFilter, setActiveFilter] = useState<boolean | undefined>(undefined);
@@ -77,6 +97,11 @@ export default function FormsPage() {
   const [deleteTarget, setDeleteTarget] = useState<
     { id: string; name: string } | null
   >(null);
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+  const [duplicateTarget, setDuplicateTarget] = useState<
+    { id: string; name: string } | null
+  >(null);
+  const [newFormName, setNewFormName] = useState("");
 
   const { data, loading, error, refetch } = useQuery(FORMS_QUERY, {
     variables: {
@@ -91,6 +116,10 @@ export default function FormsPage() {
   });
 
   const [deleteForm] = useMutation(DELETE_FORM, {
+    onCompleted: () => refetch(),
+  });
+
+  const [duplicateForm] = useMutation(DUPLICATE_FORM, {
     onCompleted: () => refetch(),
   });
 
@@ -210,6 +239,12 @@ export default function FormsPage() {
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete
               </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleDuplicate(row.id, row.name)}
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                Duplicate
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -233,8 +268,31 @@ export default function FormsPage() {
     if (!deleteTarget) return;
 
     await deleteForm({ variables: { id: deleteTarget.id } });
-    setDeleteDialogOpen(false);
     setDeleteTarget(null);
+  };
+
+  const handleDuplicate = (id: string, name: string) => {
+    setDuplicateTarget({ id, name });
+    setNewFormName(`${name} (Copy)`);
+    setDuplicateDialogOpen(true);
+  };
+
+  const confirmDuplicate = async () => {
+    if (!duplicateTarget || !newFormName.trim()) return;
+
+    try {
+      await duplicateForm({
+        variables: {
+          id: duplicateTarget.id,
+          name: newFormName,
+        },
+      });
+      setDuplicateDialogOpen(false);
+      setDuplicateTarget(null);
+      setNewFormName("");
+    } catch (error) {
+      console.error("Failed to duplicate form:", error);
+    }
   };
 
   return (
@@ -257,27 +315,27 @@ export default function FormsPage() {
         <CardContent>
           {/* Filters */}
           <div className="flex gap-2 mb-6">
-              <Button
-                variant={activeFilter === undefined ? "default" : "outline"}
-                size="sm"
-                onClick={() => setActiveFilter(undefined)}
-              >
-                All
-              </Button>
-              <Button
-                variant={activeFilter === true ? "default" : "outline"}
-                size="sm"
-                onClick={() => setActiveFilter(true)}
-              >
-                Active
-              </Button>
-              <Button
-                variant={activeFilter === false ? "default" : "outline"}
-                size="sm"
-                onClick={() => setActiveFilter(false)}
-              >
-                Inactive
-              </Button>
+            <Button
+              variant={activeFilter === undefined ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveFilter(undefined)}
+            >
+              All
+            </Button>
+            <Button
+              variant={activeFilter === true ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveFilter(true)}
+            >
+              Active
+            </Button>
+            <Button
+              variant={activeFilter === false ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveFilter(false)}
+            >
+              Inactive
+            </Button>
           </div>
 
           {/* Loading State */}
@@ -353,6 +411,36 @@ export default function FormsPage() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+
+          <Dialog open={duplicateDialogOpen} onOpenChange={setDuplicateDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Duplicate Form</DialogTitle>
+                <DialogDescription>
+                  Enter a name for the duplicated form.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="name" className="text-right">
+                    Name
+                  </Label>
+                  <Input
+                    id="name"
+                    value={newFormName}
+                    onChange={(e) => setNewFormName(e.target.value)}
+                    className="col-span-3"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setDuplicateDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={confirmDuplicate}>Duplicate</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </CardContent>
       </Card>
     </div>

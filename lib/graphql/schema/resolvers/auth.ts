@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { redis } from "@/lib/db/redis";
 import bcrypt from "bcryptjs";
 import jwt, { type Secret, type SignOptions } from "jsonwebtoken";
 import crypto from "crypto";
@@ -285,6 +286,9 @@ export const authResolvers = {
           where: { mobileUserId: user.id },
         });
 
+        // Check if user has a temporal password flag
+        const isTemporal = await redis.get(`RESET_PASSWORD:${user.id}`);
+
         // Generate session ID and JWT token
         const sessionId = crypto.randomUUID();
         const token = jwt.sign(
@@ -295,6 +299,7 @@ export const authResolvers = {
             phoneNumber: user.phoneNumber,
             deviceId,
             sessionId,
+            temporal: isTemporal === "true",
           },
           JWT_SECRET,
           {
@@ -695,6 +700,43 @@ export const authResolvers = {
         where: { id: user.id },
         data: { passwordHash },
       });
+
+      // Set Redis flag for temporal password
+      await redis.set(`RESET_PASSWORD:${user.id}`, "true");
+
+      // Send notifications
+      const profile = await prisma.mobileUserProfile.findUnique({
+        where: { mobileUserId: user.id },
+      });
+
+      const email = profile?.email;
+      const sendSMS = !!(user.phoneNumber && user.smsNotifications);
+      const sendEmail = !!(email && user.emailNotifications);
+
+      if (sendSMS) {
+        try {
+          await ESBSMSService.sendSMS(
+            user.phoneNumber!,
+            `Your temporary password is: ${tempPassword}. Please log in and change it immediately.`,
+            user.id,
+            "password_reset"
+          );
+        } catch (error) {
+          console.error("Failed to send temporary password SMS:", error);
+        }
+      }
+
+      if (sendEmail) {
+        try {
+          await emailService.sendTemporaryPassword(
+            email!,
+            tempPassword,
+            user.username ?? "User"
+          );
+        } catch (error) {
+          console.error("Failed to send temporary password email:", error);
+        }
+      }
 
       return {
         success: true,

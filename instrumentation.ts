@@ -9,6 +9,7 @@ export async function register() {
         const { accountEnrichmentService } = await import('@/lib/services/background/account-enrichment');
         const { accountCleanupService } = await import('@/lib/services/background/account-cleanup');
         const { alertSettingsService } = await import('@/lib/services/background/alert-settings');
+        const { alertListenerService } = await import('@/lib/services/background/alert-listeners');
         const { startTransactionProcessorJob } = await import('@/lib/jobs/transaction-processor-job');
 
         // Initialize MinIO buckets on startup
@@ -25,6 +26,7 @@ export async function register() {
         accountEnrichmentService.start();
         accountCleanupService.start();
         alertSettingsService.start();
+        alertListenerService.start();
         startTransactionProcessorJob();
     }
 }

@@ -11,6 +11,7 @@ export interface JWTPayload {
   exp?: number;
   iss?: string;
   sub?: string;
+  temporal?: boolean;
 }
 
 export function verifyToken(token: string): JWTPayload | null {
@@ -52,7 +53,7 @@ export function isTokenExpired(token: string): boolean {
 
 export function extractTokenFromHeader(authHeader?: string | null): string | null {
   if (!authHeader) return null;
-  
+
   const parts = authHeader.split(" ");
   if (parts.length === 2 && parts[0] === "Bearer") {
     return parts[1];

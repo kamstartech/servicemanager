@@ -149,6 +149,34 @@ export class EmailService {
   }
 
   /**
+   * Send temporary password email
+   */
+  async sendTemporaryPassword(
+    to: string,
+    tempPassword: string,
+    username: string
+  ): Promise<boolean> {
+    return this.sendEmail({
+      to,
+      subject: "Your Temporary Password",
+      text: `Hello ${username},\n\nYour password has been reset by an administrator.\n\nYour temporary password is: ${tempPassword}\n\nPlease log in and change your password immediately.\n\nIf you did not request this, please contact support immediately.`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Temporary Password</h2>
+          <p>Hello ${username},</p>
+          <p>Your password has been reset by an administrator.</p>
+          <p>Your temporary password is:</p>
+          <div style="background-color: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
+            ${tempPassword}
+          </div>
+          <p>Please log in and change your password immediately.</p>
+          <p style="color: #666; font-size: 14px;">If you did not request this, please contact support immediately.</p>
+        </div>
+      `,
+    });
+  }
+
+  /**
    * Send welcome email
    */
   async sendWelcome(to: string, username: string): Promise<boolean> {

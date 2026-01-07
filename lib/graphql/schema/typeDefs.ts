@@ -908,6 +908,7 @@ export const typeDefs = /* GraphQL */ `
     updateForm(id: ID!, input: UpdateFormInput!): Form!
     deleteForm(id: ID!): Boolean!
     toggleFormActive(id: ID!): Form!
+    duplicateForm(id: ID!, name: String!): Form!
   }
 
   extend type Query {

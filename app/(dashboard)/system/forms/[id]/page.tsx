@@ -35,9 +35,24 @@ const GET_FORM = gql`
   }
 `;
 
+const GET_PROVIDERS = gql`
+  query GetProviders {
+    externalBankProviders {
+      id
+      name
+      code
+    }
+    externalWalletProviders {
+      id
+      name
+      code
+    }
+  }
+`;
+
 interface FormField {
   id: string;
-  type: "text" | "number" | "date" | "dropdown" | "toggle" | "beneficiary" | "lookup" | "account" | "phoneNumber";
+  type: "text" | "number" | "date" | "dropdown" | "toggle" | "beneficiary" | "lookup" | "account" | "phoneNumber" | "bank_provider" | "wallet_provider";
   label: string;
   required: boolean;
   placeholder?: string;
@@ -60,6 +75,8 @@ export default function ViewFormPage() {
   const { data, loading, error } = useQuery(GET_FORM, {
     variables: { id: formId },
   });
+
+  const { data: providersData } = useQuery(GET_PROVIDERS);
 
   if (loading) {
     return (
@@ -355,6 +372,31 @@ export default function ViewFormPage() {
                                   Filter: {field.beneficiaryType || "All Beneficiaries"}
                                 </p>
                               </div>
+                            )}
+
+                            {field.type === "bank_provider" && (
+                              <select className="w-full rounded-md border border-input bg-background px-3 py-2">
+                                <option value="">Select a bank</option>
+                                {providersData?.externalBankProviders?.map(
+                                  (provider: any) => (
+                                    <option key={provider.id} value={provider.code}>
+                                      {provider.name}
+                                    </option>
+                                  )
+                                )}
+                              </select>
+                            )}
+                            {field.type === "wallet_provider" && (
+                              <select className="w-full rounded-md border border-input bg-background px-3 py-2">
+                                <option value="">Select a wallet</option>
+                                {providersData?.externalWalletProviders?.map(
+                                  (provider: any) => (
+                                    <option key={provider.id} value={provider.code}>
+                                      {provider.name}
+                                    </option>
+                                  )
+                                )}
+                              </select>
                             )}
 
                             {field.type === "account" && (

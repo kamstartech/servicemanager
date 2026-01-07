@@ -62,7 +62,7 @@ const UPDATE_FORM = gql`
 
 interface FormField {
   id: string;
-  type: "text" | "number" | "date" | "dropdown" | "toggle" | "beneficiary" | "lookup" | "account" | "phoneNumber";
+  type: "text" | "number" | "date" | "dropdown" | "toggle" | "beneficiary" | "lookup" | "account" | "phoneNumber" | "bank_provider" | "wallet_provider";
   label: string;
   required: boolean;
   placeholder?: string;
@@ -139,6 +139,8 @@ function SortableField({
                   <option value="lookup">Lookup</option>
                   <option value="account">Account</option>
                   <option value="phoneNumber">Phone Number</option>
+                  <option value="bank_provider">Bank Provider (External)</option>
+                  <option value="wallet_provider">Wallet Provider (External)</option>
                 </select>
               </div>
 
@@ -154,7 +156,7 @@ function SortableField({
               </div>
             </div>
 
-            {field.type !== "toggle" && field.type !== "beneficiary" && field.type !== "lookup" && field.type !== "account" && field.type !== "phoneNumber" && (
+            {field.type !== "toggle" && field.type !== "beneficiary" && field.type !== "lookup" && field.type !== "account" && field.type !== "phoneNumber" && field.type !== "bank_provider" && field.type !== "wallet_provider" && (
               <div className="space-y-2">
                 <Label>Placeholder</Label>
                 <Input
@@ -726,6 +728,26 @@ export default function EditFormPage() {
                                 placeholder={field.placeholder || "Enter phone number"}
                                 disabled
                               />
+                            )}
+                            {field.type === "bank_provider" && (
+                              <select
+                                className="w-full rounded-md border border-input bg-background px-3 py-2"
+                                disabled
+                              >
+                                <option value="">Select a bank</option>
+                                <option value="sample1">Standard Bank</option>
+                                <option value="sample2">National Bank</option>
+                              </select>
+                            )}
+                            {field.type === "wallet_provider" && (
+                              <select
+                                className="w-full rounded-md border border-input bg-background px-3 py-2"
+                                disabled
+                              >
+                                <option value="">Select a wallet</option>
+                                <option value="sample1">Airtel Money</option>
+                                <option value="sample2">TNM Mpamba</option>
+                              </select>
                             )}
                             {field.validation && (
                               <p className="text-xs text-muted-foreground">

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { redis } from "@/lib/db/redis";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { ESBSMSService } from "@/lib/services/sms";
@@ -217,6 +218,9 @@ export const changePasswordResolvers = {
                 // Clean up OTP storage
                 passwordChangeOtpStorage.delete(userId);
 
+                // Clear temporal password flag if it exists
+                await redis.del(`RESET_PASSWORD:${userId}`);
+
                 // Optionally: Revoke all other sessions for security
                 await prisma.deviceSession.updateMany({
                     where: {
@@ -250,25 +254,25 @@ export const changePasswordResolvers = {
 
 // Export verify function for reuse in other resolvers (e.g., memo word change)
 export function verifyPasswordChangeOTP(userId: number, otpCode: string): boolean {
-  const stored = passwordChangeOtpStorage.get(userId);
+    const stored = passwordChangeOtpStorage.get(userId);
 
-  if (!stored) {
-    return false;
-  }
+    if (!stored) {
+        return false;
+    }
 
-  // Check if OTP expired
-  if (new Date() > stored.expiresAt) {
+    // Check if OTP expired
+    if (new Date() > stored.expiresAt) {
+        passwordChangeOtpStorage.delete(userId);
+        return false;
+    }
+
+    // Verify OTP
+    if (stored.otp !== otpCode) {
+        return false;
+    }
+
+    // OTP is valid, remove it (one-time use)
     passwordChangeOtpStorage.delete(userId);
-    return false;
-  }
-
-  // Verify OTP
-  if (stored.otp !== otpCode) {
-    return false;
-  }
-
-  // OTP is valid, remove it (one-time use)
-  passwordChangeOtpStorage.delete(userId);
-  return true;
+    return true;
 }
 
