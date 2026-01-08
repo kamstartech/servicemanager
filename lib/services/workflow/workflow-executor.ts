@@ -815,6 +815,14 @@ export class WorkflowExecutor {
     const config = (step.config as any) || {};
     const mapping = config.parameterMapping || {};
 
+    // Debug logging for variable resolution
+    console.log(`[WorkflowExecutor] POST_TRANSACTION Debug:`);
+    console.log(`  Step ID: ${step.id}`);
+    console.log(`  Context variables keys:`, Object.keys(context.variables || {}));
+    console.log(`  Context variables (full):`, JSON.stringify(context.variables, null, 2));
+    console.log(`  Parameter mapping (raw templates):`, JSON.stringify(mapping, null, 2));
+    console.log(`  Step input:`, JSON.stringify(input, null, 2));
+
     if (Object.keys(mapping).length === 0) {
       return {
         success: false,
@@ -827,7 +835,14 @@ export class WorkflowExecutor {
     const resolvedParams: Record<string, any> = {};
     for (const [key, template] of Object.entries(mapping)) {
       if (typeof template === 'string') {
-        resolvedParams[key] = this.resolveVariables(template, context, input);
+        const resolved = this.resolveVariables(template, context, input);
+        resolvedParams[key] = resolved;
+        // Log if template wasn't resolved (still contains {{ }})
+        if (resolved.includes('{{') || resolved.includes('}}')) {
+          console.warn(`  ⚠️ UNRESOLVED: ${key} = "${template}" → "${resolved}"`);
+        } else {
+          console.log(`  ✓ RESOLVED: ${key} = "${template}" → "${resolved}"`);
+        }
       } else {
         resolvedParams[key] = template;
       }
