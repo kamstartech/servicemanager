@@ -560,6 +560,12 @@ function validateBeneficiaryInput(input: any): {
     case "TNM_AIRTIME":
     case "ESCOM_PREPAID":
     case "WATER_BOARD":
+    case "BWB_POSTPAID":
+    case "LWB_POSTPAID":
+    case "SRWB_POSTPAID":
+    case "SRWB_PREPAID":
+    case "MASM":
+    case "TNM_BUNDLES":
       if (!accountNumber || accountNumber.trim() === "") {
         return {
           valid: false,
@@ -567,6 +573,11 @@ function validateBeneficiaryInput(input: any): {
         };
       }
       // BankCode is optional for bills (might store bill type like 'PHONE')
+      break;
+
+    case "REGISTER_GENERAL":
+    case "SELF":
+      // These types may not require an account number
       break;
 
     default:
