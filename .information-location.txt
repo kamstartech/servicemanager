@@ -1,0 +1,16 @@
+# .information folder location
+
+**Moved to personal project tracking system**
+
+**New Locations**:
+
+**Main Documentation Hub**: `/home/jimmy/projects/projects/active/fdh-bank-information/README.md`
+
+**Component Documentation**:
+- **New Backend**: `/home/jimmy/projects/projects/active/fdh-bank-backend-information/`
+- **Legacy Backend**: `/home/jimmy/projects/projects/active/fdh-bank-legacy-information/`
+- **Mobile App**: `/home/jimmy/projects/projects/active/fdh-bank-mobile-information/`
+
+---
+
+*For access to all FDH Bank project documentation, see the `fdh-bank-information` folder in the personal project tracking system.*

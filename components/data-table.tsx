@@ -77,6 +77,22 @@ export const COMMON_TABLE_HEADERS = {
   biller: "Biller",
   externalRef: "External Ref",
   version: "Version",
+  view: "View",
+  edit: "Edit",
+  delete: "Delete",
+  add: "Add",
+  create: "Create",
+  update: "Update",
+  remove: "Remove",
+  save: "Save",
+  cancel: "Cancel",
+  confirm: "Confirm",
+  close: "Close",
+  reply: "Reply",
+  generate: "Generate",
+  activate: "Activate",
+  suspend: "Suspend",
+  revoke: "Revoke",
 } as const;
 
 export type DataTableColumn<T> = {

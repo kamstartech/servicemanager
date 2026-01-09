@@ -28,6 +28,7 @@ This directory contains documentation for implemented features in the admin pane
 
 ### Workflow System
 - **[WORKFLOW_SYSTEM_GUIDE.md](WORKFLOW_SYSTEM_GUIDE.md)** - Complete workflow guide
+- **[WORKFLOW_INTERBANK_TRANSFER.md](WORKFLOW_INTERBANK_TRANSFER.md)** - Interbank transfer implementation
 - **[WORKFLOW_IMPLEMENTATION_SUMMARY.md](WORKFLOW_IMPLEMENTATION_SUMMARY.md)** - Implementation summary
 - **[WORKFLOW_ARCHITECTURE_DIAGRAM.md](WORKFLOW_ARCHITECTURE_DIAGRAM.md)** - Architecture overview
 - **[WORKFLOW_QUICK_REFERENCE.md](WORKFLOW_QUICK_REFERENCE.md)** - Quick reference
@@ -37,6 +38,7 @@ This directory contains documentation for implemented features in the admin pane
 - **[WORKFLOW_STEPS_REFACTORING_PLAN.md](WORKFLOW_STEPS_REFACTORING_PLAN.md)** - Refactoring plan
 - **[WORKFLOW_STEP_FORM_SELECTOR.md](WORKFLOW_STEP_FORM_SELECTOR.md)** - Form selector
 - **[WORKFLOW_BUGFIXES.md](WORKFLOW_BUGFIXES.md)** - Bug fixes
+- **[WORKFLOW_CORE_BANKING_INTEGRATION.md](WORKFLOW_CORE_BANKING_INTEGRATION.md)** - T24 integration
 
 ### Billers Management
 - **[BILLERS_README.md](BILLERS_README.md)** - Billers system overview

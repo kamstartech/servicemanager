@@ -14,14 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { COMMON_TABLE_HEADERS, DataTable, type DataTableColumn } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -70,6 +63,123 @@ export default function ClientDetailPage({
 }) {
   const { id } = use(params);
   const { translate, locale } = useI18n();
+
+  const columns: DataTableColumn<any>[] = [
+    {
+      id: "index",
+      header: COMMON_TABLE_HEADERS.index,
+      accessor: (row) => row.index + 1,
+    },
+    {
+      id: "name",
+      header: COMMON_TABLE_HEADERS.name,
+      accessor: (row) => (
+        <div>
+          <p className="font-medium">
+            {row.name || translate("thirdParty.clientDetail.unnamedToken")}
+          </p>
+          <p className="text-xs text-muted-foreground font-mono">
+            {row.keyPrefix}
+          </p>
+        </div>
+      ),
+      sortKey: "name",
+    },
+    {
+      id: "status",
+      header: COMMON_TABLE_HEADERS.status,
+      accessor: (row) => {
+        let statusConfig = { variant: "secondary", label: "Active" };
+        
+        if (row.status === "SUSPENDED") {
+          statusConfig = { variant: "secondary", label: "Suspended" };
+        } else if (row.status === "ACTIVE") {
+          statusConfig = { variant: "default", label: "Active" };
+        } else if (row.status === "REVOKED") {
+          statusConfig = { variant: "outline", label: "Revoked" };
+        }
+        
+        return <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>;
+      },
+      sortKey: "status",
+    },
+    {
+      id: "createdAt",
+      header: COMMON_TABLE_HEADERS.createdAt,
+      accessor: (row) => (
+        <div className="text-sm">
+          <span className="inline-flex items-center gap-2 text-sm text-gray-600">
+            <Calendar size={16} />
+            {new Date(row.expiresAt).toLocaleString(dateLocale, {
+              year: "numeric",
+              month: "short",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            })}
+          </span>
+          {row.daysUntilExpiry !== null && (
+            <span className="text-xs text-muted-foreground">
+              ({row.daysUntilExpiry} {translate("thirdParty.clientDetail.daysLeft")})
+            </span>
+          )}
+        </div>
+      ),
+      sortKey: "expiresAt",
+    },
+    {
+      id: "lastUsed",
+      header: COMMON_TABLE_HEADERS.lastUsed,
+      accessor: (row) => (
+        <div className="text-xs text-muted-foreground">
+          {new Date(row.lastUsedAt).toLocaleString()}
+        </div>
+      ),
+      sortKey: "lastUsedAt",
+    },
+    {
+      id: "actions",
+      header: COMMON_TABLE_HEADERS.actions,
+      accessor: (row) => (
+        <div className="flex gap-1 justify-center">
+          {row.status === "ACTIVE" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 border-amber-200"
+              onClick={() => updateTokenStatus(row.id, "suspend")}
+            >
+              <Ban className="h-4 w-4 mr-2" />
+              {translate("thirdParty.clientDetail.actions.suspend")}
+            </Button>
+          )}
+          {row.status === "SUSPENDED" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-green-700 bg-green-50 hover:bg-green-100 hover:text-green-800 border-green-200"
+              onClick={() => updateTokenStatus(row.id, "reactivate")}
+            >
+              <Play className="h-4 w-4 mr-2" />
+              {translate("thirdParty.clientDetail.actions.reactivate")}
+            </Button>
+          )}
+          {row.status !== "REVOKED" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-red-700 bg-red-50 hover:bg-red-100 hover:text-red-800 border-red-200"
+              onClick={() => updateTokenStatus(row.id, "revoke")}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              {translate("thirdParty.clientDetail.actions.revoke")}
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ];
   const [client, setClient] = useState<any>(null);
   const [tokens, setTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(true);
@@ -553,10 +663,10 @@ export default function ClientDetailPage({
                               variant="outline"
                               size="sm"
                               className="text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 border-amber-200"
-                              onClick={() => updateTokenStatus(token.id, "suspend")}
+onClick={() => updateTokenStatus(token.id, "suspend")}
                             >
-                              <Ban className="h-4 w-4 mr-2" />
-                              {translate("thirdParty.clientDetail.actions.suspend")}
+                                <Ban className="h-4 w-4 mr-2" />
+                                {COMMON_TABLE_HEADERS.suspend}
                             </Button>
                           )}
                           {token.status === "SUSPENDED" && (

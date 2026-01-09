@@ -33,14 +33,7 @@ import {
     DropdownMenuTrigger,
     DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
+import { COMMON_TABLE_HEADERS, DataTable, type DataTableColumn } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -295,116 +288,17 @@ export default function TicketsPage() {
                                     Error loading tickets: {error.message}
                                 </div>
                             ) : (
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead className="w-[80px]">ID</TableHead>
-                                            <TableHead className="w-[300px]">Subject / Category</TableHead>
-                                            <TableHead>Customer</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead>Priority</TableHead>
-                                            <TableHead>Last Update</TableHead>
-                                            <TableHead className="w-[50px]"></TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {loading && tickets.length === 0 ? (
-                                            <TableRow>
-                                                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                                                    Loading tickets...
-                                                </TableCell>
-                                            </TableRow>
-                                        ) : tickets.length > 0 ? (
-                                            tickets.map((ticket) => (
-                                                <TableRow
-                                                    key={ticket.id}
-                                                    className="cursor-pointer hover:bg-muted/50"
-                                                    onClick={() => router.push(`/customer-care/tickets/${ticket.id}`)}
-                                                >
-                                                    <TableCell className="font-mono text-xs text-muted-foreground">
-                                                        #{ticket.id}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <div className="flex flex-col gap-1">
-                                                            <span className="font-medium truncate max-w-[280px]">
-                                                                {ticket.subject}
-                                                            </span>
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-xs text-muted-foreground px-1.5 py-0.5 bg-muted rounded">
-                                                                    {ticket.category || "General"}
-                                                                </span>
-                                                                {ticket.unreadCount > 0 && (
-                                                                    <span className="flex items-center gap-1 text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">
-                                                                        <MessageSquare className="w-3 h-3" />
-                                                                        {ticket.unreadCount} new
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10 text-primary text-xs font-bold">
-                                                                {(ticket.user?.username || "Unknown").charAt(0)}
-                                                            </div>
-                                                            <div className="flex flex-col">
-                                                                <span className="text-sm font-medium">{ticket.user?.username || "Unknown User"}</span>
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-xs text-muted-foreground">
-                                                                        {ticket.user?.phoneNumber || "No Phone"}
-                                                                    </span>
-                                                                    {renderContext(ticket.context)}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell>{renderStatus(ticket.status)}</TableCell>
-                                                    <TableCell>{renderPriority(ticket.priority)}</TableCell>
-                                                    <TableCell>
-                                                        <div className="flex flex-col text-xs text-muted-foreground">
-                                                            <span>{formatDate(ticket.updatedAt)}</span>
-                                                            <span>{formatTime(ticket.updatedAt)}</span>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                                    <MoreHorizontal className="h-4 w-4" />
-                                                                </Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end">
-                                                                <DropdownMenuItem onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    router.push(`/customer-care/tickets/${ticket.id}`);
-                                                                }}>
-                                                                    View Details
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem onClick={(e) => e.stopPropagation()}>Reply</DropdownMenuItem>
-                                                                <DropdownMenuSeparator />
-                                                                <DropdownMenuItem className="text-destructive" onClick={(e) => e.stopPropagation()}>
-                                                                    Close Ticket
-                                                                </DropdownMenuItem>
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))
-                                        ) : (
-                                            <TableRow>
-                                                <TableCell colSpan={7} className="h-24 text-center">
-                                                    <div className="flex flex-col items-center justify-center text-muted-foreground">
-                                                        <MessageSquare className="h-8 w-8 mb-2 opacity-50" />
-                                                        <p>No tickets found matching your filters</p>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            )}
-                        </CardContent>
-                    </Card>
+                                <DataTable
+                                    data={tickets}
+                                    columns={columns}
+                                    searchableKeys={["subject", "status", "priority", "context", "customer"]}
+                                    searchPlaceholder="Search tickets..."
+                                    pageSize={25}
+                                    showRowNumbers
+                                    loading={loading}
+                                    emptyStateText="No tickets found matching your filters"
+                                />
+                            )
                 </div>
             </Tabs>
         </div>

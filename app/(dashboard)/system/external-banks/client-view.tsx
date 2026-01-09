@@ -9,14 +9,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
+import { COMMON_TABLE_HEADERS, DataTable, type DataTableColumn } from "@/components/data-table";
 import { Plus, Pencil, Eye } from "lucide-react";
 import Link from "next/link";
 import { ExternalBank } from "@prisma/client";
@@ -45,6 +38,54 @@ export function ExternalBanksClientView({
         setIsDialogOpen(true);
     };
 
+    const columns: DataTableColumn<ExternalBank>[] = [
+        {
+            id: "name",
+            header: COMMON_TABLE_HEADERS.name,
+            accessor: (row) => row.name,
+            sortKey: "name",
+        },
+        {
+            id: "type",
+            header: COMMON_TABLE_HEADERS.type,
+            accessor: (row) => row.type === "WALLET" ? "WALLET" : "Bank",
+            sortKey: "type",
+        },
+        {
+            id: "code",
+            header: COMMON_TABLE_HEADERS.code,
+            accessor: (row) => row.code,
+            sortKey: "code",
+        },
+        {
+            id: "externalRef",
+            header: COMMON_TABLE_HEADERS.externalRef,
+            accessor: (row) => row.institutionCode || "-",
+            sortKey: "institutionCode",
+        },
+        {
+            id: "actions",
+            header: COMMON_TABLE_HEADERS.actions,
+            accessor: (row) => (
+                <div className="flex justify-end gap-2">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openEdit(row)}
+                        title="Edit Details"
+                    >
+                        <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" asChild title="Manage Branches">
+                        <Link href={`/system/external-banks/${row.id}`}>
+                            <Eye className="h-4 w-4" />
+                        </Link>
+                    </Button>
+                </div>
+            ),
+        },
+    ];
+
     return (
         <div className="container mx-auto py-10 space-y-6">
             <div className="flex items-center justify-between">
@@ -63,57 +104,15 @@ export function ExternalBanksClientView({
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Bank Name</TableHead>
-                                <TableHead>Type</TableHead>
-                                <TableHead>Sort Code</TableHead>
-                                <TableHead>Inst. Code</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {banks.length === 0 ? (
-                                <TableRow>
-                                    <TableCell
-                                        colSpan={5}
-                                        className="text-center text-muted-foreground h-24"
-                                    >
-                                        No banks configured yet.
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                banks.map((bank) => (
-                                    <TableRow key={bank.id}>
-                                        <TableCell className="font-medium">{bank.name}</TableCell>
-                                        <TableCell>
-                                            {bank.type === "WALLET" ? "WALLET" : "Bank"}
-                                        </TableCell>
-                                        <TableCell>{bank.code}</TableCell>
-                                        <TableCell>{bank.institutionCode || "-"}</TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => openEdit(bank)}
-                                                    title="Edit Details"
-                                                >
-                                                    <Pencil className="h-4 w-4" />
-                                                </Button>
-                                                <Button variant="ghost" size="icon" asChild title="Manage Branches">
-                                                    <Link href={`/system/external-banks/${bank.id}`}>
-                                                        <Eye className="h-4 w-4" />
-                                                    </Link>
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
+                    <DataTable
+                        data={banks}
+                        columns={columns}
+                        searchableKeys={["name", "type", "code", "institutionCode"]}
+                        pageSize={25}
+                        searchPlaceholder="Search banks..."
+                        showRowNumbers
+                        emptyStateText="No banks configured yet."
+                    />
                 </CardContent>
             </Card>
 

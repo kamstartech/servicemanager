@@ -11,6 +11,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import { COMMON_TABLE_HEADERS } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -59,15 +60,13 @@ export function ExternalBankDialog({
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                    <DialogTitle>
-                        {mode === "create" ? "Add External Bank" : "Edit External Bank"}
-                    </DialogTitle>
-                    <DialogDescription>
-                        {mode === "create"
-                            ? "Add a new external bank to the system."
-                            : "Update external bank details."}
-                    </DialogDescription>
+                            <DialogHeader>
+                                <DialogTitle>
+                                    {mode === "create" ? COMMON_TABLE_HEADERS.add : COMMON_TABLE_HEADERS.edit}
+                                </DialogTitle>
+                                <DialogDescription>
+                                    {mode === "create" ? COMMON_TABLE_HEADERS.create : COMMON_TABLE_HEADERS.update}
+                                </DialogDescription>
                 </DialogHeader>
                 <form action={formAction}>
                     <div className="grid gap-4 py-4">
@@ -76,7 +75,7 @@ export function ExternalBankDialog({
 
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="name" className="text-right">
-                                Name
+                                {COMMON_TABLE_HEADERS.name}
                             </Label>
                             <Input
                                 id="name"
@@ -88,7 +87,7 @@ export function ExternalBankDialog({
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="type" className="text-right">
-                                Type
+                                {COMMON_TABLE_HEADERS.type}
                             </Label>
                             <Select
                                 value={selectedType}
@@ -98,14 +97,14 @@ export function ExternalBankDialog({
                                     <SelectValue placeholder="Select type" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="BANK">Bank</SelectItem>
-                                    <SelectItem value="WALLET">Mobile Network Operator</SelectItem>
-                                </SelectContent>
+                            <SelectItem value="BANK">{COMMON_TABLE_HEADERS.bank}</SelectItem>
+                            <SelectItem value="WALLET">{COMMON_TABLE_HEADERS.wallet}</SelectItem>
+                            </SelectContent>
                             </Select>
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="code" className="text-right">
-                                Sort Code
+                                <Label htmlFor="code" className="text-right">
+                                {COMMON_TABLE_HEADERS.code}
                             </Label>
                             <Input
                                 id="code"
@@ -118,29 +117,22 @@ export function ExternalBankDialog({
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="institutionCode" className="text-right">
-                                Inst. Code
+                                {COMMON_TABLE_HEADERS.institutionCode}
                             </Label>
                             <Input
                                 id="institutionCode"
                                 name="institutionCode"
                                 defaultValue={initialData?.institutionCode || ""}
-                                placeholder="Optional"
+                                placeholder={COMMON_TABLE_HEADERS.description}
                                 className="col-span-3"
                             />
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => onOpenChange(false)}
-                        >
-                            Cancel
-                        </Button>
-                        <Button type="submit" disabled={isPending}>
-                            {isPending ? "Saving..." : "Save"}
-                        </Button>
-                    </DialogFooter>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={handleClose}>
+                                {COMMON_TABLE_HEADERS.cancel}
+                            </Button>
+                        </DialogFooter>
                 </form>
             </DialogContent>
         </Dialog >

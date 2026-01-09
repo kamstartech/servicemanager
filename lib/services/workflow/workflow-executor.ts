@@ -8,6 +8,7 @@ import { FundReservationService } from '@/lib/services/fund-reservation-service'
 import { airtimeService } from '@/lib/services/airtime/airtime-service';
 import { billerTransactionService } from "../billers/transactions";
 import { getBillerDefinition } from "@/lib/config/biller-constants";
+import { configurationService } from '@/lib/services/configuration-service';
 import {
   WorkflowStep,
   TriggerTiming,
@@ -850,16 +851,36 @@ export class WorkflowExecutor {
 
     console.log(`[WorkflowExecutor] Resolved params for transaction:`, JSON.stringify(resolvedParams, null, 2));
 
+    // Determine transfer type from config or resolved params
+    let transferType: TransferType = TransferType.FDH_BANK; // default
+    const configTransferType = config.transferType || config.transactionType;
+
+    if (configTransferType === 'EXTERNAL_BANK' || resolvedParams.transferType === 'EXTERNAL_BANK') {
+      transferType = TransferType.EXTERNAL_BANK;
+    } else if (configTransferType === 'FDH_WALLET' || configTransferType === 'WALLET') {
+      transferType = TransferType.FDH_WALLET;
+    } else if (configTransferType === 'EXTERNAL_WALLET') {
+      transferType = TransferType.EXTERNAL_WALLET;
+    } else if (configTransferType === 'SELF') {
+      transferType = TransferType.SELF;
+    }
+
     // Map resolved params to T24TransferRequest
-    const transferRequest = {
+    const transferRequest: any = {
       fromAccount: resolvedParams.fromAccountNumber || resolvedParams.fromAccount,
       toAccount: resolvedParams.toAccountNumber || resolvedParams.toAccount,
       amount: resolvedParams.amount?.toString(),
       currency: resolvedParams.currency || 'MWK',
       description: resolvedParams.description || step.label || 'Workflow Transaction',
       reference: resolvedParams.reference || `WF-${context.sessionId.slice(-8)}`,
-      transferType: config.transactionType === 'TRANSFER' ? TransferType.FDH_BANK : TransferType.FDH_WALLET
+      transferType
     };
+
+    // Add external bank fields if applicable
+    if (transferType === TransferType.EXTERNAL_BANK) {
+      transferRequest.bankCode = resolvedParams.bankCode;
+      // bankName will be looked up from ExternalBank table during transaction creation
+    }
 
     if (!transferRequest.fromAccount || !transferRequest.toAccount || !transferRequest.amount) {
       return {
@@ -869,57 +890,195 @@ export class WorkflowExecutor {
       };
     }
 
+    // Validate bankCode for EXTERNAL_BANK transfers
+    if (transferType === TransferType.EXTERNAL_BANK && !transferRequest.bankCode) {
+      return {
+        success: false,
+        error: 'Missing required field: Bank Code',
+        shouldProceed: false
+      };
+    }
+
     try {
-      console.log(`[WorkflowExecutor] Executing built-in T24 transfer for step: ${step.id}`);
-      const result = await t24Service.transfer(transferRequest);
+      console.log(`[WorkflowExecutor] Executing transfer for step: ${step.id}, type: ${transferType}`);
 
-      if (!result.success) {
-        // Extract error message from T24 response
-        let errorMessage = 'Transaction failed';
+      // FDH_BANK internal transfers: Direct T24 call
+      if (transferType === TransferType.FDH_BANK) {
+        console.log(`[WorkflowExecutor] FDH-to-FDH: Direct T24 transfer`);
+        const result = await t24Service.transfer(transferRequest);
 
-        if (typeof result.message === 'string') {
-          errorMessage = result.message;
-        } else if (result.message && typeof result.message === 'object') {
-          // Handle T24 business error format: { type: 'BUSINESS', errorDetails: [...] }
-          const errorDetails = (result.message as any).errorDetails;
-          if (Array.isArray(errorDetails) && errorDetails.length > 0) {
-            errorMessage = errorDetails[0].message || errorDetails[0].errorMessage || errorMessage;
-          } else if ((result.message as any).message) {
-            errorMessage = (result.message as any).message;
-          }
+        if (!result.success) {
+          const errorMessage = this.extractT24ErrorMessage(result);
+          console.log('[WorkflowExecutor] T24 transaction failed:', errorMessage);
+
+          return {
+            success: false,
+            error: errorMessage,
+            structuredError: {
+              title: 'Transaction Error',
+              message: errorMessage,
+              code: result.errorCode || 'T24_ERROR',
+              type: 'POPUP',
+              details: result.message
+            },
+            shouldProceed: false
+          };
         }
 
-        console.log('[WorkflowExecutor] T24 transaction failed:', errorMessage);
+        // Save successful transfer to FdhTransaction table
+        const reference = result.t24Reference || `WF-${context.sessionId.slice(-8)}`;
+        const amountNum = parseFloat(transferRequest.amount);
+
+        try {
+          const transaction = await prisma.fdhTransaction.create({
+            data: {
+              type: 'TRANSFER',
+              source: (context.source || 'MOBILE_BANKING') as any,
+              reference,
+              status: 'COMPLETED',
+              transferType: transferType,
+              transferContext: (context.transferContext || 'MOBILE_BANKING') as any,
+              amount: amountNum,
+              currency: transferRequest.currency,
+              description: transferRequest.description,
+              fromAccountNumber: transferRequest.fromAccount,
+              toAccountNumber: transferRequest.toAccount,
+              initiatedByUserId: context.userId ? parseInt(context.userId) : null,
+              t24Reference: result.t24Reference,
+              t24Response: result as any,
+              completedAt: new Date()
+            }
+          });
+          console.log(`[WorkflowExecutor] FdhTransaction saved: ${transaction.id}`);
+        } catch (e) {
+          console.error('[WorkflowExecutor] Failed to save FdhTransaction:', e);
+          // Don't fail the workflow - transfer already succeeded
+        }
 
         return {
+          success: true,
+          output: {
+            t24Reference: result.t24Reference,
+            externalReference: result.externalReference,
+            status: 'COMPLETED',
+            message: result.message
+          },
+          shouldProceed: true
+        };
+      }
+
+      // External transfers (EXTERNAL_BANK, EXTERNAL_WALLET, etc): Fund reservation flow
+      console.log(`[WorkflowExecutor] External transfer: Using fund reservation flow`);
+      const amount = parseFloat(transferRequest.amount);
+      const description = transferRequest.description; // Use description as-is without prefix
+
+      // Step 1: Hold funds (debit user → suspense account)
+      console.log(`[WorkflowExecutor] Holding funds: ${amount} from ${transferRequest.fromAccount}`);
+      const holdResult = await FundReservationService.holdFunds(
+        amount,
+        transferRequest.fromAccount,
+        transferRequest.reference,
+        description
+      );
+
+      if (!holdResult.success) {
+        return {
           success: false,
-          error: errorMessage,
+          error: `Failed to debit account: ${holdResult.error}`,
           structuredError: {
-            title: 'Transaction Error',
-            message: errorMessage,
-            code: result.errorCode || 'T24_ERROR',
-            type: 'POPUP',
-            details: result.message
+            title: 'Debit Failed',
+            message: holdResult.error || 'Could not debit your account',
+            code: 'HOLD_FAILED',
+            type: 'POPUP'
           },
           shouldProceed: false
         };
       }
 
-      return {
-        success: true,
-        output: {
-          t24Reference: result.t24Reference,
-          externalReference: result.externalReference,
-          status: 'COMPLETED',
-          message: result.message
-        },
-        shouldProceed: true
-      };
+      const holdReference = holdResult.transactionReference || '';
+      console.log(`[WorkflowExecutor] Funds held with reference: ${holdReference}`);
+
+      // Step 2: Lookup external bank details if bankCode provided
+      let bankName = null;
+      if (transferRequest.bankCode) {
+        try {
+          const externalBank = await prisma.externalBank.findUnique({
+            where: { code: transferRequest.bankCode }
+          });
+          if (externalBank) {
+            bankName = externalBank.name;
+            console.log(`[WorkflowExecutor] Looked up bank: ${bankName} (${transferRequest.bankCode})`);
+          } else {
+            console.warn(`[WorkflowExecutor] Bank code ${transferRequest.bankCode} not found in ExternalBank table`);
+          }
+        } catch (e) {
+          console.error(`[WorkflowExecutor] Failed to lookup external bank:`, e);
+          // Continue without bank name - not critical
+        }
+      }
+
+      // Step 3: Record transaction as COMPLETED after successful hold
+      console.log(`[WorkflowExecutor] Recording transaction for ${transferType}`);
+      try {
+        const transaction = await prisma.fdhTransaction.create({
+          data: {
+            type: 'TRANSFER',
+            source: (context.source || 'MOBILE_BANKING') as any,
+            reference: holdReference,
+            status: 'COMPLETED',
+            transferType: transferType,
+            transferContext: (context.transferContext || 'MOBILE_BANKING') as any,
+            amount: amount,
+            currency: transferRequest.currency,
+            description: description,
+            fromAccountNumber: transferRequest.fromAccount,
+            toAccountNumber: transferRequest.toAccount,
+            toBankCode: transferRequest.bankCode || null,
+            toBankName: bankName,
+            initiatedByUserId: context.userId ? parseInt(context.userId) : null,
+            t24Reference: holdReference,
+            t24Response: holdResult as any,
+            completedAt: new Date()
+          }
+        });
+        console.log(`[WorkflowExecutor] FdhTransaction saved: ${transaction.id}`);
+
+        return {
+          success: true,
+          output: {
+            t24Reference: holdReference,
+            transactionId: transaction.id,
+            status: 'COMPLETED',
+            message: 'Transfer completed successfully'
+          },
+          shouldProceed: true
+        };
+      } catch (e) {
+        console.error('[WorkflowExecutor] Failed to save FdhTransaction:', e);
+        // If DB fails after hold, release the funds
+        await FundReservationService.releaseFunds(
+          amount,
+          transferRequest.fromAccount,
+          holdReference,
+          `Reversal: DB Failure - ${description}`
+        );
+        return {
+          success: false,
+          error: 'System error: Could not record transaction',
+          structuredError: {
+            title: 'System Error',
+            message: 'Could not record transaction. Funds have been returned.',
+            code: 'DB_ERROR',
+            type: 'POPUP'
+          },
+          shouldProceed: false
+        };
+      }
     } catch (error: any) {
-      console.error('T24 built-in transfer failed:', error);
+      console.error('Transfer execution failed:', error);
       return {
         success: false,
-        error: error.message || 'T24 connection failed',
+        error: error.message || 'Transfer failed',
         shouldProceed: false
       };
     }
@@ -1209,87 +1368,225 @@ export class WorkflowExecutor {
   }
 
   /**
-   * Handle Direct Biller Transaction (Water, Govt, etc.)
+   * Handle Direct Biller Transaction (Water, Govt, etc.) with Hold-Execute-Release Pattern
    */
   private async handleDirectBillerTransaction(
     billerType: string,
     resolvedParams: any,
     context: ExecutionContext
   ): Promise<StepExecutionResponse> {
-    const paymentParams: any = {
-      amount: resolvedParams.amount?.toString(),
-      accountNumber: resolvedParams.accountNumber || resolvedParams.account,
-      phoneNumber: resolvedParams.phoneNumber,
-      invoiceNumber: resolvedParams.invoiceNumber,
-      bundleId: resolvedParams.bundleId,
-      currency: resolvedParams.currency || 'MWK',
-      // Optional context
-      userId: context.userId,
-      customerNumber: resolvedParams.customerNumber,
-      debitAccount: resolvedParams.debitAccount,
-    };
+    // Step 0: Extract parameters
+    const amount = parseFloat(resolvedParams.amount);
+    const sourceAccount = resolvedParams.debitAccount;
+    const billerAccountNumber = resolvedParams.accountNumber || resolvedParams.account;
 
-    const result = await billerEsbService.processPayment(billerType, paymentParams);
+    if (!sourceAccount) {
+      return { success: false, error: "Debit account required for bill payment", shouldProceed: false };
+    }
 
-    if (!result.ok) {
+    let billerTransaction: any;
+    let fdhTransaction: any;
+    let reference = '';
+    let description = '';
+
+    // Create description for T24 call
+    const billerDefinition = getBillerDefinition(billerType);
+    const billerTypeName = billerDefinition?.name ||
+      billerType.split('_').map(word =>
+        word.charAt(0) + word.slice(1).toLowerCase()
+      ).join(' ');
+    description = `${billerTypeName} - ${billerAccountNumber}`;
+
+    // Step 1: Hold Funds (Debit User → Suspense)
+    console.log(`[WorkflowExecutor] Holding funds for bill payment: ${amount} from ${sourceAccount}`);
+    const holdResult = await FundReservationService.holdFunds(
+      amount,
+      sourceAccount,
+      '', // No internal reference yet
+      description
+    );
+
+    if (!holdResult.success) {
       return {
         success: false,
-        error: result.error || 'Bill payment failed',
+        error: `Failed to debit account: ${holdResult.error}`,
         shouldProceed: false
       };
     }
 
-    const txnId = result.data?.transactionId || result.data?.reference || result.data?.id || `DIR-${Date.now()}`;
-    const amountNum = parseFloat(paymentParams.amount);
+    // Now we have the T24 Reference
+    reference = holdResult.transactionReference || '';
+    console.log(`[WorkflowExecutor] Funds held with reference: ${reference}`);
 
-    // Create Audit Records (Fire and Forget or await)
+    // Step 2: Get suspense account for biller API call
+    const suspenseAccount = await configurationService.getInboundSuspenseAccount();
+
+    // Step 3: Create Transaction Records using T24 Reference
     try {
-      // 1. Biller Transaction
-      await billerTransactionService.createTransaction({
+      // Create Biller Audit Record
+      billerTransaction = await billerTransactionService.createTransaction({
         billerType,
-        billerName: billerType, // TODO: Get name from definition
-        accountNumber: paymentParams.accountNumber,
-        amount: amountNum,
-        currency: paymentParams.currency,
+        billerName: billerDefinition?.name || billerType,
+        accountNumber: billerAccountNumber,
+        amount: amount,
+        currency: resolvedParams.currency || 'MWK',
         transactionType: 'BILL_PAYMENT',
-        debitAccount: paymentParams.debitAccount,
+        debitAccount: sourceAccount, // Original user account for audit
+        debitAccountType: resolvedParams.debitAccountType,
         initiatedBy: context.userId,
-        ourTransactionId: txnId,
-        externalTransactionId: result.data?.externalReference || result.data?.id,
-        status: 'COMPLETED'
-      }).catch(e => console.error("[WorkflowExecutor] Failed to create biller audit for direct payment:", e));
+        ourTransactionId: reference, // Use T24 Reference as our ID
+        metadata: {
+          context: 'WORKFLOW_BILL_PAYMENT',
+          t24HoldReference: reference
+        },
+        status: 'PENDING'
+      });
 
-      // 2. Financial Record
-      await prisma.fdhTransaction.create({
+      // Create Financial Record
+      fdhTransaction = await prisma.fdhTransaction.create({
         data: {
           type: 'BILL_PAYMENT',
           source: (context.source || 'MOBILE_BANKING') as any,
-          reference: txnId,
-          status: 'COMPLETED',
+          reference, // Use T24 Reference as primary key
+          status: 'PENDING',
           transferContext: (context.transferContext || 'MOBILE_BANKING') as any,
-          amount: amountNum,
-          currency: paymentParams.currency,
-          description: `Bill Payment - ${billerType} for ${paymentParams.accountNumber}`,
-          fromAccountNumber: paymentParams.debitAccount,
-          toAccountNumber: paymentParams.accountNumber,
+          amount: amount,
+          currency: resolvedParams.currency || 'MWK',
+          description,
+          fromAccountNumber: sourceAccount,
+          toAccountNumber: billerAccountNumber,
           initiatedByUserId: context.userId ? parseInt(context.userId) : null,
-          t24Reference: txnId,
-          completedAt: new Date()
+          t24Reference: reference
         }
-      }).catch(e => console.error("[WorkflowExecutor] Failed to create financial record for direct payment:", e));
-    } catch (e) {
-      console.error("[WorkflowExecutor] Error in direct payment auditing:", e);
+      });
+
+    } catch (e: any) {
+      console.error("Failed to create transaction record after fund hold:", e);
+      // IF DB fails after hold, we MUST release the funds
+      await FundReservationService.releaseFunds(
+        amount,
+        sourceAccount,
+        reference,
+        `Reversal: DB Failure - ${description}`
+      );
+      return { success: false, error: "System error: Could not record transaction", shouldProceed: false };
     }
 
-    return {
-      success: true,
-      output: {
-        transactionId: txnId,
-        message: result.data?.message || 'Payment successful',
-        ...result.data
-      },
-      shouldProceed: true
+    // Step 4: Call biller API with SUSPENSE account as debitAccount
+    console.log(`[WorkflowExecutor] Executing Bill Payment for ${billerAccountNumber} via ${billerType}`);
+    const paymentParams: any = {
+      accountNumber: billerAccountNumber,
+      amount: amount.toString(),
+      phoneNumber: resolvedParams.phoneNumber,
+      invoiceNumber: resolvedParams.invoiceNumber,
+      bundleId: resolvedParams.bundleId,
+      currency: resolvedParams.currency || 'MWK',
+      customerNumber: resolvedParams.customerNumber,
+      debitAccount: suspenseAccount,        // Use suspense account (where funds are)
+      debitAccountType: 'SUSPENSE',         // Mark as suspense type
+      externalTxnId: reference              // Use T24 reference for traceability
     };
+
+    let billerResult: any = { ok: false, error: "Unknown error" };
+    try {
+      billerResult = await billerEsbService.processPayment(billerType, paymentParams);
+    } catch (e: any) {
+      billerResult = { ok: false, error: e.message };
+    }
+
+    // Step 5: Handle Result
+    if (billerResult.ok) {
+      console.log(`[WorkflowExecutor] Bill Payment Successful: ${reference}`);
+
+      const updatePromises: Promise<any>[] = [
+        // Update FDH Transaction
+        prisma.fdhTransaction.update({
+          where: { id: fdhTransaction.id },
+          data: {
+            status: 'COMPLETED',
+            t24Response: billerResult.data,
+            completedAt: new Date()
+          }
+        })
+      ];
+
+      // Update Biller Transaction (Parallel)
+      if (billerTransaction) {
+        updatePromises.push(
+          billerTransactionService.completeTransaction(
+            billerTransaction.id,
+            billerResult.data,
+            billerResult.data?.externalReference || billerResult.data?.id
+          )
+        );
+      }
+
+      await Promise.all(updatePromises);
+
+      return {
+        success: true,
+        output: {
+          transactionId: reference,
+          message: billerResult.data?.message || 'Payment successful',
+          ...billerResult.data,
+          transaction: fdhTransaction,
+          billerTransaction: billerTransaction,
+        },
+        shouldProceed: true
+      };
+    } else {
+      // Failure: Refund (Reverse Hold)
+      console.error(`[WorkflowExecutor] Bill Payment Failed. Reversing funds for ${sourceAccount}`);
+      const errorMsg = billerResult.error || billerResult.statusText || 'Unknown error';
+
+      const failurePromises: Promise<any>[] = [];
+
+      // 1. Fail Biller Transaction
+      if (billerTransaction) {
+        failurePromises.push(
+          billerTransactionService.failTransaction(billerTransaction.id, errorMsg || "Bill payment exception", String(billerResult.status || 'UNKNOWN'))
+            .catch(e => console.error("Failed to update biller transaction status:", e))
+        );
+      }
+
+      // 2. Release Funds (Critical)
+      const refundPromise = FundReservationService.releaseFunds(
+        amount,
+        sourceAccount, // Send back to user
+        reference,
+        `Refund for failed bill payment: ${billerAccountNumber}`
+      );
+      failurePromises.push(refundPromise);
+
+      // Execute all failure actions in parallel
+      const [refundRes, ..._] = await Promise.all([
+        refundPromise,
+        ...failurePromises.slice(0, -1) // biller update promises
+      ]);
+
+      const errorMessage = `Bill payment failed: ${errorMsg}. Refund status: ${refundRes.success ? 'Success' : 'Failed'}`;
+
+      // Update FDH Transaction (Final step)
+      const finalFdhTx = await prisma.fdhTransaction.update({
+        where: { id: fdhTransaction.id },
+        data: {
+          status: 'FAILED',
+          errorMessage: errorMessage,
+          errorCode: billerResult.status?.toString() || 'BILLER_ERROR'
+        }
+      });
+
+      return {
+        success: false,
+        error: errorMessage,
+        output: {
+          transactionId: reference,
+          transaction: finalFdhTx,
+          billerTransaction: billerTransaction
+        },
+        shouldProceed: false
+      };
+    }
   }
 
 
@@ -1471,8 +1768,28 @@ export class WorkflowExecutor {
   }
 
   /**
-   * Resolve variables in template string
+   * Extract human-readable error message from T24 response
    */
+  private extractT24ErrorMessage(result: { message?: any; error?: string }): string {
+    let errorMessage = 'Transaction failed';
+
+    if (typeof result.message === 'string') {
+      errorMessage = result.message;
+    } else if (result.message && typeof result.message === 'object') {
+      // Handle T24 business error format: { type: 'BUSINESS', errorDetails: [...] }
+      const errorDetails = (result.message as any).errorDetails;
+      if (Array.isArray(errorDetails) && errorDetails.length > 0) {
+        errorMessage = errorDetails[0].message || errorDetails[0].errorMessage || errorMessage;
+      } else if ((result.message as any).message) {
+        errorMessage = (result.message as any).message;
+      }
+    } else if (result.error) {
+      errorMessage = result.error;
+    }
+
+    return errorMessage;
+  }
+
   /**
    * Resolve variables in template string
    */

@@ -5,18 +5,6 @@ WORKDIR /app
 # Install OpenSSL for Prisma and postgresql-client for backups
 RUN apk add --no-cache openssl postgresql-client
 
-# Copy package files
-COPY package.json package-lock.json* ./
-
-# Install dependencies
-RUN npm install
-
-# Copy prisma schema
-COPY prisma ./prisma
-
-# Generate Prisma Client
-RUN npx prisma generate
-
 EXPOSE 3000
 
 CMD ["npm", "run", "dev"]

@@ -91,28 +91,55 @@ export class T24Service {
       }
 
       if (!response.ok) {
-        const errorCode =
-          responseJson?.code ||
-          responseJson?.errorCode ||
-          responseJson?.error?.code ||
-          "T24_API_ERROR";
-        const message =
-          responseJson?.message ||
-          responseJson?.error ||
-          responseJson?.error_description ||
-          response.statusText ||
-          "T24 transfer failed";
+        // Extract human-readable error message from T24 response
+        let errorMessage = "T24 transfer failed";
+        let errorCode = "T24_API_ERROR";
+
+        // Priority 1: Check for override details (account warnings like minimum balance)
+        const overrideDetails = responseJson?.override?.overrideDetails;
+        if (Array.isArray(overrideDetails) && overrideDetails.length > 0) {
+          const messages = overrideDetails
+            .map((od: { description?: string; message?: string; id?: string; code?: string }) =>
+              od.description || od.message || od.id)
+            .filter(Boolean);
+          if (messages.length > 0) {
+            errorMessage = messages.join('; ');
+            errorCode = overrideDetails[0]?.code || "T24_OVERRIDE";
+          }
+        }
+        // Priority 2: Check for error details in error object  
+        else {
+          const errorDetails = responseJson?.error?.errorDetails;
+          if (Array.isArray(errorDetails) && errorDetails.length > 0) {
+            const messages = errorDetails
+              .map((ed: { message?: string; description?: string; id?: string; code?: string }) =>
+                ed.message || ed.description || ed.id)
+              .filter(Boolean);
+            if (messages.length > 0) {
+              errorMessage = messages.join('; ');
+              errorCode = errorDetails[0]?.code || "T24_ERROR";
+            }
+          }
+          // Priority 3: Fallback to standard error fields
+          else {
+            errorCode = responseJson?.code || responseJson?.errorCode || responseJson?.error?.code || "T24_API_ERROR";
+            const rawMessage = responseJson?.message || responseJson?.error?.message || responseJson?.error_description || response.statusText;
+            if (rawMessage) {
+              errorMessage = typeof rawMessage === 'string' ? rawMessage : JSON.stringify(rawMessage);
+            }
+          }
+        }
 
         console.error("[T24Service] T24 ESB transfer failed", {
           status: response.status,
           errorCode,
-          message,
+          message: errorMessage,
           response: responseJson ?? responseText,
         });
 
         return {
           success: false,
-          message,
+          message: errorMessage,
           errorCode,
         };
       }

@@ -530,6 +530,18 @@ System
                 └── Workflow Manager
 ```
 
+## Related Documentation
+
+### Feature-Specific Workflow Guides
+
+- **[Interbank Transfer Workflow](./WORKFLOW_INTERBANK_TRANSFER.md)** - POST_TRANSACTION step for external bank transfers
+- **[Bill Payment Workflow](./BILLERS_WORKFLOW_INTEGRATION.md)** - BILL_TRANSACTION step for utility payments
+
+### Architecture & Implementation
+
+- **[Transaction System](./TRANSACTION_SYSTEM_IMPLEMENTATION.md)** - FdhTransaction model and lifecycle
+- **[T24 Integration](../t24/T24_ACCOUNTS_ENDPOINT.md)** - Core banking integration
+
 ## Future Enhancements
 
 1. **Workflow Templates** - Pre-built workflows for common tasks
