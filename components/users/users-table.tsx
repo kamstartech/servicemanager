@@ -1,12 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { gql, useQuery } from "@apollo/client";
+import { gql, useQuery, useMutation } from "@apollo/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { useI18n } from "@/components/providers/i18n-provider";
-import { Calendar, CheckCircle, Eye, XCircle } from "lucide-react";
+import { Calendar, CheckCircle, Eye, XCircle, Ban, Loader2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { translateStatusOneWord } from "@/lib/utils";
 
 const USERS_QUERY = gql`
@@ -19,6 +33,30 @@ const USERS_QUERY = gql`
       customerNumber
       isActive
       createdAt
+      isBlocked
+      blockReason
+    }
+  }
+`;
+
+const BLOCK_USER_MUTATION = gql`
+  mutation BlockMobileUser($input: BlockMobileUserInput!) {
+    blockMobileUser(input: $input) {
+      id
+      isActive
+      isBlocked
+      blockedAt
+      blockReason
+    }
+  }
+`;
+
+const UNBLOCK_USER_MUTATION = gql`
+  mutation UnblockMobileUser($userId: ID!) {
+    unblockMobileUser(userId: $userId) {
+      id
+      isActive
+      isBlocked
     }
   }
 `;
@@ -31,6 +69,8 @@ type MobileUserRow = {
   customerNumber?: string | null;
   isActive: boolean;
   createdAt: string;
+  isBlocked: boolean;
+  blockReason?: string | null;
 };
 
 function mapMobileUsers(data: any): MobileUserRow[] {
@@ -42,6 +82,8 @@ function mapMobileUsers(data: any): MobileUserRow[] {
     customerNumber: user.customerNumber,
     isActive: user.isActive,
     createdAt: user.createdAt,
+    isBlocked: user.isBlocked,
+    blockReason: user.blockReason,
   }));
 }
 
@@ -56,6 +98,84 @@ export function UsersTable({ context, title, searchPlaceholder }: UsersTableProp
   const { data, loading, error, refetch } = useQuery(USERS_QUERY, {
     variables: { context },
   });
+
+  const { toast } = useToast();
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
+  const [unblockDialogOpen, setUnblockDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<MobileUserRow | null>(null);
+  const [blockReason, setBlockReason] = useState("");
+
+  const [blockUser, { loading: blocking }] = useMutation(BLOCK_USER_MUTATION, {
+    onCompleted: () => {
+      toast({
+        title: "User Blocked",
+        description: `${selectedUser?.username || selectedUser?.phoneNumber} has been blocked.`,
+      });
+      setBlockDialogOpen(false);
+      setBlockReason("");
+      setSelectedUser(null);
+      refetch();
+    },
+    onError: (err) => {
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const [unblockUser, { loading: unblocking }] = useMutation(UNBLOCK_USER_MUTATION, {
+    onCompleted: () => {
+      toast({
+        title: "User Unblocked",
+        description: `${selectedUser?.username || selectedUser?.phoneNumber} has been unblocked.`,
+      });
+      setUnblockDialogOpen(false);
+      setSelectedUser(null);
+      refetch();
+    },
+    onError: (err) => {
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleBlockClick = (user: MobileUserRow) => {
+    setSelectedUser(user);
+    setBlockDialogOpen(true);
+  };
+
+  const handleUnblockClick = (user: MobileUserRow) => {
+    setSelectedUser(user);
+    setUnblockDialogOpen(true);
+  };
+
+  const confirmBlock = () => {
+    if (selectedUser) {
+      blockUser({
+        variables: {
+          input: {
+            userId: selectedUser.id,
+            reason: blockReason || null,
+          },
+        },
+      });
+    }
+  };
+
+  const confirmUnblock = () => {
+    if (selectedUser) {
+      unblockUser({
+        variables: {
+          userId: selectedUser.id,
+        },
+      });
+    }
+  };
 
   const rows = mapMobileUsers(data);
 
@@ -88,18 +208,27 @@ export function UsersTable({ context, title, searchPlaceholder }: UsersTableProp
     {
       id: "status",
       header: translate("common.table.columns.status"),
-      accessor: (row) =>
-        row.isActive ? (
+      accessor: (row) => {
+        if (row.isBlocked) {
+          return (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+              <Ban size={14} />
+              Blocked
+            </span>
+          );
+        }
+        return row.isActive ? (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
             <CheckCircle size={14} />
             {translateStatusOneWord("ACTIVE", translate, "ACTIVE")}
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
             <XCircle size={14} />
             {translateStatusOneWord("INACTIVE", translate, "INACTIVE")}
           </span>
-        ),
+        );
+      },
       sortKey: "isActive",
       alignCenter: true,
     },
@@ -132,7 +261,7 @@ export function UsersTable({ context, title, searchPlaceholder }: UsersTableProp
             : `/mobile-banking/users/${row.id}`;
 
         return (
-          <div className="flex justify-center">
+          <div className="flex justify-center gap-2">
             <Button
               asChild
               variant="outline"
@@ -144,6 +273,27 @@ export function UsersTable({ context, title, searchPlaceholder }: UsersTableProp
                 {translate("common.actions.details")}
               </Link>
             </Button>
+            {row.isBlocked ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleUnblockClick(row)}
+                className="text-green-600 hover:text-green-700 hover:bg-green-50"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Unblock
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleBlockClick(row)}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                <Ban className="h-4 w-4 mr-2" />
+                Block
+              </Button>
+            )}
           </div>
         );
       },
@@ -194,6 +344,66 @@ export function UsersTable({ context, title, searchPlaceholder }: UsersTableProp
           )}
         </CardContent>
       </Card>
+
+      {/* Block User Dialog */}
+      <AlertDialog open={blockDialogOpen} onOpenChange={setBlockDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Block User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to block{" "}
+              <strong>{selectedUser?.username || selectedUser?.phoneNumber}</strong>?
+              This will prevent them from logging in and receiving notifications.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Label htmlFor="blockReason">Reason (optional)</Label>
+            <Input
+              id="blockReason"
+              placeholder="Enter reason for blocking..."
+              value={blockReason}
+              onChange={(e) => setBlockReason(e.target.value)}
+              className="mt-2"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={blocking}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmBlock}
+              disabled={blocking}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {blocking && <Loader2 size={14} className="mr-2 animate-spin" />}
+              Block User
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Unblock User Dialog */}
+      <AlertDialog open={unblockDialogOpen} onOpenChange={setUnblockDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unblock User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to unblock{" "}
+              <strong>{selectedUser?.username || selectedUser?.phoneNumber}</strong>?
+              They will be able to log in again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={unblocking}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmUnblock}
+              disabled={unblocking}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {unblocking && <Loader2 size={14} className="mr-2 animate-spin" />}
+              Unblock User
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

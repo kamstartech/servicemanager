@@ -36,7 +36,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Calendar, Plus, Edit, Trash2, GripVertical, Workflow as WorkflowIcon,
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
+import {
+  ArrowLeft, Calendar, Plus, Edit, Trash2, GripVertical, Workflow as WorkflowIcon,
   Home, Send, CreditCard, LayoutDashboard, User, Settings,
   Smartphone, Briefcase, TrendingUp, Bell, Target, Wallet,
   FileText, Lock, Phone, MapPin, Store, File, Lightbulb, Search

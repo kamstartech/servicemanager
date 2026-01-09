@@ -10,7 +10,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { COMMON_TABLE_HEADERS, DataTable, type DataTableColumn } from "@/components/data-table";
-import { Calendar, Plus, ExternalLink, Link2Off, Star, CheckCircle, Clock, XCircle, Bell, List } from "lucide-react";
+import { Calendar, Plus, ExternalLink, Link2Off, Star, CheckCircle, Clock, XCircle, Bell, List, Ban, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const USER_DETAILS_QUERY = gql`
   query UserDetails($context: MobileUserContext!) {
@@ -30,6 +42,9 @@ const USER_DETAILS_QUERY = gql`
       isActive
       createdAt
       updatedAt
+      isBlocked
+      blockedAt
+      blockReason
       profile {
         id
         firstName
@@ -43,6 +58,28 @@ const USER_DETAILS_QUERY = gql`
         createdAt
         updatedAt
       }
+    }
+  }
+`;
+
+const BLOCK_USER_MUTATION = gql`
+  mutation BlockMobileUser($input: BlockMobileUserInput!) {
+    blockMobileUser(input: $input) {
+      id
+      isActive
+      isBlocked
+      blockedAt
+      blockReason
+    }
+  }
+`;
+
+const UNBLOCK_USER_MUTATION = gql`
+  mutation UnblockMobileUser($userId: ID!) {
+    unblockMobileUser(userId: $userId) {
+      id
+      isActive
+      isBlocked
     }
   }
 `;
@@ -185,6 +222,10 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
   const [newAccountName, setNewAccountName] = useState("");
   const [newAccountType, setNewAccountType] = useState("");
 
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
+  const [unblockDialogOpen, setUnblockDialogOpen] = useState(false);
+  const [blockReason, setBlockReason] = useState("");
+
   const [transactionsDialogOpen, setTransactionsDialogOpen] = useState(false);
   const [transactionsAccountNumber, setTransactionsAccountNumber] = useState<string | null>(null);
   const [transactionsLoading, setTransactionsLoading] = useState(false);
@@ -295,6 +336,48 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
       void refetchAccounts();
     },
   });
+
+  const [blockUser, { loading: blocking }] = useMutation(BLOCK_USER_MUTATION, {
+    onCompleted: () => {
+      toast.success("User blocked successfully");
+      setBlockDialogOpen(false);
+      setBlockReason("");
+      refetch();
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to block user");
+    },
+  });
+
+  const [unblockUser, { loading: unblocking }] = useMutation(UNBLOCK_USER_MUTATION, {
+    onCompleted: () => {
+      toast.success("User unblocked successfully");
+      setUnblockDialogOpen(false);
+      refetch();
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to unblock user");
+    },
+  });
+
+  const handleBlockUser = async () => {
+    await blockUser({
+      variables: {
+        input: {
+          userId: id,
+          reason: blockReason || null,
+        },
+      },
+    });
+  };
+
+  const handleUnblockUser = async () => {
+    await unblockUser({
+      variables: {
+        userId: id,
+      },
+    });
+  };
 
   const handleLinkAccount = async () => {
     if (!newAccountNumber.trim()) return;
@@ -850,6 +933,11 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
             <Badge variant={user.isActive ? "default" : "outline"}>
               {user.isActive ? "Active" : "Inactive"}
             </Badge>
+            {user.isBlocked && (
+              <Badge variant="destructive" className="bg-red-600">
+                Blocked
+              </Badge>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -866,6 +954,27 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
             <Button variant="outline" size="sm" asChild>
               <a href={backHref}>Back</a>
             </Button>
+            {user.isBlocked ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setUnblockDialogOpen(true)}
+                className="text-green-600 hover:text-green-700 hover:bg-green-50"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Unblock
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setBlockDialogOpen(true)}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                <Ban className="h-4 w-4 mr-2" />
+                Block
+              </Button>
+            )}
           </div>
         </div>
 
@@ -1217,6 +1326,72 @@ export function UserDetails({ context, backHref, title }: UserDetailsProps) {
             </CardContent>
           </Card>
         </div>
+
+
+        {/* Block User Dialog */}
+        <AlertDialog open={blockDialogOpen} onOpenChange={setBlockDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Block User</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to block this user?
+                This will prevent them from logging in and receiving notifications.
+                All active sessions will be revoked immediately.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="py-4">
+              <Label htmlFor="blockReason">Reason (optional)</Label>
+              <Input
+                id="blockReason"
+                placeholder="Enter reason for blocking..."
+                value={blockReason}
+                onChange={(e) => setBlockReason(e.target.value)}
+                className="mt-2"
+              />
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={blocking}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleBlockUser();
+                }}
+                disabled={blocking}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {blocking && <Loader2 size={14} className="mr-2 animate-spin" />}
+                Block User
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Unblock User Dialog */}
+        <AlertDialog open={unblockDialogOpen} onOpenChange={setUnblockDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Unblock User</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to unblock this user?
+                They will be able to log in again.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={unblocking}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleUnblockUser();
+                }}
+                disabled={unblocking}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {unblocking && <Loader2 size={14} className="mr-2 animate-spin" />}
+                Unblock User
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
